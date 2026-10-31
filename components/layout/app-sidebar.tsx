@@ -60,6 +60,7 @@ const navSections = [
       { title: "Investments", href: "/investments", icon: Coins },
       { title: "Credit Cards", href: "/credit-cards", icon: CreditCard },
       { title: "Loans & Debts", href: "/loans", icon: Scale },
+      { title: "Assets & Liabilities", href: "/assets", icon: Home },
     ],
   },
   {

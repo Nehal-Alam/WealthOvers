@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { RecurringList } from "@/components/recurring/recurring-list";
+import { RecurringDetectorCard } from "@/components/recurring/recurring-detector-card";
 
 export const metadata: Metadata = {
   title: "Recurring Transactions — WealthOvers",
@@ -50,6 +51,7 @@ export default async function RecurringPage() {
 
   return (
     <div className="space-y-6">
+      <RecurringDetectorCard accounts={accounts} />
       <RecurringList
         recurringRules={recurringRules}
         accounts={accounts}

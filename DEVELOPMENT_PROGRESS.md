@@ -2,7 +2,7 @@
 
 **Project:** WealthOvers — Advanced Personal Money Manager Web Application  
 **Architect:** Principal Software Architect  
-**Current Status:** Core & Advanced Money Manager Modules Complete (Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports, Investments, Credit Cards, Loans, Assets & Liabilities, Net Worth, Financial Goals)  
+**Current Status:** All Core, Advanced, and Automation/Data Import Modules Complete (Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports, Investments, Credit Cards, Loans, Assets & Liabilities, Net Worth, Financial Goals, Statement Import CSV/Excel/PDF, Duplicate Detection, Categorization Rules, Recurring Detection, Android Companion Sync API & Device Management)  
 **Last Updated:** 2026-10-31  
 
 ---
@@ -11,16 +11,17 @@
 
 | Metric | Status | Notes |
 | :--- | :--- | :--- |
-| **Current Milestone** | **Advanced Modules Complete (M1 - M8, M10)** | All Core & Advanced modules implemented & verified |
-| **Next Milestone** | **Milestone 9** | Statement Import (CSV/XLSX/PDF) & Android Companion Sync Gateway |
+| **Current Milestone** | **Milestone 9 Complete (M1 - M10)** | All modules specified in PRD & Architecture implemented |
+| **Next Milestone** | **Production Release & Hardening** | PWA offline manifest, Vercel edge deployment optimization |
 | **Architecture Specification** | 100% (Approved) | `ARCHITECTURE.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `ROADMAP.md` |
 | **Database Schema Deployment** | 100% (Live) | 26 tables migrated on Supabase Cloud (`dxvfgzqtvnpjwdibuhrh`), RLS active on all tables |
 | **Authentication & Multi-User** | 100% (Functional) | Supabase Auth (Email/Password + OAuth ready), session middleware, profile auto-provisioning |
 | **Responsive Application Shell** | 100% (Functional) | Desktop collapsible sidebar, mobile bottom navigation, dark/light theme, privacy balance mask |
 | **Core Money Management** | 100% (Functional) | Full CRUD on Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
 | **Advanced Financial Modules** | 100% (Functional) | Investments (Stocks, US Stocks, MFs, Gold, FDs), Credit Cards, Loans, Assets/Liabilities, Net Worth, Goals |
-| **Automated Tests** | 30 Passed (100%) | 7 suites: Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3), Advanced financial math (5) |
-| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (24 routes) |
+| **Automation & Data Import** | 100% (Functional) | Bank statement parsers (CSV, Excel, PDF), SHA-256 deduplication, categorization rules, recurring detection, Android token auth & sync API |
+| **Automated Tests** | 43 Passed (100%) | 8 test suites: Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3), Advanced financial math (5), Data import & automation (13) |
+| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (29 routes) |
 | **Containerization / Docker** | Excluded | Complies with strict non-Docker constraint |
 
 ---
@@ -38,7 +39,7 @@
 | **M6** | Budgets, Rollovers & Recurring Transactions | **COMPLETED** | 2026-10-31 | `/budgets`, `/recurring`, monthly budget allocations, overspending alerts, recurring rules with auto-date advance |
 | **M7** | Investment Portfolio Engine & XIRR Analytics | **COMPLETED** | 2026-10-31 | `/investments`, Indian Stocks, US Stocks (with USD/INR currency conversion), Mutual Funds, ETFs, Gold, FDs, CSV import, XIRR solver |
 | **M8** | Credit Cards, Loans, Debt, Assets & Net Worth Rollup | **COMPLETED** | 2026-10-31 | `/credit-cards`, `/loans` (EMI & Amortization), `/assets` (Fixed assets & liabilities), `/net-worth`, `/goals` |
-| **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **NEXT TARGET** | Week 5 | Bank statement parsers, Android companion sync gateway & auth |
+| **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **COMPLETED** | 2026-10-31 | `/import`, `/devices`, CSV, Excel, PDF parsers, deduplication, categorization rules, recurring pattern detector, Android token auth (`POST /api/v1/transactions/sync`) |
 | **M10**| Financial Reports, PWA Hardening & Vercel Deploy | **COMPLETED (Reports)**| 2026-10-31 | `/reports`, Cash flow Recharts bar chart, category spending donut chart, CSV export engine |
 
 ---
@@ -88,6 +89,43 @@
   - Monthly required savings pacing engine (`calculateGoalMonthlyRequired`) using calendar month calculations to avoid timezone and boundary traps.
   - Direct contribution modal linked to bank accounts.
 
+### Automation, Import & Synchronization Modules (Milestone 9)
+- [x] **CSV Bank Statement Import (`/import`)**:
+  - Robust RFC-4180 parsing engine with multiline cell and quotation handling.
+  - Header resolution supporting Indian bank statements (HDFC, SBI, ICICI, Axis, Kotak, Chase, Citibank).
+  - Multiformat date parsing (`DD/MM/YYYY`, `YYYY-MM-DD`, `DD-MMM-YYYY`, `MMM DD, YYYY`).
+- [x] **Excel (.xlsx / .xls) Statement Import (`/import`)**:
+  - Binary workbook parser powered by `xlsx` (SheetJS).
+  - Automatic sheet identification and table header discovery.
+- [x] **PDF Bank Statement Parser (`lib/parsers/pdf-parser.ts`)**:
+  - Text-layer extraction using `pdf-parse@1.1.1`.
+  - Regex-based transaction table line extractor with debit, credit, balance, and reference number identification.
+- [x] **Deterministic Duplicate Detection**:
+  - SHA-256 idempotency hash:
+    $$\text{SHA256}(\text{userId} + ":" + \text{accountId} + ":" + \text{amount} + ":" + \text{date} + ":" + (\text{refNo} \lor \text{normalizedDesc}))$$
+  - Filters duplicate rows against database and within the same file batch.
+- [x] **Transaction Categorization Rules (`/categories`)**:
+  - Priority-ordered rules matching keyword/regex patterns against description, merchant, or reference.
+  - Auto-assigns category and subcategory during import and Android synchronization.
+  - One-click "Apply Rules on Uncategorized Transactions" batch action.
+- [x] **Smart Recurring Transaction Detection (`/recurring`)**:
+  - Pattern recognition engine analyzing historical transaction intervals and amounts.
+  - Detects weekly, bi-weekly, monthly, quarterly, and yearly subscriptions/bills with confidence scoring.
+  - One-click conversion from detected candidates into active recurring rules.
+- [x] **Android Companion Device Registration (`/devices`, `POST /api/v1/devices/register`)**:
+  - Generates high-entropy token (`wov_dev_...`), hashes with SHA-256 for database storage, displays plaintext token once with copy button.
+  - Instant device revocation invalidating tokens immediately.
+- [x] **Secure Transaction Synchronization Gateway (`POST /api/v1/transactions/sync`)**:
+  - Zero-Trust content policy: strictly rejects raw SMS, OTPs, auth PINs, and non-financial data with HTTP 400.
+  - Requires device authentication via `X-Device-Id` and `X-Device-Token` (or Bearer header). Revoked devices rejected with HTTP 403.
+  - Stored procedure `public.sync_android_transactions` executes atomic ledger ingestion, account matching, auto-categorization, duplicate filtering, and audit logging in `sync_logs`.
+- [x] **Offline Synchronization & Recovery**:
+  - Android companion caches transactions locally when offline and pushes multi-transaction batches on reconnect.
+  - Server deduplicates batch records individually via `idempotencyHash`: previously synced items are safely ignored while new transactions are ingested.
+- [x] **Synchronization History & Simulator (`/devices`)**:
+  - Live audit table of sync events, ingested records, flagged transactions, and error logs.
+  - In-browser interactive companion sync simulator testing online sync, offline batch recovery, duplicate deduplication, and zero-trust OTP defense.
+
 ---
 
 ## 4. Tests Executed & Quality Assurance Matrix
@@ -102,8 +140,9 @@
 | **`tests/transfer-workflow.test.ts`** | 3 tests | **PASS** | Validates inter-account transfer invariants: rejects same-account transfers, rejects zero/negative transfer amounts, verifies positive amount transfers between distinct accounts. |
 | **`tests/recurring-dates.test.ts`** | 3 tests | **PASS** | Tests calendar boundary calculations: weekly, biweekly, quarterly, and yearly intervals without timezone offset drift. |
 | **`tests/advanced-financial-math.test.ts`** | 5 tests | **PASS** | Verifies: (1) Loan EMI & interest split; (2) Complete declining-balance amortization schedule; (3) US Stock valuation with USD/INR conversion; (4) Newton-Raphson numerical XIRR solver; (5) Financial goal monthly savings pacing with calendar-month arithmetic. |
+| **`tests/data-import-automation.test.ts`** | 13 tests | **PASS** | Verifies: (1) CSV bank statement parser with debit/credit columns; (2) Multi-format dates and currency symbol cleaning; (3) Excel (.xlsx) statement parser; (4) Deterministic SHA-256 idempotency hash generation; (5) Duplicate detection against existing hashes and in-batch; (6) Categorization rules matching with priority hierarchy; (7) Auto-applying category suggestions; (8) Monthly subscription pattern detection; (9) Weekly pattern detection; (10) Device token generation and SHA-256 hashing; (11) Zero-trust rejection of OTPs and raw SMS; (12) Acceptance of sanitized financial metadata; (13) Offline batch recovery with partial duplicate deduplication. |
 
-**Total Vitest Count:** **30 passed (30 / 30, 100%)**
+**Total Vitest Count:** **43 passed (43 / 43, 100%)**
 
 ### 4.2 Typecheck (`npm run typecheck`)
 - Command: `tsc --noEmit`
@@ -115,39 +154,31 @@
 
 ### 4.4 Production Build (`npm run build`)
 - Command: `next build`
-- Result: **Compiled successfully in 28.9s**. All 24 routes generated and optimized:
+- Result: **Compiled successfully in 30.2s**. All 29 routes generated and optimized:
   - `/` (Static landing / redirect)
   - `/_not-found` (Static 404 page)
   - `/accounts` (Dynamic server-rendered accounts management)
   - `/api/auth/callback` (Dynamic PKCE / verification callback)
+  - `/api/v1/devices/register` (Dynamic device pairing endpoint)
+  - `/api/v1/sync/status` (Dynamic synchronization status & telemetry endpoint)
+  - `/api/v1/transactions/sync` (Dynamic secure Android sync endpoint)
   - `/assets` (Dynamic server-rendered asset & liability tracking)
   - `/budgets` (Dynamic server-rendered monthly budgets)
-  - `/categories` (Dynamic server-rendered category management)
+  - `/categories` (Dynamic server-rendered category management & rules)
   - `/credit-cards` (Dynamic server-rendered credit card management)
   - `/dashboard` (Dynamic server-rendered financial dashboard)
+  - `/devices` (Dynamic server-rendered Android device management & sync audit)
   - `/forgot-password` (Static forgot password page)
   - `/goals` (Dynamic server-rendered financial goals tracking)
+  - `/import` (Dynamic server-rendered statement import engine)
   - `/investments` (Dynamic server-rendered investment portfolio)
   - `/loans` (Dynamic server-rendered loan amortization & EMI tracker)
   - `/login` (Static login page)
   - `/net-worth` (Dynamic server-rendered net worth balance sheet)
   - `/profile` (Dynamic server-rendered user profile)
-  - `/recurring` (Dynamic server-rendered recurring rules)
+  - `/recurring` (Dynamic server-rendered recurring rules & pattern detector)
   - `/register` (Static register page)
   - `/reports` (Dynamic server-rendered financial analytics & reports)
   - `/reset-password` (Static reset password page)
   - `/settings` (Dynamic server-rendered application settings)
   - `/transactions` (Dynamic server-rendered transaction ledger)
-
----
-
-## 5. Known Issues Diagnosed & Resolved
-
-1. **Vendor Chunk ENOENT Error on `/dashboard` (User Screenshot)**:
-   - **Root Cause**: Running `next build` while a `next dev` background process was active wiped the intermediate compilation cache (`.next/server/vendor-chunks/@radix-ui.js`).
-   - **Fix**: Safely terminated stale background processes, purged `.next` artifacts, and launched `next dev` as a dedicated background daemon. Confirmed HTTP 200 on all routes.
-2. **Date Boundary & Timezone Discrepancies**:
-   - **Root Cause**: Millisecond offset between test execution timestamp and helper evaluation inside `calculateGoalMonthlyRequired` caused `differenceInMonths` to round down full months on boundary dates.
-   - **Fix**: Upgraded math engine to use `differenceInCalendarMonths` with explicit reference date handling, ensuring 100% calendar boundary accuracy.
-3. **Double Counting Protection**:
-   - Transfer invariants strictly enforced: Credit card bill payments and loan payments recorded through account transfers use `transaction_type = 'transfer'`, preventing double-counting expenses in cash flow summaries.

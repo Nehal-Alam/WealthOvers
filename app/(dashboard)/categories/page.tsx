@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { CategoryList } from "@/components/categories/category-list";
+import { CategorizationRulesView } from "@/components/categories/categorization-rules-view";
 
 export const metadata: Metadata = {
-  title: "Categories — WealthOvers",
-  description: "Organize and configure income and expense categories",
+  title: "Categories & Rules — WealthOvers",
+  description: "Organize categories and configure automated categorization rules",
 };
 
 export default async function CategoriesPage() {
@@ -17,18 +18,27 @@ export default async function CategoriesPage() {
     redirect("/login");
   }
 
-  // Fetch categories and subcategories
-  const { data: categoriesData } = await supabase
-    .from("categories")
-    .select("*, subcategories(*)")
-    .eq("user_id", user.id)
-    .order("name", { ascending: true });
+  // Fetch categories, subcategories, and rules in parallel
+  const [categoriesRes, rulesRes] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("*, subcategories(*)")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+    supabase
+      .from("categorization_rules")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("priority", { ascending: false }),
+  ]);
 
-  const categories = (categoriesData || []) as any[];
+  const categories = (categoriesRes.data || []) as any[];
+  const rules = rulesRes.data || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <CategoryList categories={categories} />
+      <CategorizationRulesView rules={rules} categories={categories} />
     </div>
   );
 }
