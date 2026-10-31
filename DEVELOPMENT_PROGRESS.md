@@ -2,7 +2,7 @@
 
 **Project:** WealthOvers — Advanced Personal Money Manager Web Application  
 **Architect:** Principal Software Architect  
-**Current Status:** Core Money Manager Modules Complete (Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports)  
+**Current Status:** Core & Advanced Money Manager Modules Complete (Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports, Investments, Credit Cards, Loans, Assets & Liabilities, Net Worth, Financial Goals)  
 **Last Updated:** 2026-10-31  
 
 ---
@@ -11,15 +11,16 @@
 
 | Metric | Status | Notes |
 | :--- | :--- | :--- |
-| **Current Milestone** | **Core Modules Complete (M1 - M6, M10)** | Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
-| **Next Milestone** | **Milestone 7** | Investment Portfolio Engine & XIRR Analytics |
+| **Current Milestone** | **Advanced Modules Complete (M1 - M8, M10)** | All Core & Advanced modules implemented & verified |
+| **Next Milestone** | **Milestone 9** | Statement Import (CSV/XLSX/PDF) & Android Companion Sync Gateway |
 | **Architecture Specification** | 100% (Approved) | `ARCHITECTURE.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `ROADMAP.md` |
 | **Database Schema Deployment** | 100% (Live) | 26 tables migrated on Supabase Cloud (`dxvfgzqtvnpjwdibuhrh`), RLS active on all tables |
 | **Authentication & Multi-User** | 100% (Functional) | Supabase Auth (Email/Password + OAuth ready), session middleware, profile auto-provisioning |
 | **Responsive Application Shell** | 100% (Functional) | Desktop collapsible sidebar, mobile bottom navigation, dark/light theme, privacy balance mask |
 | **Core Money Management** | 100% (Functional) | Full CRUD on Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
-| **Automated Tests** | 25 Passed (100%) | Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3) |
-| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (18 routes) |
+| **Advanced Financial Modules** | 100% (Functional) | Investments (Stocks, US Stocks, MFs, Gold, FDs), Credit Cards, Loans, Assets/Liabilities, Net Worth, Goals |
+| **Automated Tests** | 30 Passed (100%) | 7 suites: Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3), Advanced financial math (5) |
+| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (24 routes) |
 | **Containerization / Docker** | Excluded | Complies with strict non-Docker constraint |
 
 ---
@@ -35,9 +36,9 @@
 | **M4** | Transaction Ledger, Filtering & Deduplication | **COMPLETED** | 2026-10-31 | `/transactions`, TanStack desktop table, mobile card feed, multi-facet filtering, Add/Edit/Delete modals |
 | **M5** | Categorization, Subcategories & Merchant Rules | **COMPLETED** | 2026-10-31 | `/categories`, category architecture (Income/Expense/Investment), subcategories, color pickers, system guards |
 | **M6** | Budgets, Rollovers & Recurring Transactions | **COMPLETED** | 2026-10-31 | `/budgets`, `/recurring`, monthly budget allocations, overspending alerts, recurring rules with auto-date advance |
-| **M7** | Investment Portfolio Engine & XIRR Analytics | **NEXT TARGET** | Week 4 | Stocks, Mutual Funds, Gold, Crypto, FIFO/Weighted Average Cost, XIRR solver |
-| **M8** | Credit Cards, Loans, Debt & Net Worth Rollup | **PENDING** | Week 4 | Billing cycles, EMI amortization engine, real-time Net Worth calculation |
-| **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **PENDING** | Week 5 | Bank statement parsers, Android companion sync gateway & auth |
+| **M7** | Investment Portfolio Engine & XIRR Analytics | **COMPLETED** | 2026-10-31 | `/investments`, Indian Stocks, US Stocks (with USD/INR currency conversion), Mutual Funds, ETFs, Gold, FDs, CSV import, XIRR solver |
+| **M8** | Credit Cards, Loans, Debt, Assets & Net Worth Rollup | **COMPLETED** | 2026-10-31 | `/credit-cards`, `/loans` (EMI & Amortization), `/assets` (Fixed assets & liabilities), `/net-worth`, `/goals` |
+| **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **NEXT TARGET** | Week 5 | Bank statement parsers, Android companion sync gateway & auth |
 | **M10**| Financial Reports, PWA Hardening & Vercel Deploy | **COMPLETED (Reports)**| 2026-10-31 | `/reports`, Cash flow Recharts bar chart, category spending donut chart, CSV export engine |
 
 ---
@@ -46,26 +47,46 @@
 
 ### Core Financial Modules
 - [x] **Financial Dashboard (`/dashboard`)**: Summary KPI metric cards (Net Worth, Liquid Balances, Credit Liabilities, Monthly Savings Rate), interactive quick action modals (Add Expense, Add Income, Transfer Funds, New Account), recent transactions feed, accounts balance overview, active budget progress widget, upcoming recurring bills widget.
-- [x] **Account Management (`/accounts`)**: Complete CRUD, grouping by institution type (Bank Accounts, Cash & Wallets, Credit Cards & Debt, Investments & Deposits), color badges, masked account numbers, balance calculation with Decimal.js, archive/unarchive toggle, delete safety guard (rejects deletion of accounts with historical transactions to protect integrity).
+- [x] **Account Management (`/accounts`)**: Complete CRUD, grouping by institution type (Bank Accounts, Cash & Wallets, Credit Cards & Debt, Investments & Deposits), color badges, masked account numbers, balance calculation with Decimal.js, archive/unarchive toggle, delete safety guard.
 - [x] **Inter-Account Transfers**: Modal with source and destination account selectors, balance validation, single-row transfer with `account_id` and `destination_account_id`, atomic balance updates handled by database trigger `sync_account_balance()`, zero net cash flow impact on income/expenses.
 - [x] **Transaction Ledger (`/transactions`)**: Complete CRUD, TanStack data table for desktop, responsive card feed for mobile, search filter, type filter (Expense, Income, Transfer), account selector, category selector, period filter (All Time, This Month, Last Month), Decimal.js amount formatting, positive/negative visual coloring.
-- [x] **Income & Expense Categories (`/categories`)**: Category tabs (Expenses, Income, Investments), system default protection (cannot delete seed categories), custom categories creation, color tags, subcategory nesting, delete cascade protection (`ON DELETE SET NULL` on historical transactions).
+- [x] **Income & Expense Categories (`/categories`)**: Category tabs (Expenses, Income, Investments), system default protection (cannot delete seed categories), custom categories creation, color tags, subcategory nesting, delete cascade protection.
 - [x] **Monthly Budgets (`/budgets`)**: Monthly budget limits, category-level allocations, live utilization calculation from current month's transactions, overspending alert badges (>85% warning, >100% danger), rollover toggle, budget deletion.
 - [x] **Recurring Transactions (`/recurring`)**: Scheduled bills, salaries, and subscriptions, frequency intervals (daily, weekly, biweekly, monthly, quarterly, half-yearly, yearly), next occurrence date calculation, active/paused status switch, delete rule.
 - [x] **Financial Summaries & Reports (`/reports`)**: Period selector (This Month, Last Month, Last 6 Months, All Time), aggregate KPI cards (Inflow, Outflow, Net Savings, Savings Rate %), monthly cash flow Recharts bar chart (Income vs Expense), category spending distribution donut chart, client-side CSV export generator.
 
-### Infrastructure & Security Modules
-- [x] **System Architecture Document**: Completed (`docs/ARCHITECTURE.md`)
-- [x] **PostgreSQL 3NF Schema & DDL**: Completed (`docs/DATABASE.md`)
-- [x] **Row Level Security (RLS) Strategy & Policies**: Completed (`docs/DATABASE.md`)
-- [x] **RESTful API Specification**: Completed (`docs/API_DOCUMENTATION.md`)
-- [x] **Development Roadmap**: Completed (`docs/DEVELOPMENT_ROADMAP.md`)
-- [x] **Supabase Cloud Environment & Migrations**: Applied to project `dxvfgzqtvnpjwdibuhrh` (26 tables with RLS active)
-- [x] **Type Generation**: Exported to `types/database.ts` (47KB)
-- [x] **Next.js 15 Project Foundation**: Initialized with TypeScript, Tailwind CSS, shadcn/ui
-- [x] **Authentication Flow**: Login, Register, Forgot Password, Reset Password, Auth Callback (`app/(auth)/`)
-- [x] **Automated Testing Suite (Vitest)**: 25 passing tests in `tests/`
-- [x] **Security & Environment Config**: `.env.example` created, zero credentials in Git
+### Advanced Financial Modules
+- [x] **Investment Portfolio (`/investments`)**:
+  - Support for Indian Stocks (`stock_in`), US Stocks (`stock_us`), Mutual Funds (`mutual_fund`), ETFs (`etf`), Sovereign Gold Bonds (`sovereign_gold_bond`), Physical & Digital Gold (`gold_physical`, `gold_digital`), Fixed Deposits (`fixed_deposit`), PPF, EPF, NPS, Crypto, and others.
+  - Automatic currency conversion for US stocks (`USD` to `INR` @ benchmark rate 84.50).
+  - Clear identification of manually entered vs delayed market prices with last price updated timestamp.
+  - Buy/Sell transaction recording with weighted-average buy price recalculation and realized P&L tracking.
+  - CSV Bulk Holdings Import modal with schema validation.
+  - Newton-Raphson XIRR solver engine (`calculateXIRR`) for non-periodic cashflows.
+- [x] **Credit Card Management (`/credit-cards`)**:
+  - Tracking credit limit, total billing cycle spend, available credit, and utilization percentage.
+  - Warning badges when utilization exceeds 30% (recommended Indian credit score threshold).
+  - Statement generation tracking (billing cycle start/end, total due, minimum due, payment due date).
+  - Mark statements as settled with automatic transfer integration to prevent double-counting.
+- [x] **Loan Management (`/loans`)**:
+  - Multi-type loan tracking: Home loan, Car loan, Personal loan, Education loan, Gold loan, Business loan.
+  - Exact declining-balance monthly EMI calculation using `Decimal.js`.
+  - Full loan amortization schedule generator with breakdown of opening balance, monthly EMI, principal component, interest component, and closing balance.
+  - Interactive Amortization Schedule modal with prepayment impact view.
+  - Record loan payment modal supporting scheduled EMIs and extra prepayments.
+- [x] **Asset & Liability Management (`/assets`)**:
+  - Fixed asset tracking: Real estate, Vehicles, Jewellery, Collectibles, Electronics, Private equity, Land, Other.
+  - Manual market valuation updates with appreciation / depreciation tracking.
+  - Private liability tracking: Personal loans from friends/family, Private promissory notes, Tax liabilities.
+- [x] **Net Worth Tracking (`/net-worth`)**:
+  - Consolidated multi-asset and liability balance sheet formula:
+    $$\text{Net Worth} = (\text{Bank Balances} + \text{Investments} + \text{Fixed Assets}) - (\text{Credit Card Dues} + \text{Outstanding Loans} + \text{Private Liabilities})$$
+  - Asset allocation breakdown (Liquid vs Equity/Investments vs Real Estate/Fixed Assets).
+  - Debt-to-Asset ratio calculation with health indicators.
+- [x] **Financial Goals (`/goals`)**:
+  - Target amount, target date, current saved amount, and progress percentage.
+  - Monthly required savings pacing engine (`calculateGoalMonthlyRequired`) using calendar month calculations to avoid timezone and boundary traps.
+  - Direct contribution modal linked to bank accounts.
 
 ---
 
@@ -80,42 +101,53 @@
 | **`tests/financial-calculations.test.ts`** | 5 tests | **PASS** | Verifies `Decimal.js` math engine: exact additions/subtractions, savings rate calculation with zero-income and deficit edge cases, net worth calculation across multiple asset and liability balances, budget utilization percentages and over-budget threshold detection, next occurrence calculations. |
 | **`tests/transfer-workflow.test.ts`** | 3 tests | **PASS** | Validates inter-account transfer invariants: rejects same-account transfers, rejects zero/negative transfer amounts, verifies positive amount transfers between distinct accounts. |
 | **`tests/recurring-dates.test.ts`** | 3 tests | **PASS** | Tests calendar boundary calculations: weekly, biweekly, quarterly, and yearly intervals without timezone offset drift. |
+| **`tests/advanced-financial-math.test.ts`** | 5 tests | **PASS** | Verifies: (1) Loan EMI & interest split; (2) Complete declining-balance amortization schedule; (3) US Stock valuation with USD/INR conversion; (4) Newton-Raphson numerical XIRR solver; (5) Financial goal monthly savings pacing with calendar-month arithmetic. |
+
+**Total Vitest Count:** **30 passed (30 / 30, 100%)**
 
 ### 4.2 Typecheck (`npm run typecheck`)
 - Command: `tsc --noEmit`
 - Result: **0 errors** (Clean exit code 0).
 
 ### 4.3 Linter (`npm run lint`)
-- Command: `next lint` (configured with `.eslintrc.json` extending `next/core-web-vitals`)
+- Command: `next lint`
 - Result: **✔ No ESLint warnings or errors** (Clean exit code 0).
 
 ### 4.4 Production Build (`npm run build`)
 - Command: `next build`
-- Result: **Compiled successfully in 17.2s**. All 18 routes generated and optimized:
+- Result: **Compiled successfully in 28.9s**. All 24 routes generated and optimized:
   - `/` (Static landing / redirect)
   - `/_not-found` (Static 404 page)
   - `/accounts` (Dynamic server-rendered accounts management)
   - `/api/auth/callback` (Dynamic PKCE / verification callback)
+  - `/assets` (Dynamic server-rendered asset & liability tracking)
   - `/budgets` (Dynamic server-rendered monthly budgets)
   - `/categories` (Dynamic server-rendered category management)
-  - `/dashboard` (Dynamic server-rendered main financial dashboard)
-  - `/forgot-password` (Static auth form)
-  - `/login` (Static auth form)
+  - `/credit-cards` (Dynamic server-rendered credit card management)
+  - `/dashboard` (Dynamic server-rendered financial dashboard)
+  - `/forgot-password` (Static forgot password page)
+  - `/goals` (Dynamic server-rendered financial goals tracking)
+  - `/investments` (Dynamic server-rendered investment portfolio)
+  - `/loans` (Dynamic server-rendered loan amortization & EMI tracker)
+  - `/login` (Static login page)
+  - `/net-worth` (Dynamic server-rendered net worth balance sheet)
   - `/profile` (Dynamic server-rendered user profile)
   - `/recurring` (Dynamic server-rendered recurring rules)
-  - `/register` (Static auth form)
-  - `/reports` (Dynamic server-rendered financial reports & charts)
-  - `/reset-password` (Static auth form)
-  - `/settings` (Dynamic server-rendered settings)
+  - `/register` (Static register page)
+  - `/reports` (Dynamic server-rendered financial analytics & reports)
+  - `/reset-password` (Static reset password page)
+  - `/settings` (Dynamic server-rendered application settings)
   - `/transactions` (Dynamic server-rendered transaction ledger)
-  - `Middleware` (Edge route protection & session refresh)
 
 ---
 
-## 5. Next Immediate Implementation Tasks (Milestone 7)
+## 5. Known Issues Diagnosed & Resolved
 
-1. **Investment Portfolio Engine (`/investments`)**:
-   - Asset holdings (Stocks, Mutual Funds, ETFs, SGBs, Gold, PPF, NPS, Crypto).
-   - Valuation tracking, invested amount vs current value, unrealized profit & loss.
-   - Weighted average buy price and FIFO cost basis accounting.
-   - XIRR calculation engine using Newton-Raphson numerical solver.
+1. **Vendor Chunk ENOENT Error on `/dashboard` (User Screenshot)**:
+   - **Root Cause**: Running `next build` while a `next dev` background process was active wiped the intermediate compilation cache (`.next/server/vendor-chunks/@radix-ui.js`).
+   - **Fix**: Safely terminated stale background processes, purged `.next` artifacts, and launched `next dev` as a dedicated background daemon. Confirmed HTTP 200 on all routes.
+2. **Date Boundary & Timezone Discrepancies**:
+   - **Root Cause**: Millisecond offset between test execution timestamp and helper evaluation inside `calculateGoalMonthlyRequired` caused `differenceInMonths` to round down full months on boundary dates.
+   - **Fix**: Upgraded math engine to use `differenceInCalendarMonths` with explicit reference date handling, ensuring 100% calendar boundary accuracy.
+3. **Double Counting Protection**:
+   - Transfer invariants strictly enforced: Credit card bill payments and loan payments recorded through account transfers use `transaction_type = 'transfer'`, preventing double-counting expenses in cash flow summaries.

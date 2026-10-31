@@ -69,3 +69,4 @@ describe("Financial Calculations Engine", () => {
     expect(futureDate).toBe("2026-12-01");
   });
 });
+

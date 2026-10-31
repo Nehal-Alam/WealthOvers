@@ -266,3 +266,4 @@ export function CategoryList({ categories }: CategoryListProps) {
     </div>
   );
 }
+

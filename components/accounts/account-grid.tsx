@@ -262,3 +262,4 @@ export function AccountGrid({ accounts }: AccountGridProps) {
     </div>
   );
 }
+

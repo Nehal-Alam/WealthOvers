@@ -62,3 +62,4 @@ export const transferFundsSchema = z
   });
 
 export type TransferFundsInput = z.infer<typeof transferFundsSchema>;
+

@@ -247,3 +247,4 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
     </Dialog>
   );
 }
+

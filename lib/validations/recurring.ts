@@ -47,3 +47,4 @@ export const updateRecurringSchema = z.object({
 });
 
 export type UpdateRecurringInput = z.infer<typeof updateRecurringSchema>;
+

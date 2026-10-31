@@ -73,3 +73,4 @@ export const updateTransactionSchema = z.object({
 });
 
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
+

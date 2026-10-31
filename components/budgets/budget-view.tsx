@@ -295,3 +295,4 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
     </div>
   );
 }
+

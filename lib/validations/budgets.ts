@@ -40,3 +40,4 @@ export const updateBudgetSchema = z.object({
 });
 
 export type UpdateBudgetInput = z.infer<typeof updateBudgetSchema>;
+

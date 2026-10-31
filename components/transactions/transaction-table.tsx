@@ -203,3 +203,4 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
     </div>
   );
 }
+
