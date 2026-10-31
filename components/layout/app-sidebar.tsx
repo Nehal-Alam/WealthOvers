@@ -50,7 +50,6 @@ const navSections = [
     items: [
       { title: "Budgets", href: "/budgets", icon: PiggyBank },
       { title: "Recurring Bills", href: "/recurring", icon: Calendar },
-      { title: "Subscriptions", href: "/subscriptions", icon: CreditCard },
       { title: "Financial Goals", href: "/goals", icon: Target },
     ],
   },
@@ -113,6 +112,7 @@ export function AppSidebar() {
           onClick={toggleSidebar}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hidden lg:flex"
           title={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
           {isOpen ? (
             <ChevronLeft className="h-4 w-4" />

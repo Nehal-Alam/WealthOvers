@@ -174,6 +174,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
                         onClick={() => handleDelete(device.id)}
+                        aria-label="Delete companion device"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

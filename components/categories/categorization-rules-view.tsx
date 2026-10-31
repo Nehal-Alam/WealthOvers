@@ -165,6 +165,7 @@ export function CategorizationRulesView({ rules, categories }: CategorizationRul
                           size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteRule(rule.id)}
+                          aria-label="Delete categorization rule"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

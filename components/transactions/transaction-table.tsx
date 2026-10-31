@@ -176,6 +176,7 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground"
+                        aria-label="Transaction options"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>

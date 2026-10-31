@@ -59,6 +59,7 @@ export function AppHeader({ user }: AppHeaderProps) {
               variant="ghost"
               size="icon"
               className="lg:hidden h-9 w-9 text-muted-foreground hover:text-foreground"
+              aria-label="Open navigation menu"
             >
               <Menu className="h-5 w-5" />
               <span className="sr-only">Open navigation menu</span>
@@ -84,6 +85,13 @@ export function AppHeader({ user }: AppHeaderProps) {
                   Dashboard
                 </Link>
                 <Link
+                  href="/net-worth"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Net Worth
+                </Link>
+                <Link
                   href="/transactions"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
@@ -98,11 +106,32 @@ export function AppHeader({ user }: AppHeaderProps) {
                   Accounts
                 </Link>
                 <Link
+                  href="/categories"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Categories & Rules
+                </Link>
+                <Link
                   href="/budgets"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
                 >
                   Budgets
+                </Link>
+                <Link
+                  href="/recurring"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Recurring Bills
+                </Link>
+                <Link
+                  href="/goals"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Financial Goals
                 </Link>
                 <Link
                   href="/investments"
@@ -117,6 +146,20 @@ export function AppHeader({ user }: AppHeaderProps) {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
                 >
                   Credit Cards
+                </Link>
+                <Link
+                  href="/loans"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Loans & Debts
+                </Link>
+                <Link
+                  href="/assets"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                >
+                  Assets & Liabilities
                 </Link>
                 <Link
                   href="/reports"

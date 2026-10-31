@@ -121,6 +121,7 @@ export function TransactionMobileFeed({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground -mr-1"
+                        aria-label="Transaction options"
                       >
                         <MoreVertical className="h-3.5 w-3.5" />
                       </Button>

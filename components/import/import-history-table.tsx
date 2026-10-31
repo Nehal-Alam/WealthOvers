@@ -112,6 +112,7 @@ export function ImportHistoryTable({ importJobs }: ImportHistoryTableProps) {
                         size="icon"
                         className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(job.id)}
+                        aria-label="Delete import job audit record"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
