@@ -85,3 +85,4 @@ describe("Authentication Validation Schemas", () => {
     expect(resetPasswordSchema.safeParse(valid).success).toBe(true);
   });
 });
+

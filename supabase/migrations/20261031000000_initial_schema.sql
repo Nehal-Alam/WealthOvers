@@ -808,3 +808,4 @@ CREATE POLICY "attachments_all_own" ON public.attachments FOR ALL USING (auth.ui
 
 DROP POLICY IF EXISTS "audit_logs_select_own" ON public.audit_logs;
 CREATE POLICY "audit_logs_select_own" ON public.audit_logs FOR SELECT USING (auth.uid() = user_id);
+

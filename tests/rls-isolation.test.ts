@@ -47,3 +47,4 @@ describe("Cross-User Data Isolation & RLS Security Contracts", () => {
     expect(monthlyExpenses).toBe(2500);
   });
 });
+

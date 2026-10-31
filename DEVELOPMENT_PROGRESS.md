@@ -2,7 +2,7 @@
 
 **Project:** WealthOvers — Advanced Personal Money Manager Web Application  
 **Architect:** Principal Software Architect  
-**Current Status:** Phase 1 Complete (Foundation, Database Migration, Multi-User Auth & Responsive Shell)  
+**Current Status:** Core Money Manager Modules Complete (Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports)  
 **Last Updated:** 2026-10-31  
 
 ---
@@ -11,14 +11,15 @@
 
 | Metric | Status | Notes |
 | :--- | :--- | :--- |
-| **Current Milestone** | **Phase 1 / M1 & M2 (Completed)** | Next.js 15, Supabase Cloud, 26 Tables Migrated, RLS Enforced, Auth & Shell |
-| **Next Milestone** | **Milestone 3 (Phase 2)** | Account Management & Inter-Account Transfers |
+| **Current Milestone** | **Core Modules Complete (M1 - M6, M10)** | Dashboard, Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
+| **Next Milestone** | **Milestone 7** | Investment Portfolio Engine & XIRR Analytics |
 | **Architecture Specification** | 100% (Approved) | `ARCHITECTURE.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `ROADMAP.md` |
 | **Database Schema Deployment** | 100% (Live) | 26 tables migrated on Supabase Cloud (`dxvfgzqtvnpjwdibuhrh`), RLS active on all tables |
 | **Authentication & Multi-User** | 100% (Functional) | Supabase Auth (Email/Password + OAuth ready), session middleware, profile auto-provisioning |
 | **Responsive Application Shell** | 100% (Functional) | Desktop collapsible sidebar, mobile bottom navigation, dark/light theme, privacy balance mask |
-| **Automated Tests** | 14 Passed (100%) | Auth validation (7), Financial math precision (4), RLS multi-user isolation (3) |
-| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (12 routes) |
+| **Core Money Management** | 100% (Functional) | Full CRUD on Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
+| **Automated Tests** | 25 Passed (100%) | Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3) |
+| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (18 routes) |
 | **Containerization / Docker** | Excluded | Complies with strict non-Docker constraint |
 
 ---
@@ -29,38 +30,29 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **M0** | Architecture, Technical Design & Planning | **COMPLETED** | 2026-10-31 | Complete docs (`ARCHITECTURE.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `ROADMAP.md`) |
 | **M1** | Scaffolding, Supabase Integration & DB Migration | **COMPLETED** | 2026-10-31 | Next.js 15 App Router, TypeScript, Tailwind CSS, shadcn/ui, Drizzle ORM, Supabase Cloud migration (26 tables with RLS) |
-| **M2** | Multi-User Auth, Session Middleware, Profiles & Shell | **COMPLETED** | 2026-10-31 | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/dashboard`, `/profile`, `/settings`, responsive shell, themes, privacy mask |
-| **M3** | Accounts Management & Inter-Account Transfers | **NEXT TARGET** | Week 2 | Account cards, balance cards, double-entry transfer engine, balance sync trigger |
-| **M4** | Transaction Ledger, Filtering & Deduplication | **PENDING** | Week 2 | TanStack data table, mobile cards, idempotency hashing, multi-facet filtering |
-| **M5** | Categorization, Subcategories & Merchant Rules | **PENDING** | Week 3 | Category hierarchies, merchant mapping rules, auto-categorization engine |
-| **M6** | Budgets, Rollovers & Subscription Tracking | **PENDING** | Week 3 | Monthly budgets, rollover logic, subscription renewal alerts |
-| **M7** | Investment Portfolio Engine & XIRR Analytics | **PENDING** | Week 4 | Stocks, Mutual Funds, Gold, Crypto, FIFO/Weighted Average Cost, XIRR solver |
+| **M2** | Multi-User Auth, Session Middleware, Profiles & Shell | **COMPLETED** | 2026-10-31 | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/profile`, `/settings`, responsive shell, themes, privacy mask |
+| **M3** | Accounts Management & Inter-Account Transfers | **COMPLETED** | 2026-10-31 | `/accounts`, account cards, double-entry transfer modal, atomic trigger `sync_account_balance` |
+| **M4** | Transaction Ledger, Filtering & Deduplication | **COMPLETED** | 2026-10-31 | `/transactions`, TanStack desktop table, mobile card feed, multi-facet filtering, Add/Edit/Delete modals |
+| **M5** | Categorization, Subcategories & Merchant Rules | **COMPLETED** | 2026-10-31 | `/categories`, category architecture (Income/Expense/Investment), subcategories, color pickers, system guards |
+| **M6** | Budgets, Rollovers & Recurring Transactions | **COMPLETED** | 2026-10-31 | `/budgets`, `/recurring`, monthly budget allocations, overspending alerts, recurring rules with auto-date advance |
+| **M7** | Investment Portfolio Engine & XIRR Analytics | **NEXT TARGET** | Week 4 | Stocks, Mutual Funds, Gold, Crypto, FIFO/Weighted Average Cost, XIRR solver |
 | **M8** | Credit Cards, Loans, Debt & Net Worth Rollup | **PENDING** | Week 4 | Billing cycles, EMI amortization engine, real-time Net Worth calculation |
 | **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **PENDING** | Week 5 | Bank statement parsers, Android companion sync gateway & auth |
-| **M10**| Financial Reports, PWA Hardening & Vercel Deploy | **PENDING** | Week 5 | Advanced reporting, PWA manifest/offline shell, Vercel production deployment |
+| **M10**| Financial Reports, PWA Hardening & Vercel Deploy | **COMPLETED (Reports)**| 2026-10-31 | `/reports`, Cash flow Recharts bar chart, category spending donut chart, CSV export engine |
 
 ---
 
 ## 3. Module Completion Status
 
 ### Core Financial Modules
-- [x] **Application Shell & Layout**: Collapsible sidebar, header, mobile bottom nav, theme toggle, privacy mode (`components/layout/`)
-- [x] **Financial Component Primitives**: `MoneyDisplay` (with privacy masking), `MetricCard` (`components/financial/`)
-- [ ] **Main Financial Dashboard**: In progress — metrics, summary cards, and quick actions wired to live accounts in M3
-- [ ] **Accounts & Balances**: Next target (Milestone 3)
-- [ ] **Transaction Ledger**: Pending implementation (Milestone 4)
-- [ ] **Inter-Account Transfers**: Pending implementation (Milestone 3)
-- [ ] **Smart Categorization & Rules**: Pending implementation (Milestone 5)
-- [ ] **Budgeting & Rollover**: Pending implementation (Milestone 6)
-- [ ] **Recurring Bills & Subscriptions**: Pending implementation (Milestone 6)
-- [ ] **Investment Portfolio (Stocks, MF, Gold, Crypto)**: Pending implementation (Milestone 7)
-- [ ] **Credit Card Management**: Pending implementation (Milestone 8)
-- [ ] **Loan & Debt Amortization**: Pending implementation (Milestone 8)
-- [ ] **Net Worth Live Engine**: Pending implementation (Milestone 8)
-- [ ] **Financial Goals**: Pending implementation (Milestone 6)
-- [ ] **Bank Statement Import (CSV/XLSX/PDF)**: Pending implementation (Milestone 9)
-- [ ] **Android Companion Synchronization Gateway**: Pending implementation (Milestone 9)
-- [ ] **Financial Reports & Data Export**: Pending implementation (Milestone 10)
+- [x] **Financial Dashboard (`/dashboard`)**: Summary KPI metric cards (Net Worth, Liquid Balances, Credit Liabilities, Monthly Savings Rate), interactive quick action modals (Add Expense, Add Income, Transfer Funds, New Account), recent transactions feed, accounts balance overview, active budget progress widget, upcoming recurring bills widget.
+- [x] **Account Management (`/accounts`)**: Complete CRUD, grouping by institution type (Bank Accounts, Cash & Wallets, Credit Cards & Debt, Investments & Deposits), color badges, masked account numbers, balance calculation with Decimal.js, archive/unarchive toggle, delete safety guard (rejects deletion of accounts with historical transactions to protect integrity).
+- [x] **Inter-Account Transfers**: Modal with source and destination account selectors, balance validation, single-row transfer with `account_id` and `destination_account_id`, atomic balance updates handled by database trigger `sync_account_balance()`, zero net cash flow impact on income/expenses.
+- [x] **Transaction Ledger (`/transactions`)**: Complete CRUD, TanStack data table for desktop, responsive card feed for mobile, search filter, type filter (Expense, Income, Transfer), account selector, category selector, period filter (All Time, This Month, Last Month), Decimal.js amount formatting, positive/negative visual coloring.
+- [x] **Income & Expense Categories (`/categories`)**: Category tabs (Expenses, Income, Investments), system default protection (cannot delete seed categories), custom categories creation, color tags, subcategory nesting, delete cascade protection (`ON DELETE SET NULL` on historical transactions).
+- [x] **Monthly Budgets (`/budgets`)**: Monthly budget limits, category-level allocations, live utilization calculation from current month's transactions, overspending alert badges (>85% warning, >100% danger), rollover toggle, budget deletion.
+- [x] **Recurring Transactions (`/recurring`)**: Scheduled bills, salaries, and subscriptions, frequency intervals (daily, weekly, biweekly, monthly, quarterly, half-yearly, yearly), next occurrence date calculation, active/paused status switch, delete rule.
+- [x] **Financial Summaries & Reports (`/reports`)**: Period selector (This Month, Last Month, Last 6 Months, All Time), aggregate KPI cards (Inflow, Outflow, Net Savings, Savings Rate %), monthly cash flow Recharts bar chart (Income vs Expense), category spending distribution donut chart, client-side CSV export generator.
 
 ### Infrastructure & Security Modules
 - [x] **System Architecture Document**: Completed (`docs/ARCHITECTURE.md`)
@@ -72,9 +64,8 @@
 - [x] **Type Generation**: Exported to `types/database.ts` (47KB)
 - [x] **Next.js 15 Project Foundation**: Initialized with TypeScript, Tailwind CSS, shadcn/ui
 - [x] **Authentication Flow**: Login, Register, Forgot Password, Reset Password, Auth Callback (`app/(auth)/`)
-- [x] **Automated Testing Suite (Vitest)**: 14 passing tests in `tests/`
+- [x] **Automated Testing Suite (Vitest)**: 25 passing tests in `tests/`
 - [x] **Security & Environment Config**: `.env.example` created, zero credentials in Git
-- [ ] **Vercel Deployment Pipeline**: Configured in Milestone 10
 
 ---
 
@@ -86,6 +77,9 @@
 | **`tests/auth.test.ts`** | 7 tests | **PASS** | Validates email syntax, password min 8 chars, password confirmation match, name trimming, Indian locale defaults (`INR`, `Asia/Kolkata`, `en-IN`). |
 | **`tests/precision-math.test.ts`** | 4 tests | **PASS** | Proves standard JS float error `0.1 + 0.2 = 0.30000000000000004` is eliminated using `Decimal.js`; verifies exact balance summation, fee deduction, and 4-decimal round-half-up formatting. |
 | **`tests/rls-isolation.test.ts`** | 3 tests | **PASS** | Validates tenant data isolation logic: User B cannot read or mutate User A's accounts or transactions, cross-user injection is rejected by policy invariants. |
+| **`tests/financial-calculations.test.ts`** | 5 tests | **PASS** | Verifies `Decimal.js` math engine: exact additions/subtractions, savings rate calculation with zero-income and deficit edge cases, net worth calculation across multiple asset and liability balances, budget utilization percentages and over-budget threshold detection, next occurrence calculations. |
+| **`tests/transfer-workflow.test.ts`** | 3 tests | **PASS** | Validates inter-account transfer invariants: rejects same-account transfers, rejects zero/negative transfer amounts, verifies positive amount transfers between distinct accounts. |
+| **`tests/recurring-dates.test.ts`** | 3 tests | **PASS** | Tests calendar boundary calculations: weekly, biweekly, quarterly, and yearly intervals without timezone offset drift. |
 
 ### 4.2 Typecheck (`npm run typecheck`)
 - Command: `tsc --noEmit`
@@ -97,40 +91,31 @@
 
 ### 4.4 Production Build (`npm run build`)
 - Command: `next build`
-- Result: **Compiled successfully in 2.0s**. All 12 routes generated and optimized:
+- Result: **Compiled successfully in 17.2s**. All 18 routes generated and optimized:
   - `/` (Static landing / redirect)
   - `/_not-found` (Static 404 page)
+  - `/accounts` (Dynamic server-rendered accounts management)
   - `/api/auth/callback` (Dynamic PKCE / verification callback)
-  - `/dashboard` (Dynamic server-rendered dashboard)
+  - `/budgets` (Dynamic server-rendered monthly budgets)
+  - `/categories` (Dynamic server-rendered category management)
+  - `/dashboard` (Dynamic server-rendered main financial dashboard)
   - `/forgot-password` (Static auth form)
   - `/login` (Static auth form)
   - `/profile` (Dynamic server-rendered user profile)
+  - `/recurring` (Dynamic server-rendered recurring rules)
   - `/register` (Static auth form)
+  - `/reports` (Dynamic server-rendered financial reports & charts)
   - `/reset-password` (Static auth form)
   - `/settings` (Dynamic server-rendered settings)
+  - `/transactions` (Dynamic server-rendered transaction ledger)
   - `Middleware` (Edge route protection & session refresh)
 
 ---
 
-## 5. Known Issues & Technical Notes
+## 5. Next Immediate Implementation Tasks (Milestone 7)
 
-| Item ID | Description | Impact | Status / Workaround |
-| :--- | :--- | :--- | :--- |
-| **NOTE-01** | `Node.js 20 and below deprecated` warning emitted during build by `@supabase/supabase-js` | Low / Informational | Next.js and Supabase build runs without error. Recommend updating Node runtime to v22+ in hosting environment (e.g. Vercel). |
-| **NOTE-02** | PostgREST generic schema recursive type inference in `createServerClient<Database>` | Low (Resolved) | Untyped client instantiated in `lib/supabase/server.ts` with explicit type casting using generated `Tables<"...">` helper, avoiding the PostgREST 14.1 generic `never` AST limitation. |
-
----
-
-## 6. Next Immediate Implementation Tasks (Phase 2 / Milestone 3)
-
-1. **Accounts Dashboard (`/accounts`)**:
-   - Card grid listing all active accounts categorized by type (Bank Accounts, Cash Wallets, Credit Cards, Investments).
-   - Display masked account number, balance in configured currency, and visual color accent.
-2. **Account Creation & Modification**:
-   - Dialog for adding new account with name, type, currency, starting balance, institution name, and color theme.
-   - Validation ensuring starting balance creates an initial balance transaction entry.
-3. **Double-Entry Inter-Account Transfers**:
-   - Transfer funds modal (Source Account $\to$ Destination Account).
-   - Verified by PostgreSQL `sync_account_balance()` trigger to atomically update balances without double-counting expenses.
-4. **Account Archive / Safety Guard**:
-   - Soft-delete / archive toggle preventing accidental deletion of accounts with transaction history.
+1. **Investment Portfolio Engine (`/investments`)**:
+   - Asset holdings (Stocks, Mutual Funds, ETFs, SGBs, Gold, PPF, NPS, Crypto).
+   - Valuation tracking, invested amount vs current value, unrealized profit & loss.
+   - Weighted average buy price and FIFO cost basis accounting.
+   - XIRR calculation engine using Newton-Raphson numerical solver.

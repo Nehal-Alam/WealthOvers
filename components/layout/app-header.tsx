@@ -168,3 +168,4 @@ export function AppHeader({ user }: AppHeaderProps) {
     </header>
   );
 }
+

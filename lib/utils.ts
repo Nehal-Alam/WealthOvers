@@ -25,3 +25,4 @@ export function formatCurrency(
     maximumFractionDigits: 2,
   }).format(num);
 }
+

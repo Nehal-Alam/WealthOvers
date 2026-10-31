@@ -15,3 +15,4 @@ const client = connectionString
   : null;
 
 export const db = client ? drizzle(client, { schema }) : null;
+
