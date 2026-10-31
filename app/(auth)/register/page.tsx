@@ -92,7 +92,16 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        if (
+          error.message.toLowerCase().includes("provider is not enabled") ||
+          error.message.toLowerCase().includes("unsupported provider")
+        ) {
+          setErrorMessage(
+            "Google Sign-Up is not enabled yet in your Supabase project. You can register using your email and password, or enable Google OAuth in the Supabase Dashboard under Authentication -> Providers -> Google."
+          );
+        } else {
+          setErrorMessage(error.message);
+        }
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Google authentication failed.");
