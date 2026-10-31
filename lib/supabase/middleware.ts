@@ -51,6 +51,9 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     isAuthRoute ||
     path === "/" ||
+    path === "/sw.js" ||
+    path === "/manifest.json" ||
+    path.startsWith("/images/") ||
     path.startsWith("/api/auth/callback") ||
     path.startsWith("/_next") ||
     path.startsWith("/favicon.ico");
