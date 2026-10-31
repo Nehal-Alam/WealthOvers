@@ -2,7 +2,7 @@
 
 **Project:** WealthOvers — Advanced Personal Money Manager Web Application  
 **Architect:** Principal Software Architect  
-**Current Status:** Production-Ready & Fully Audited (M0 - M10 Complete)  
+**Current Status:** Production-Ready & Prepared for Vercel Deployment (M0 - M11 Complete)  
 **Last Updated:** 2026-10-31  
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Status | Notes |
 | :--- | :--- | :--- |
-| **Production Readiness** | **100% (AUDITED & CERTIFIED)** | All 17 audit dimensions verified and passing |
+| **Production Readiness** | **100% (AUDITED & CERTIFIED)** | All 17 audit dimensions verified, Next.js build clean, Vercel ready |
 | **Architecture Specification** | 100% (Approved) | `ARCHITECTURE.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `ROADMAP.md` |
 | **Database Schema Deployment** | 100% (Live) | 26 tables migrated on Supabase Cloud (`dxvfgzqtvnpjwdibuhrh`), RLS active on all tables |
 | **Authentication & Multi-User** | 100% (Functional) | Supabase Auth (Email/Password + OAuth ready), session middleware, profile auto-provisioning |
@@ -19,8 +19,10 @@
 | **Core Money Management** | 100% (Functional) | Full CRUD on Accounts, Transactions, Categories, Transfers, Budgets, Recurring, Reports |
 | **Advanced Financial Modules** | 100% (Functional) | Investments (Stocks, US Stocks, MFs, Gold, FDs), Credit Cards, Loans, Assets/Liabilities, Net Worth, Goals |
 | **Automation & Data Import** | 100% (Functional) | Bank statement parsers (CSV, Excel, PDF), SHA-256 deduplication, categorization rules, recurring detection, Android token auth & sync API |
-| **Automated Tests** | **51 Passed (100%)** | 9 test suites: Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3), Advanced financial math (5), Data import & automation (13), Production audit (8) |
-| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (30 routes) |
+| **Security Headers & Boundaries**| 100% (Active) | Strict HSTS, CSP, X-Frame-Options: DENY, nosniff, Referrer-Policy, app/error.tsx, app/global-error.tsx, app/not-found.tsx |
+| **Automated Tests** | **55 Passed (100%)** | 10 test suites: Auth (7), Precision math (4), RLS isolation (3), Financial calculations (5), Transfers (3), Recurring dates (3), Advanced financial math (5), Data import & automation (13), Production audit (8), Vercel production readiness (4) |
+| **Code Quality & Build** | Clean | Typecheck (0 errors), ESLint (0 errors), Next.js 15 Production Build (30/30 routes compiled) |
+| **Deployment Guide** | 100% Complete | `docs/DEPLOYMENT_GUIDE.md` with step-by-step GitHub to Vercel instructions and user action items |
 | **Containerization / Docker** | Excluded | Complies with strict non-Docker constraint |
 
 ---
@@ -40,6 +42,7 @@
 | **M8** | Credit Cards, Loans, Debt, Assets & Net Worth Rollup | **COMPLETED** | 2026-10-31 | `/credit-cards`, `/loans` (EMI & Amortization), `/assets` (Fixed assets & liabilities), `/net-worth`, `/goals` |
 | **M9** | Statement Import (CSV/XLSX/PDF) & Android Sync | **COMPLETED** | 2026-10-31 | `/import`, `/devices`, CSV, Excel, PDF parsers, deduplication, categorization rules, recurring pattern detector, Android token auth (`POST /api/v1/transactions/sync`) |
 | **M10**| Financial Reports & Production Release Audit | **COMPLETED** | 2026-10-31 | `/reports`, Cash flow Recharts bar chart, category spending donut chart, CSV export engine, comprehensive 17-dimension production audit |
+| **M11**| Vercel Production Deployment Preparation | **COMPLETED** | 2026-10-31 | `next.config.ts` security headers (HSTS, CSP, X-Frame-Options), error boundaries (`error.tsx`, `global-error.tsx`, `not-found.tsx`), connection pooling via Supavisor port 6543, reverse proxy & custom domain auth callback, `docs/DEPLOYMENT_GUIDE.md` |
 
 ---
 
@@ -107,5 +110,6 @@ All pages, tables, modal dialogs, and navigation elements have been tested acros
 | **`tests/advanced-financial-math.test.ts`** | 5 tests | **PASS** | Verifies: (1) Loan EMI & interest split; (2) Complete declining-balance amortization schedule; (3) US Stock valuation with USD/INR conversion; (4) Newton-Raphson numerical XIRR solver; (5) Financial goal monthly savings pacing with calendar-month arithmetic. |
 | **`tests/data-import-automation.test.ts`** | 13 tests | **PASS** | Verifies: (1) CSV bank statement parser with debit/credit columns; (2) Multi-format dates and currency symbol cleaning; (3) Excel (.xlsx) statement parser; (4) Deterministic SHA-256 idempotency hash generation; (5) Duplicate detection against existing hashes and in-batch; (6) Categorization rules matching with priority hierarchy; (7) Auto-applying category suggestions; (8) Monthly subscription pattern detection; (9) Weekly pattern detection; (10) Device token generation and SHA-256 hashing; (11) Zero-trust rejection of OTPs and raw SMS; (12) Acceptance of sanitized financial metadata; (13) Offline batch recovery with partial duplicate deduplication. |
 | **`tests/production-audit.test.ts`** | 8 tests | **PASS** | Verifies: (1) Zero broken navigation links across sidebar and mobile nav; (2) Responsive dialog width constraints; (3) High-volume micro-transaction zero floating-point drift (10,000 iterations); (4) Cash-flow neutrality of transfers; (5) Graceful handling of zero/negative interest loan EMIs; (6) Amortization schedule declining balance reaching zero; (7) Rejection of all OTP phrases and security tokens; (8) Rejection of negative amounts and non-ISO timestamps. |
+| **`tests/production-readiness-vercel.test.ts`** | 4 tests | **PASS** | Verifies: (1) Strict React and Next.js configuration flags; (2) Enterprise HTTP security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy); (3) Production error boundary components (`error.tsx`, `global-error.tsx`, `not-found.tsx`); (4) Open redirect vulnerability sanitization for auth callbacks. |
 
-**Total Vitest Count:** **51 passed (51 / 51, 100%)**
+**Total Vitest Count:** **55 passed (55 / 55, 100%)**

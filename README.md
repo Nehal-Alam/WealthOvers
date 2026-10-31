@@ -14,8 +14,10 @@ WealthOvers has undergone a complete production-readiness audit across security,
 | :--- | :--- | :--- |
 | **Linting & Code Style** | **PASS (0 errors, 0 warnings)** | `next lint` clean across all 85+ components and route files |
 | **TypeScript Typecheck** | **PASS (0 errors)** | `tsc --noEmit` exited with code 0 in strict mode |
-| **Automated Test Suite** | **PASS (51 / 51, 100%)** | 9 Vitest suites covering Auth, RLS, Transfers, Precision Math, XIRR, EMI, Statements, Rules, and Android Sync |
-| **Production Build** | **PASS (30 routes compiled)** | Optimized production build generated in 10.9s |
+| **Automated Test Suite** | **PASS (55 / 55, 100%)** | 10 Vitest suites covering Auth, RLS, Transfers, Precision Math, XIRR, EMI, Statements, Rules, Android Sync, and Vercel Security |
+| **Production Build** | **PASS (30 routes compiled)** | Optimized production build generated in 16.9s |
+| **Security Headers** | **ACTIVE (Enterprise-Grade)** | Strict HSTS (2-year preload), CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy |
+| **Error Boundaries** | **ACTIVE** | Custom `not-found.tsx`, `error.tsx`, and `global-error.tsx` preventing stack-trace leaks |
 | **Cross-User Data Isolation** | **VERIFIED (RLS Forced)** | Zero-trust PostgreSQL Row Level Security + user-level query scoping (`auth.uid() = user_id`) on all 26 tables |
 | **Financial Arithmetic** | **VERIFIED (Arbitrary Precision)**| Powered by `Decimal.js` (28-digit precision, ROUND_HALF_UP) preventing floating-point rounding drift |
 | **Double-Counting Prevention**| **VERIFIED** | Inter-account transfers and credit card settlements use single-row transfer schema (`transaction_type = 'transfer'`) |
@@ -133,7 +135,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## 🧪 Verification & Audit Commands
 
 ```bash
-# Execute full Vitest suite (51 passing tests across 9 suites)
+# Execute full Vitest suite (55 passing tests across 10 suites)
 npm run test
 
 # Validate TypeScript type safety
@@ -145,3 +147,12 @@ npm run lint
 # Build optimized production bundle
 npm run build
 ```
+
+---
+
+## 🚀 Production Deployment to Vercel
+
+For comprehensive, step-by-step instructions on deploying WealthOvers to Vercel and configuring Supabase Cloud (including connection pooling, redirect URLs, and security headers), see the official guide:
+
+👉 [**docs/DEPLOYMENT_GUIDE.md**](file:///Users/nehalalam/Coding/Project/WealthOvers/docs/DEPLOYMENT_GUIDE.md)
+
