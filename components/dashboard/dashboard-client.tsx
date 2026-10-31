@@ -42,6 +42,14 @@ interface DashboardClientProps {
   categories: Tables<"categories">[];
   activeBudget?: any | null;
   upcomingRecurring?: any[];
+  precomputedSummary?: {
+    totalLiquid?: string;
+    totalCredit?: string;
+    netWorth?: string;
+    monthlyInflow?: string;
+    monthlyOutflow?: string;
+    savingsRate?: string;
+  } | null;
 }
 
 export function DashboardClient({
@@ -50,15 +58,27 @@ export function DashboardClient({
   categories,
   activeBudget,
   upcomingRecurring = [],
+  precomputedSummary,
 }: DashboardClientProps) {
   const activeAccounts = React.useMemo(
     () => accounts.filter((a) => !a.is_archived),
     [accounts]
   );
 
-  // Financial calculations with Decimal precision
+  // Financial calculations with Decimal precision (prefer server-aggregated SQL summary when available)
   const { totalLiquid, totalCredit, netWorth, monthlyInflow, monthlyOutflow, savingsRate } =
     React.useMemo(() => {
+      if (precomputedSummary) {
+        return {
+          totalLiquid: precomputedSummary.totalLiquid || "0.0000",
+          totalCredit: precomputedSummary.totalCredit || "0.0000",
+          netWorth: precomputedSummary.netWorth || "0.0000",
+          monthlyInflow: precomputedSummary.monthlyInflow || "0.0000",
+          monthlyOutflow: precomputedSummary.monthlyOutflow || "0.0000",
+          savingsRate: precomputedSummary.savingsRate || "0",
+        };
+      }
+
       let liquid = "0.0000";
       let credit = "0.0000";
 
@@ -95,7 +115,7 @@ export function DashboardClient({
         monthlyOutflow: outflow,
         savingsRate: savingsRatePercent,
       };
-    }, [activeAccounts, recentTransactions]);
+    }, [activeAccounts, recentTransactions, precomputedSummary]);
 
   // Budget calculations
   const budgetUtilization = React.useMemo(() => {

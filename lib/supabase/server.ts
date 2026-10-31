@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -24,4 +25,21 @@ export async function createClient() {
       },
     }
   );
-}
+});
+
+/**
+ * Request-scoped memoized authenticated user retrieval.
+ * Eliminates redundant GoTrue Auth round-trips across layouts, pages, and server components.
+ */
+export const getAuthenticatedUser = cache(async () => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return null;
+  }
+  return user;
+});

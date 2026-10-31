@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { generateTransactionIdempotencyHash } from "@/lib/parsers/duplicate-detector";
 
 interface SyncSimulatorCardProps {
   devices: Tables<"devices">[];
@@ -123,19 +122,6 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
           },
         ];
       }
-
-      // Compute hashes
-      records.forEach((r) => {
-        if (!r.idempotencyHash) {
-          r.idempotencyHash = generateTransactionIdempotencyHash({
-            userId: selectedDeviceId,
-            amount: r.amount,
-            transactionDate: r.timestamp.slice(0, 10),
-            referenceNumber: r.referenceNumber,
-            description: r.merchant || r.description,
-          });
-        }
-      });
 
       const res = await fetch("/api/v1/transactions/sync", {
         method: "POST",

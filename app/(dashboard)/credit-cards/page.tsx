@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { CreditCardView } from "@/components/credit-cards/credit-card-view";
 
 export const metadata: Metadata = {
@@ -9,35 +9,37 @@ export const metadata: Metadata = {
 };
 
 export default async function CreditCardsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch credit cards with statements & account
-  const { data: cardsData } = await supabase
-    .from("credit_cards")
-    .select(
+  const supabase = await createClient();
+
+  // Parallelize cards and accounts queries
+  const [cardsResult, accountsResult] = await Promise.all([
+    supabase
+      .from("credit_cards")
+      .select(
+        `
+        *,
+        account:accounts!credit_cards_account_id_fkey(*),
+        statements:credit_card_statements(*)
       `
-      *,
-      account:accounts!credit_cards_account_id_fkey(*),
-      statements:credit_card_statements(*)
-    `
-    )
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
 
-  // Fetch all user accounts
-  const { data: accountsData } = await supabase
-    .from("accounts")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("name", { ascending: true });
+    supabase
+      .from("accounts")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+  ]);
 
-  const creditCards = (cardsData || []) as any[];
-  const accounts = (accountsData || []) as any[];
+  const creditCards = (cardsResult.data || []) as any[];
+  const accounts = (accountsResult.data || []) as any[];
 
   return (
     <div className="space-y-6">
@@ -45,4 +47,3 @@ export default async function CreditCardsPage() {
     </div>
   );
 }
-

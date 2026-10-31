@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { TransactionLedger } from "@/components/transactions/transaction-ledger";
 
@@ -10,45 +10,47 @@ export const metadata: Metadata = {
 };
 
 export default async function TransactionsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch transactions with related account and category
-  const { data: transactionsData } = await supabase
-    .from("transactions")
-    .select(
+  const supabase = await createClient();
+
+  // Parallelize initial transaction batch, accounts, and categories (eliminates sequential waterfall)
+  const [transactionsResult, accountsResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(
+        `
+        id, amount, currency, transaction_type, transaction_date, description, notes, reference_number, category_id, subcategory_id, account_id, destination_account_id,
+        account:accounts!transactions_account_id_fkey(id, name, institution_name, color),
+        destination_account:accounts!transactions_destination_account_id_fkey(id, name, institution_name),
+        category:categories(id, name, color, icon),
+        subcategory:subcategories(id, name)
       `
-      *,
-      account:accounts!transactions_account_id_fkey(id, name, institution_name, color),
-      destination_account:accounts!transactions_destination_account_id_fkey(id, name, institution_name),
-      category:categories(id, name, color, icon),
-      subcategory:subcategories(id, name)
-    `
-    )
-    .eq("user_id", user.id)
-    .order("transaction_date", { ascending: false });
+      )
+      .eq("user_id", user.id)
+      .order("transaction_date", { ascending: false })
+      .limit(1000),
 
-  // Fetch accounts
-  const { data: accountsData } = await supabase
-    .from("accounts")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("name", { ascending: true });
+    supabase
+      .from("accounts")
+      .select("id, name, institution_name, color, is_archived, currency, current_balance, account_type")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
 
-  // Fetch categories with subcategories
-  const { data: categoriesData } = await supabase
-    .from("categories")
-    .select("*, subcategories(*)")
-    .eq("user_id", user.id)
-    .order("name", { ascending: true });
+    supabase
+      .from("categories")
+      .select("id, name, color, icon, subcategories(id, name)")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+  ]);
 
-  const transactions = (transactionsData || []) as any[];
-  const accounts = (accountsData || []) as Tables<"accounts">[];
-  const categories = (categoriesData || []) as any[];
+  const transactions = (transactionsResult.data || []) as any[];
+  const accounts = (accountsResult.data || []) as Tables<"accounts">[];
+  const categories = (categoriesResult.data || []) as any[];
 
   return (
     <div className="space-y-6">
@@ -60,4 +62,3 @@ export default async function TransactionsPage() {
     </div>
   );
 }
-

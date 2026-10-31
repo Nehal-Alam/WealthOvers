@@ -12,7 +12,21 @@ interface MoneyDisplayProps extends React.HTMLAttributes<HTMLSpanElement> {
   colored?: boolean;
 }
 
-export function MoneyDisplay({
+const emptySubscribe = () => () => {};
+
+/**
+ * Concurrent-safe hydration snapshot hook using useSyncExternalStore.
+ * Avoids cascading useState/useEffect updates across dozens of table rows on initial mount.
+ */
+function useIsHydrated() {
+  return React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
+export const MoneyDisplay = React.memo(function MoneyDisplay({
   amount,
   currency = "INR",
   locale = "en-IN",
@@ -22,11 +36,7 @@ export function MoneyDisplay({
   ...props
 }: MoneyDisplayProps) {
   const isPrivacyMode = useUIStore((state) => state.isPrivacyMode);
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isHydrated = useIsHydrated();
 
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   const isPositive = num > 0;
@@ -47,10 +57,9 @@ export function MoneyDisplay({
       {...props}
     >
       {prefix}
-      {mounted
+      {isHydrated
         ? formatCurrency(amount, currency, locale, isPrivacyMode)
         : formatCurrency(amount, currency, locale, false)}
     </span>
   );
-}
-
+});

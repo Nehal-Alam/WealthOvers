@@ -45,17 +45,27 @@ export function TransactionLedger({
 
   // Filters state
   const [searchQuery, setSearchQuery] = React.useState("");
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [selectedType, setSelectedType] = React.useState<string>("all");
   const [selectedAccountId, setSelectedAccountId] = React.useState<string>("all");
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>("all");
   const [dateFilter, setDateFilter] = React.useState<string>("all");
 
-  // Filtered transactions
+  // Pagination state (prevents DOM bloat and maintains 60 FPS interactions)
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const pageSize = 25;
+
+  // Reset to first page when any filter criteria changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearchQuery, selectedType, selectedAccountId, selectedCategoryId, dateFilter]);
+
+  // Filtered transactions (uses deferredSearchQuery to keep input typing smooth)
   const filteredTransactions = React.useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
     return transactions.filter((txn) => {
       // Search
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+      if (query) {
         const descMatch = txn.description?.toLowerCase().includes(query);
         const refMatch = txn.reference_number?.toLowerCase().includes(query);
         const notesMatch = txn.notes?.toLowerCase().includes(query);
@@ -93,12 +103,18 @@ export function TransactionLedger({
     });
   }, [
     transactions,
-    searchQuery,
+    deferredSearchQuery,
     selectedType,
     selectedAccountId,
     selectedCategoryId,
     dateFilter,
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const paginatedTransactions = React.useMemo(() => {
+    const from = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(from, from + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
 
   // Aggregate Metrics using Decimal precision
   const { totalInflow, totalOutflow, netCashFlow } = React.useMemo(() => {
@@ -243,7 +259,7 @@ export function TransactionLedger({
           {/* Desktop Table View */}
           <div className="hidden md:block">
             <TransactionTable
-              transactions={filteredTransactions}
+              transactions={paginatedTransactions}
               onEdit={setEditingTransaction}
             />
           </div>
@@ -251,10 +267,44 @@ export function TransactionLedger({
           {/* Mobile Feed View */}
           <div className="md:hidden">
             <TransactionMobileFeed
-              transactions={filteredTransactions}
+              transactions={paginatedTransactions}
               onEdit={setEditingTransaction}
             />
           </div>
+
+          {/* Pagination Controls */}
+          {filteredTransactions.length > pageSize && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-sm text-muted-foreground">
+              <p>
+                Showing <span className="font-medium text-foreground">{((currentPage - 1) * pageSize) + 1}</span> to{" "}
+                <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, filteredTransactions.length)}</span> of{" "}
+                <span className="font-medium text-foreground">{filteredTransactions.length}</span> transactions
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="h-8 px-3 text-xs"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-medium px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-8 px-3 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

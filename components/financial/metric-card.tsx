@@ -20,7 +20,7 @@ interface MetricCardProps {
   className?: string;
 }
 
-export function MetricCard({
+export const MetricCard = React.memo(function MetricCard({
   title,
   amount,
   currency = "INR",
@@ -73,5 +73,5 @@ export function MetricCard({
       </CardContent>
     </Card>
   );
-}
+});
 

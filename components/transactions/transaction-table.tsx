@@ -37,7 +37,7 @@ interface TransactionTableProps {
   onEdit: (transaction: any) => void;
 }
 
-export function TransactionTable({ transactions, onEdit }: TransactionTableProps) {
+export const TransactionTable = React.memo(function TransactionTable({ transactions, onEdit }: TransactionTableProps) {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this transaction? Account balance will be restored.")) {
       return;
@@ -203,5 +203,5 @@ export function TransactionTable({ transactions, onEdit }: TransactionTableProps
       </Table>
     </div>
   );
-}
+});
 

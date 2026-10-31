@@ -29,7 +29,7 @@ interface TransactionMobileFeedProps {
   onEdit: (transaction: any) => void;
 }
 
-export function TransactionMobileFeed({
+export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
   transactions,
   onEdit,
 }: TransactionMobileFeedProps) {
@@ -148,5 +148,5 @@ export function TransactionMobileFeed({
       })}
     </div>
   );
-}
+});
 

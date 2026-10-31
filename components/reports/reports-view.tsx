@@ -19,19 +19,31 @@ import {
   isWithinInterval,
   parseISO,
 } from "date-fns";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const CashFlowChart = dynamic(
+  () => import("./cash-flow-chart").then((mod) => mod.CashFlowChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-72 w-full animate-pulse bg-muted/20 rounded-lg flex items-center justify-center text-xs text-muted-foreground">
+        Loading cash flow analytics...
+      </div>
+    ),
+  }
+);
+
+const CategoryPieChart = dynamic(
+  () => import("./category-pie-chart").then((mod) => mod.CategoryPieChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-72 w-full animate-pulse bg-muted/20 rounded-lg flex items-center justify-center text-xs text-muted-foreground">
+        Loading category breakdown...
+      </div>
+    ),
+  }
+);
 
 import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -314,27 +326,7 @@ export function ReportsView({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={cashFlowChartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" fontSize={11} tickLine={false} />
-                  <YAxis fontSize={11} tickLine={false} />
-                  <Tooltip
-                    formatter={(val: any) => [
-                      `₹${parseFloat(val).toLocaleString("en-IN")}`,
-                      "",
-                    ]}
-                  />
-                  <Legend />
-                  <Bar dataKey="income" name="Inflow" fill="#10B981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Outflow" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <CashFlowChart data={cashFlowChartData} />
           </CardContent>
         </Card>
 
@@ -355,36 +347,7 @@ export function ReportsView({
                 <p className="text-sm">No expenses recorded for this period</p>
               </div>
             ) : (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryChartData}
-                      dataKey="amount"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={85}
-                      innerRadius={50}
-                      paddingAngle={3}
-                    >
-                      {categoryChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(val: any) => [
-                        `₹${parseFloat(val).toLocaleString("en-IN")}`,
-                        "Spent",
-                      ]}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <CategoryPieChart data={categoryChartData} />
             )}
           </CardContent>
         </Card>

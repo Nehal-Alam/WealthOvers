@@ -1,6 +1,6 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -11,24 +11,22 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch user profile from public.profiles
+  const supabase = await createClient();
+
+  // Fetch only needed user profile fields
   const { data: profileData } = await supabase
     .from("profiles")
-    .select("*")
+    .select("full_name, avatar_url")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  const profile = profileData as Tables<"profiles"> | null;
+  const profile = profileData as Pick<Tables<"profiles">, "full_name" | "avatar_url"> | null;
 
   const userData = {
     email: user.email,

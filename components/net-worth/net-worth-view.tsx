@@ -14,14 +14,19 @@ import {
   ChevronRight,
   PieChart as PieIcon,
 } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const AssetAllocationChart = dynamic(
+  () => import("./asset-allocation-chart").then((mod) => mod.AssetAllocationChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse bg-muted/20 rounded-lg flex items-center justify-center text-xs text-muted-foreground">
+        Loading asset allocation chart...
+      </div>
+    ),
+  }
+);
 
 import { Tables } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -251,33 +256,7 @@ export function NetWorthView({
                 No asset holdings recorded
               </div>
             ) : (
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={assetChartData}
-                      dataKey="amount"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={85}
-                      innerRadius={50}
-                      paddingAngle={3}
-                    >
-                      {assetChartData.map((entry, idx) => (
-                        <Cell key={`cell-${idx}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(val: any) => [
-                        `₹${parseFloat(val).toLocaleString("en-IN")}`,
-                        "Valuation",
-                      ]}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <AssetAllocationChart data={assetChartData} />
             )}
           </CardContent>
         </Card>

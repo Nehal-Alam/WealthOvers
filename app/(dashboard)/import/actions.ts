@@ -199,10 +199,14 @@ export async function confirmImportAction(input: ConfirmImportJobInput): Promise
       parser_confidence: 0.95,
     }));
 
-    const { error: insertErr } = await supabase.from("transactions").insert(rowsToInsert);
-
-    if (insertErr) {
-      return { success: false, error: insertErr.message };
+    // Insert in optimized batches of 500 records to prevent request payload saturation
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
+      const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
+      const { error: insertErr } = await supabase.from("transactions").insert(batch);
+      if (insertErr) {
+        return { success: false, error: insertErr.message };
+      }
     }
 
     // Update import job if id exists
