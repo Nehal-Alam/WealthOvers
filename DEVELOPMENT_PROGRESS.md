@@ -22,18 +22,21 @@
 
 ---
 
-## 2. 7-Phase Upgrade Roadmap
+## 2. 11-Phase Premium UI & Navigation Performance Upgrade
 
 | Phase | Description | Status | Scope & Deliverables |
 | :--- | :--- | :--- | :--- |
-| **Pre-Phase** | Complete Application Audit | **COMPLETED** | Complete 4-part audit, benchmarks, architecture analysis, and implementation plan |
-| **Phase 1** | Design System & Application Shell | **COMPLETED** | CSS tokens (#365CF5 indigo, #0F9F75 emerald, #E05B67 coral, #8B7CF6 violet, #D99A35 amber, dark/light surface elevations), AppHeader with Cmd+K and "+ Add Transaction", AppSidebar with tooltips and active accents, MobileNav with central Quick Action FAB |
-| **Phase 2** | Dashboard & Net Worth Improvements | **COMPLETED** | 7 primary metrics (Net Worth, Assets, Liabilities, Liquid, Income, Expense, Savings Rate), Net Worth Trend & Cash Flow charts, Asset Allocation, customizable widgets, historical snapshots, transparent Financial Health Score |
-| **Phase 3** | Transaction & Account Improvements | **COMPLETED** | Split transactions with live allocation calculator, floating bulk operations toolbar (bulk categorization, review queue, bulk deletion), quick view tabs (All, Needs Review, Expenses, Income, Transfers, Refunds), date range filters + custom picker, export to CSV, account statement reconciliation dialog |
-| **Phase 4** | Investment & Liability Improvements | **COMPLETED** | Multi-asset portfolio (Indian/US equities, MFs, SIPs, Gold, FDs, PPF/EPF), XIRR analytics, P&L breakdown, Credit Card utilization meter & statement due date urgency tracking, 1-click bill payment transfer dialog, Loan reducing-balance amortization & interactive prepayment/foreclosure simulator with interest savings engine, Tangible asset solvency & equity ratio visualizer |
-| **Phase 5** | Planning, Goals & Automation | **COMPLETED** | Category budgets with rollover and daily safe spend burn rate, forward cash-flow forecasting (30, 60, 90-day horizons), financial goal trajectory with completion forecasting, companion automation health & ingestion telemetry |
-| **Phase 6** | Financial Insights & Reports | **COMPLETED** | Deterministic insights engine (runway, spending anomalies, category concentration, savings velocity), Indian Financial Year (April–March) filter toggle, multi-format export (CSV, JSON audit ledger, Print/PDF) |
-| **Phase 7** | Performance, Accessibility & Final Testing | **COMPLETED** | Node 22 upgrade, WCAG 2.1 AA compliance audit, full 110 automated tests passing, 6.1s clean build, `docs/FINAL_QA_REPORT.md` signoff |
+| **Phase 1** | Application Audit | **COMPLETED** | `docs/UI_AUDIT.md`, `docs/NAVIGATION_PERFORMANCE_AUDIT.md`, `docs/DATABASE_PERFORMANCE_AUDIT.md` |
+| **Phase 2** | Premium Design System | **COMPLETED** | PREMIUM INDIGO (#4F46E5) + EMERALD (#10B981) + CORAL (#F87171) + SLATE palette, CSS variables, `docs/DESIGN_SYSTEM.md` v3.0, full component harmonization |
+| **Phase 3** | Global Layout Redesign | **COMPLETED** | Persistent app shell, collapsible sidebar, desktop header with controls & mobile drawer, bottom nav with FAB quick action & `prefetch={true}` |
+| **Phase 4** | Dashboard Redesign | **COMPLETED** | 7 core financial KPIs, 5 clean visualisations (Net Worth Trend, Income vs Expenses, Asset Allocation, Expense Breakdown, Investment Performance), 6 sections (Recent Transactions, Accounts Overview, Upcoming Bills, Budget Progress, Financial Goals, Financial Health Insights), 11-widget customizer with Show/Hide All |
+| **Phase 5** | Make Navigation Extremely Fast | **PENDING** | Missing `loading.tsx` skeletons across all 13 routes, `<Suspense>` boundaries, persistent layout state, eliminate unmounting |
+| **Phase 6** | Supabase Query Optimisation | **PENDING** | Composite indexes migration, eliminate N+1 queries, explicit column selects across all routes |
+| **Phase 7** | React & Bundle Optimisation | **PENDING** | Dynamic imports for heavy libraries, minimal client component boundaries, bundle audit |
+| **Phase 8** | Smooth UX & Transitions | **PENDING** | Short 120-180ms CSS transitions, instant button feedback, zero full-page blocking |
+| **Phase 9** | Financial Correctness Audit | **PENDING** | Decimal-safe verification across all KPIs, accurate currency, no mock figures |
+| **Phase 10** | Production Performance Testing | **PENDING** | Target LCP <= 2.5s, INP <= 200ms, CLS <= 0.1, navigation under 1s |
+| **Phase 11** | Quality & Safety Signoff | **PENDING** | Verification reports: `docs/NAVIGATION_OPTIMISATION_REPORT.md` and `docs/PERFORMANCE_REPORT.md` |
 
 ---
 
