@@ -23,7 +23,7 @@ export function PrivacyMaskToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Toggle privacy mode">
         <span className="sr-only">Toggle privacy mode</span>
       </Button>
     );
@@ -35,6 +35,7 @@ export function PrivacyMaskToggle() {
       size="icon"
       className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
       onClick={togglePrivacyMode}
+      aria-label={isPrivacyMode ? "Disable Privacy Mode (Show balances)" : "Enable Privacy Mode (Mask balances)"}
       title={
         isPrivacyMode
           ? "Disable Privacy Mode (Show balances - ⌘⇧P)"
