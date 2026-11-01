@@ -38,15 +38,33 @@ import { MoneyDisplay } from "@/components/financial/money-display";
 interface TransferFundsDialogProps {
   accounts: Tables<"accounts">[];
   defaultSourceId?: string;
-  trigger?: React.ReactNode;
+  defaultDestinationId?: string;
+  trigger?: React.ReactNode | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function TransferFundsDialog({
   accounts,
   defaultSourceId,
+  defaultDestinationId,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: TransferFundsDialogProps) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = React.useCallback(
+    (val: boolean) => {
+      if (isControlled) {
+        onOpenChange?.(val);
+      } else {
+        setInternalOpen(val);
+      }
+    },
+    [isControlled, onOpenChange]
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const activeAccounts = React.useMemo(
@@ -54,9 +72,15 @@ export function TransferFundsDialog({
     [accounts]
   );
 
-  const initialSource = defaultSourceId || activeAccounts[0]?.id || "";
+  const initialSource =
+    defaultSourceId ||
+    activeAccounts.find((a) => a.id !== defaultDestinationId)?.id ||
+    activeAccounts[0]?.id ||
+    "";
   const initialDest =
-    activeAccounts.find((a) => a.id !== initialSource)?.id || "";
+    defaultDestinationId ||
+    activeAccounts.find((a) => a.id !== initialSource)?.id ||
+    "";
 
   const {
     register,
@@ -76,6 +100,13 @@ export function TransferFundsDialog({
       notes: "",
     },
   });
+
+  React.useEffect(() => {
+    if (open) {
+      if (defaultSourceId) setValue("source_account_id", defaultSourceId);
+      if (defaultDestinationId) setValue("destination_account_id", defaultDestinationId);
+    }
+  }, [open, defaultSourceId, defaultDestinationId, setValue]);
 
   const selectedSourceId = watch("source_account_id");
   const selectedDestId = watch("destination_account_id");
@@ -103,14 +134,16 @@ export function TransferFundsDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" className="gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            <span>Transfer Funds</span>
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" className="gap-2">
+              <ArrowLeftRight className="h-4 w-4" />
+              <span>Transfer Funds</span>
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

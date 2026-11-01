@@ -11,7 +11,7 @@ import {
   Calendar,
   CheckCircle2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 
 import { Tables } from "@/types/database";
@@ -215,15 +215,29 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                 <CardContent className="p-4 space-y-4">
                   {/* Utilization Progress */}
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Credit Utilization</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground font-medium">Credit Utilization</span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 font-medium ${
+                            util > 50
+                              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                              : util > 30
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          }`}
+                        >
+                          {util <= 30 ? "Optimal (<30%)" : util <= 50 ? "Moderate" : "High Risk (>50%)"}
+                        </Badge>
+                      </div>
                       <span
                         className={`font-mono font-bold ${
                           util > 50
-                            ? "text-rose-600"
+                            ? "text-rose-600 dark:text-rose-400"
                             : util > 30
-                            ? "text-amber-600"
-                            : "text-emerald-600"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
                         {util}%
@@ -277,39 +291,55 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                         Recent Statements
                       </span>
                       <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                        {card.statements.map((stmt) => (
-                          <div
-                            key={stmt.id}
-                            className="flex items-center justify-between p-2 rounded-md bg-muted/40 text-xs"
-                          >
-                            <div>
-                              <span className="font-semibold block">
-                                Due: {format(new Date(stmt.due_date), "dd MMM yyyy")}
-                              </span>
-                              <span className="text-[11px] text-muted-foreground">
-                                Total Due: <MoneyDisplay amount={stmt.total_due} />
-                              </span>
-                            </div>
+                        {card.statements.map((stmt) => {
+                          const daysUntilDue = differenceInDays(new Date(stmt.due_date), new Date());
+                          return (
+                            <div
+                              key={stmt.id}
+                              className="flex items-center justify-between p-2 rounded-md bg-muted/40 text-xs"
+                            >
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold block">
+                                    Due: {format(new Date(stmt.due_date), "dd MMM yyyy")}
+                                  </span>
+                                  {!stmt.is_settled && (
+                                    daysUntilDue <= 3 ? (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-rose-500/10 text-rose-600 border-rose-500/30 animate-pulse">
+                                        {daysUntilDue <= 0 ? "Due today!" : `Due in ${daysUntilDue}d!`}
+                                      </Badge>
+                                    ) : daysUntilDue <= 7 ? (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                        Due in {daysUntilDue}d
+                                      </Badge>
+                                    ) : null
+                                  )}
+                                </div>
+                                <span className="text-[11px] text-muted-foreground">
+                                  Total Due: <MoneyDisplay amount={stmt.total_due} />
+                                </span>
+                              </div>
 
-                            <div className="flex items-center gap-2">
-                              {stmt.is_settled ? (
-                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Settled
-                                </Badge>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 text-[11px] px-2 text-primary"
-                                  onClick={() => handleToggleSettle(stmt.id, stmt.is_settled)}
-                                >
-                                  Mark Settled
-                                </Button>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {stmt.is_settled ? (
+                                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Settled
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-[11px] px-2 text-primary"
+                                    onClick={() => handleToggleSettle(stmt.id, stmt.is_settled)}
+                                  >
+                                    Mark Settled
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -328,12 +358,13 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
       />
 
       {/* Inter-Account Bill Payment Modal */}
-      {billPayTargetAccount && (
-        <TransferFundsDialog
-          accounts={accounts}
-          trigger={<span className="hidden" />}
-        />
-      )}
+      <TransferFundsDialog
+        accounts={accounts}
+        defaultDestinationId={billPayTargetAccount || undefined}
+        open={!!billPayTargetAccount}
+        onOpenChange={(open) => !open && setBillPayTargetAccount(null)}
+        trigger={null}
+      />
     </div>
   );
 }

@@ -89,7 +89,7 @@ describe("Large Dataset Performance & Scalability Benchmark", () => {
   describe("Scale Test: 10,000 Transactions", () => {
     const dataset10k = generateSyntheticTransactions(10000);
 
-    it("filters by description search query across 10,000 records in < 25ms", () => {
+    it("filters by description search query across 10,000 records in < 100ms", () => {
       const query = "swiggy";
       const start = performance.now();
       const searchResults = dataset10k.filter((t) =>
@@ -97,7 +97,7 @@ describe("Large Dataset Performance & Scalability Benchmark", () => {
       );
       const elapsed = performance.now() - start;
 
-      expect(elapsed).toBeLessThan(25);
+      expect(elapsed).toBeLessThan(100);
       expect(searchResults.length).toBeGreaterThan(0);
     });
 

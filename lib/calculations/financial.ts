@@ -34,6 +34,19 @@ export interface AmortizationScheduleRow {
   remainingBalance: string;
 }
 
+export interface LoanPrepaymentSimulation {
+  originalTenureMonths: number;
+  revisedTenureMonths: number;
+  monthsSaved: number;
+  yearsSaved: string;
+  originalTotalInterest: string;
+  revisedTotalInterest: string;
+  interestSaved: string;
+  originalTotalPayment: string;
+  revisedTotalPayment: string;
+  schedule: AmortizationScheduleRow[];
+}
+
 export interface InvestmentReturns {
   investedAmount: string;
   currentValuation: string;
@@ -340,6 +353,130 @@ export function generateAmortizationSchedule(
   }
 
   return schedule;
+}
+
+/**
+ * Simulate loan prepayment (extra monthly payment and/or one-time lumpsum)
+ * Calculates revised tenure, total interest saved, and accelerated payoff schedule.
+ */
+export function calculateLoanPrepayment(
+  principalAmount: number | string | Decimal,
+  annualInterestRate: number | string | Decimal,
+  tenureMonths: number,
+  extraMonthlyPayment: number | string | Decimal = 0,
+  lumpsumPayment: number | string | Decimal = 0,
+  lumpsumMonth: number = 1,
+  startDateStr: string | Date = new Date()
+): LoanPrepaymentSimulation {
+  const p = toDecimal(principalAmount);
+  const annualRate = toDecimal(annualInterestRate);
+  const n = Math.max(1, tenureMonths);
+  const { monthlyEmi } = calculateLoanEMI(p, annualRate, n);
+  const baseEmi = toDecimal(monthlyEmi);
+  const r = annualRate.dividedBy(1200);
+
+  const extraMonthly = toDecimal(extraMonthlyPayment);
+  const lumpsum = toDecimal(lumpsumPayment);
+
+  // 1. Original standard totals
+  const standardSchedule = generateAmortizationSchedule(p, annualRate, n, startDateStr);
+  let originalTotalInterest = new Decimal(0);
+  for (const row of standardSchedule) {
+    originalTotalInterest = originalTotalInterest.plus(toDecimal(row.interestComponent));
+  }
+  const originalTotalPayment = p.plus(originalTotalInterest);
+
+  // If no prepayments are configured, accelerated schedule is identical to standard
+  if (extraMonthly.isZero() && lumpsum.isZero()) {
+    return {
+      originalTenureMonths: n,
+      revisedTenureMonths: n,
+      monthsSaved: 0,
+      yearsSaved: "0.0",
+      originalTotalInterest: originalTotalInterest.toFixed(4),
+      revisedTotalInterest: originalTotalInterest.toFixed(4),
+      interestSaved: "0.0000",
+      originalTotalPayment: originalTotalPayment.toFixed(4),
+      revisedTotalPayment: originalTotalPayment.toFixed(4),
+      schedule: standardSchedule,
+    };
+  }
+
+  // 2. Accelerated schedule with prepayments
+  let currentBalance = p;
+  let currentDate = typeof startDateStr === "string" ? parseISO(startDateStr) : startDateStr;
+  const acceleratedSchedule: AmortizationScheduleRow[] = [];
+  let revisedTotalInterest = new Decimal(0);
+
+  let month = 0;
+  const maxCap = Math.max(n, 600);
+
+  while (currentBalance.greaterThan(0.0001) && month < maxCap) {
+    month++;
+    currentDate = addMonths(currentDate, 1);
+
+    // One-time lumpsum prepayment in the specified month
+    if (month === lumpsumMonth && lumpsum.greaterThan(0)) {
+      currentBalance = Decimal.max(0, currentBalance.minus(lumpsum));
+      if (currentBalance.lessThanOrEqualTo(0.0001)) {
+        acceleratedSchedule.push({
+          month,
+          paymentDate: format(currentDate, "yyyy-MM-dd"),
+          emi: lumpsum.toFixed(4),
+          principalComponent: lumpsum.toFixed(4),
+          interestComponent: "0.0000",
+          remainingBalance: "0.0000",
+        });
+        break;
+      }
+    }
+
+    const interestComponent = currentBalance.times(r);
+    revisedTotalInterest = revisedTotalInterest.plus(interestComponent);
+
+    // Base EMI + extra monthly prepayment
+    const totalPaymentTarget = baseEmi.plus(extraMonthly);
+    let principalComponent = totalPaymentTarget.minus(interestComponent);
+
+    // Finish loan early if residual balance is less than or equal to 1.00
+    if (currentBalance.minus(principalComponent).lessThanOrEqualTo(1.0)) {
+      principalComponent = currentBalance;
+      currentBalance = new Decimal(0);
+    } else {
+      currentBalance = currentBalance.minus(principalComponent);
+    }
+
+    const actualEmi = principalComponent.plus(interestComponent);
+    acceleratedSchedule.push({
+      month,
+      paymentDate: format(currentDate, "yyyy-MM-dd"),
+      emi: actualEmi.toFixed(4),
+      principalComponent: principalComponent.toFixed(4),
+      interestComponent: interestComponent.toFixed(4),
+      remainingBalance: currentBalance.toFixed(4),
+    });
+
+    if (currentBalance.isZero()) break;
+  }
+
+  const revisedTenureMonths = month;
+  const monthsSaved = Math.max(0, n - revisedTenureMonths);
+  const yearsSaved = (monthsSaved / 12).toFixed(1);
+  const interestSaved = Decimal.max(0, originalTotalInterest.minus(revisedTotalInterest));
+  const revisedTotalPayment = p.plus(revisedTotalInterest);
+
+  return {
+    originalTenureMonths: n,
+    revisedTenureMonths,
+    monthsSaved,
+    yearsSaved,
+    originalTotalInterest: originalTotalInterest.toFixed(4),
+    revisedTotalInterest: revisedTotalInterest.toFixed(4),
+    interestSaved: interestSaved.toFixed(4),
+    originalTotalPayment: originalTotalPayment.toFixed(4),
+    revisedTotalPayment: revisedTotalPayment.toFixed(4),
+    schedule: acceleratedSchedule,
+  };
 }
 
 /**

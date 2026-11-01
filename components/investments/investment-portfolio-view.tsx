@@ -118,6 +118,78 @@ export function InvestmentPortfolioView({
       };
     }, [investments]);
 
+  // Asset Allocation across classes
+  const assetAllocation = React.useMemo(() => {
+    let equities = 0;
+    let mutualFunds = 0;
+    let goldEtf = 0;
+    let fixedIncome = 0;
+
+    for (const i of investments) {
+      const ret = calculateInvestmentReturns(
+        i.total_quantity,
+        i.average_buy_price,
+        i.current_nav_or_price,
+        i.currency,
+        DEFAULT_USD_INR_RATE
+      );
+      const amount = parseFloat(ret.currentValuation);
+      if (i.asset_type === "stock_in" || i.asset_type === "stock_us") {
+        equities += amount;
+      } else if (i.asset_type === "mutual_fund") {
+        mutualFunds += amount;
+      } else if (["etf", "sovereign_gold_bond", "gold_physical", "gold_digital"].includes(i.asset_type)) {
+        goldEtf += amount;
+      } else {
+        fixedIncome += amount;
+      }
+    }
+
+    const total = equities + mutualFunds + goldEtf + fixedIncome;
+    return {
+      equities,
+      mutualFunds,
+      goldEtf,
+      fixedIncome,
+      total,
+      equitiesPct: total > 0 ? ((equities / total) * 100).toFixed(1) : "0.0",
+      mutualFundsPct: total > 0 ? ((mutualFunds / total) * 100).toFixed(1) : "0.0",
+      goldEtfPct: total > 0 ? ((goldEtf / total) * 100).toFixed(1) : "0.0",
+      fixedIncomePct: total > 0 ? ((fixedIncome / total) * 100).toFixed(1) : "0.0",
+    };
+  }, [investments]);
+
+  // Annualized XIRR return across cash flows
+  const portfolioXIRR = React.useMemo(() => {
+    if (investments.length === 0 || parseFloat(totalValuationINR) <= 0) return null;
+
+    const cashFlows: { amount: number | string; date: Date | string }[] = [];
+    for (const i of investments) {
+      const ret = calculateInvestmentReturns(
+        i.total_quantity,
+        i.average_buy_price,
+        i.current_nav_or_price,
+        i.currency,
+        DEFAULT_USD_INR_RATE
+      );
+      const invAmt = parseFloat(ret.investedAmount);
+      if (invAmt > 0) {
+        cashFlows.push({
+          amount: -invAmt,
+          date: i.created_at,
+        });
+      }
+    }
+
+    cashFlows.push({
+      amount: parseFloat(totalValuationINR),
+      date: new Date(),
+    });
+
+    const rate = calculateXIRR(cashFlows);
+    return rate !== null ? rate.toFixed(2) : null;
+  }, [investments, totalValuationINR]);
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove holding for "${name}" from your portfolio?`)) return;
     const res = await deleteInvestmentAction(id);
@@ -203,13 +275,91 @@ export function InvestmentPortfolioView({
           coloredAmount
         />
         <MetricCard
-          title="Absolute Return"
-          amount={`${absoluteReturnPercent}%`}
-          subtitle={isNetProfit ? "Positive portfolio return" : "Negative return"}
+          title="Annualized XIRR"
+          amount={portfolioXIRR !== null ? `${portfolioXIRR}%` : `${absoluteReturnPercent}%`}
+          subtitle={
+            portfolioXIRR !== null
+              ? `Annualized rate • Abs: ${absoluteReturnPercent}%`
+              : isNetProfit
+              ? "Positive portfolio return"
+              : "Negative return"
+          }
           icon={Sparkles}
           iconColor={isNetProfit ? "#10B981" : "#EF4444"}
+          coloredAmount
         />
       </div>
+
+      {/* Asset Allocation Breakdown Banner */}
+      {assetAllocation.total > 0 && (
+        <Card className="border bg-card shadow-sm p-4 space-y-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-foreground flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-primary" />
+              <span>Portfolio Asset Allocation</span>
+            </span>
+            <span className="text-muted-foreground font-mono">
+              Total: ₹{assetAllocation.total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+
+          {/* Segmented Stacked Progress Bar */}
+          <div className="h-2.5 w-full rounded-full bg-muted/40 overflow-hidden flex">
+            {parseFloat(assetAllocation.equitiesPct) > 0 && (
+              <div
+                style={{ width: `${assetAllocation.equitiesPct}%` }}
+                className="bg-indigo-600 h-full transition-all"
+                title={`Equities: ${assetAllocation.equitiesPct}%`}
+              />
+            )}
+            {parseFloat(assetAllocation.mutualFundsPct) > 0 && (
+              <div
+                style={{ width: `${assetAllocation.mutualFundsPct}%` }}
+                className="bg-emerald-500 h-full transition-all"
+                title={`Mutual Funds: ${assetAllocation.mutualFundsPct}%`}
+              />
+            )}
+            {parseFloat(assetAllocation.goldEtfPct) > 0 && (
+              <div
+                style={{ width: `${assetAllocation.goldEtfPct}%` }}
+                className="bg-amber-500 h-full transition-all"
+                title={`Gold & SGBs: ${assetAllocation.goldEtfPct}%`}
+              />
+            )}
+            {parseFloat(assetAllocation.fixedIncomePct) > 0 && (
+              <div
+                style={{ width: `${assetAllocation.fixedIncomePct}%` }}
+                className="bg-violet-500 h-full transition-all"
+                title={`Deposits & PPF: ${assetAllocation.fixedIncomePct}%`}
+              />
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 flex-wrap text-xs pt-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 shrink-0" />
+              <span className="text-muted-foreground">Equities:</span>
+              <span className="font-semibold">{assetAllocation.equitiesPct}%</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-muted-foreground">Mutual Funds:</span>
+              <span className="font-semibold">{assetAllocation.mutualFundsPct}%</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-muted-foreground">Gold & SGBs:</span>
+              <span className="font-semibold">{assetAllocation.goldEtfPct}%</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-violet-500 shrink-0" />
+              <span className="text-muted-foreground">Deposits & PPF:</span>
+              <span className="font-semibold">{assetAllocation.fixedIncomePct}%</span>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Portfolio Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

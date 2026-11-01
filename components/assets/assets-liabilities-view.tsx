@@ -9,6 +9,8 @@ import {
   Trash2,
   Calendar,
   Layers,
+  ShieldCheck,
+  Scale,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -36,8 +38,8 @@ export function AssetsLiabilitiesView({
 }: AssetsLiabilitiesViewProps) {
   const [activeTab, setActiveTab] = React.useState<string>("assets");
 
-  // Aggregate Metrics
-  const { totalAssetValuation, totalLiabilitiesAmount, netTangible } = React.useMemo(() => {
+  // Aggregate Metrics & Equity Ratio
+  const { totalAssetValuation, totalLiabilitiesAmount, netTangible, equityPercent, debtToAssetRatio } = React.useMemo(() => {
     let a = "0.0000";
     for (const item of assets) {
       a = addMoney(a, item.current_valuation);
@@ -47,12 +49,41 @@ export function AssetsLiabilitiesView({
       l = addMoney(l, item.outstanding_amount);
     }
     const net = subtractMoney(a, l);
+    const assetValNum = parseFloat(a);
+    const liabNum = parseFloat(l);
+
+    let eqPct = 100;
+    let debtRatio = 0;
+    if (assetValNum > 0) {
+      debtRatio = Math.min(100, (liabNum / assetValNum) * 100);
+      eqPct = Math.max(0, Math.min(100, 100 - debtRatio));
+    }
+
     return {
       totalAssetValuation: a,
       totalLiabilitiesAmount: l,
       netTangible: net,
+      equityPercent: eqPct.toFixed(1),
+      debtToAssetRatio: debtRatio.toFixed(1),
     };
   }, [assets, liabilities]);
+
+  const getCategoryBadgeClass = (category: string) => {
+    const c = category.toLowerCase();
+    if (c.includes("real estate") || c.includes("property") || c.includes("home")) {
+      return "border-blue-500/30 text-blue-500 bg-blue-500/10";
+    }
+    if (c.includes("vehicle") || c.includes("car") || c.includes("bike")) {
+      return "border-amber-500/30 text-amber-500 bg-amber-500/10";
+    }
+    if (c.includes("gold") || c.includes("jewelry") || c.includes("silver")) {
+      return "border-yellow-500/30 text-yellow-500 bg-yellow-500/10";
+    }
+    if (c.includes("electronic") || c.includes("gadget") || c.includes("tech")) {
+      return "border-purple-500/30 text-purple-500 bg-purple-500/10";
+    }
+    return "border-border text-muted-foreground bg-muted/40";
+  };
 
   const handleDeleteAsset = async (id: string, name: string) => {
     if (!confirm(`Delete asset "${name}"?`)) return;
@@ -118,6 +149,40 @@ export function AssetsLiabilitiesView({
         />
       </div>
 
+      {/* Tangible Equity & Leverage Health */}
+      {(parseFloat(totalAssetValuation) > 0 || parseFloat(totalLiabilitiesAmount) > 0) && (
+        <Card className="p-4 border bg-card/60 backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <Scale className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Tangible Asset Solvency & Equity Ratio</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-mono font-medium">
+              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Unencumbered Equity: {equityPercent}%
+              </span>
+              <span className="flex items-center gap-1.5 text-rose-500">
+                <span className="h-2 w-2 rounded-full bg-rose-500" />
+                Debt Leverage: {debtToAssetRatio}%
+              </span>
+            </div>
+          </div>
+          <div className="w-full bg-secondary/50 rounded-full h-2 overflow-hidden flex">
+            <div
+              className="bg-emerald-500 transition-all duration-300"
+              style={{ width: `${equityPercent}%` }}
+              title={`Equity: ${equityPercent}%`}
+            />
+            <div
+              className="bg-rose-500 transition-all duration-300"
+              style={{ width: `${debtToAssetRatio}%` }}
+              title={`Debt: ${debtToAssetRatio}%`}
+            />
+          </div>
+        </Card>
+      )}
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-sm">
@@ -152,7 +217,7 @@ export function AssetsLiabilitiesView({
                     <CardHeader className="p-4 pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
+                          <Badge variant="outline" className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getCategoryBadgeClass(ast.category)}`}>
                             {ast.category}
                           </Badge>
                           <CardTitle className="text-base font-semibold mt-1">
@@ -232,7 +297,7 @@ export function AssetsLiabilitiesView({
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
+                        <Badge variant="outline" className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getCategoryBadgeClass(lia.category)}`}>
                           {lia.category}
                         </Badge>
                         <CardTitle className="text-base font-semibold mt-1">
