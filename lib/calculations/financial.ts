@@ -1105,3 +1105,225 @@ export function calculateReconciliationAdjustment(
   }
 }
 
+/**
+ * Get date interval for Indian Financial Year (April 1 to March 31)
+ */
+export function getIndianFinancialYearInterval(
+  referenceDate: Date = new Date(),
+  offsetYears: number = 0
+): {
+  start: Date;
+  end: Date;
+  label: string;
+} {
+  const currentMonth = referenceDate.getMonth(); // 0-based: 0 = Jan, 3 = April
+  const currentYear = referenceDate.getFullYear();
+
+  // If month is >= April (3), fiscal start year is currentYear, else currentYear - 1
+  const baseStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+  const startYear = baseStartYear + offsetYears;
+  const endYear = startYear + 1;
+
+  const start = new Date(startYear, 3, 1, 0, 0, 0, 0); // April 1
+  const end = new Date(endYear, 2, 31, 23, 59, 59, 999); // March 31
+
+  const label = `FY ${startYear}–${endYear.toString().slice(-2)}`;
+  return { start, end, label };
+}
+
+export interface FinancialInsightItem {
+  id: string;
+  type: "positive" | "warning" | "alert" | "neutral";
+  title: string;
+  description: string;
+  metric?: string;
+}
+
+export interface DeterministicFinancialInsights {
+  liquidRunwayMonths: string;
+  topExpenseCategory: { name: string; amount: string; percentage: number } | null;
+  highestTransaction: { description: string; amount: string; date: string } | null;
+  anomaliesCount: number;
+  insights: FinancialInsightItem[];
+}
+
+/**
+ * Deterministic Insights Engine:
+ * Analyzes spending distributions, anomalies, runway, and savings velocity without LLM hallucinations
+ */
+export function generateDeterministicInsights(
+  transactions: Array<{
+    amount: number | string | Decimal;
+    transaction_type: string;
+    transaction_date: string;
+    description?: string | null;
+    category?: { name: string } | null;
+  }>,
+  totalLiquidCapital: number | string | Decimal = 0
+): DeterministicFinancialInsights {
+  let totalIncome = new Decimal(0);
+  let totalExpense = new Decimal(0);
+  const categoryExpenses: Record<string, Decimal> = {};
+  let maxTransaction: { description: string; amount: string; date: string; decimal: Decimal } | null = null;
+
+  for (const t of transactions) {
+    const amt = toDecimal(t.amount);
+    if (t.transaction_type === "income" || t.transaction_type === "refund") {
+      totalIncome = totalIncome.plus(amt);
+    } else if (t.transaction_type === "expense") {
+      totalExpense = totalExpense.plus(amt);
+      const catName = t.category?.name || "Uncategorized";
+      categoryExpenses[catName] = (categoryExpenses[catName] || new Decimal(0)).plus(amt);
+
+      if (!maxTransaction || amt.greaterThan(maxTransaction.decimal)) {
+        maxTransaction = {
+          description: t.description || "Expense",
+          amount: amt.toFixed(4),
+          date: t.transaction_date,
+          decimal: amt,
+        };
+      }
+    }
+  }
+
+  // Calculate Liquid Runway
+  const liquid = toDecimal(totalLiquidCapital);
+  let runwayMonths = "0.0";
+  if (totalExpense.greaterThan(0)) {
+    runwayMonths = liquid.dividedBy(totalExpense).toFixed(1);
+  } else if (liquid.greaterThan(0)) {
+    runwayMonths = "12.0+";
+  }
+
+  // Top Expense Category
+  let topCat: { name: string; amount: string; percentage: number } | null = null;
+  const sortedCategories = Object.entries(categoryExpenses).sort((a, b) =>
+    b[1].minus(a[1]).toNumber()
+  );
+
+  if (sortedCategories.length > 0 && totalExpense.greaterThan(0)) {
+    const [name, amount] = sortedCategories[0];
+    const pct = Math.round(amount.dividedBy(totalExpense).times(100).toNumber());
+    topCat = {
+      name,
+      amount: amount.toFixed(4),
+      percentage: pct,
+    };
+  }
+
+  // Generate Deterministic Insight Cards
+  const insights: FinancialInsightItem[] = [];
+  let anomaliesCount = 0;
+
+  // 1. Savings Rate / Cash Flow Insight
+  if (totalIncome.greaterThan(0)) {
+    const savings = totalIncome.minus(totalExpense);
+    const savingsRate = Math.round(savings.dividedBy(totalIncome).times(100).toNumber());
+
+    if (savingsRate >= 30) {
+      insights.push({
+        id: "savings-optimal",
+        type: "positive",
+        title: "High Wealth Accumulation Velocity",
+        description: `You are saving ${savingsRate}% of your total inflows, which is well above the standard 20% benchmark.`,
+        metric: `${savingsRate}% saved`,
+      });
+    } else if (savingsRate >= 15) {
+      insights.push({
+        id: "savings-normal",
+        type: "neutral",
+        title: "Steady Savings Pace",
+        description: `Your net savings rate is ${savingsRate}%. Maintaining consistency here continues to build emergency stability.`,
+        metric: `${savingsRate}% saved`,
+      });
+    } else if (savingsRate >= 0) {
+      insights.push({
+        id: "savings-low",
+        type: "warning",
+        title: "Sub-optimal Savings Margin",
+        description: `Your net savings rate is ${savingsRate}%. Minor spending discipline in discretionary categories can elevate this.`,
+        metric: `${savingsRate}% saved`,
+      });
+    } else {
+      anomaliesCount++;
+      insights.push({
+        id: "savings-deficit",
+        type: "alert",
+        title: "Cash-Flow Deficit Observed",
+        description: `Outflows exceed recorded income by ₹${totalExpense.minus(totalIncome).toFixed(2)}. Review large one-time expenses.`,
+        metric: "Negative cash-flow",
+      });
+    }
+  }
+
+  // 2. Emergency Runway Insight
+  const runwayNum = parseFloat(runwayMonths);
+  if (!isNaN(runwayNum)) {
+    if (runwayNum >= 6) {
+      insights.push({
+        id: "runway-optimal",
+        type: "positive",
+        title: "Resilient Emergency Runway",
+        description: `Liquid reserves cover ${runwayMonths} months of your average outflow, exceeding the recommended 6-month safety net.`,
+        metric: `${runwayMonths} mo runway`,
+      });
+    } else if (runwayNum >= 3) {
+      insights.push({
+        id: "runway-moderate",
+        type: "neutral",
+        title: "Moderate Emergency Buffer",
+        description: `Current liquid capital provides ${runwayMonths} months of burn. Aim to scale this towards 6 full months.`,
+        metric: `${runwayMonths} mo runway`,
+      });
+    } else if (totalExpense.greaterThan(0)) {
+      anomaliesCount++;
+      insights.push({
+        id: "runway-alert",
+        type: "alert",
+        title: "Low Liquidity Coverage",
+        description: `Available liquid cash covers only ${runwayMonths} months of expenses. Prioritize emergency fund replenishment.`,
+        metric: `${runwayMonths} mo runway`,
+      });
+    }
+  }
+
+  // 3. Category Concentration / Anomaly Insight
+  if (topCat && topCat.percentage >= 35) {
+    anomaliesCount++;
+    insights.push({
+      id: "cat-concentration",
+      type: "warning",
+      title: `High Concentration in ${topCat.name}`,
+      description: `${topCat.name} accounts for ${topCat.percentage}% of your entire expenditure this period.`,
+      metric: `${topCat.percentage}% of total`,
+    });
+  }
+
+  // 4. Large Outflow Anomaly
+  if (maxTransaction && totalExpense.greaterThan(0)) {
+    const singlePct = Math.round(maxTransaction.decimal.dividedBy(totalExpense).times(100).toNumber());
+    if (singlePct >= 25 && transactions.length >= 3) {
+      anomaliesCount++;
+      insights.push({
+        id: "single-large-txn",
+        type: "warning",
+        title: "Significant Single Outflow Detected",
+        description: `"${maxTransaction.description}" was your highest expense, taking up ${singlePct}% of total outflows.`,
+        metric: `${singlePct}% of spend`,
+      });
+    }
+  }
+
+  return {
+    liquidRunwayMonths: runwayMonths,
+    topExpenseCategory: topCat,
+    highestTransaction: maxTransaction ? {
+      description: maxTransaction.description,
+      amount: maxTransaction.amount,
+      date: maxTransaction.date,
+    } : null,
+    anomaliesCount,
+    insights,
+  };
+}
+

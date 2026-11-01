@@ -14,8 +14,8 @@
 | :--- | :--- | :--- |
 | **Complete Application Audit** | **100% COMPLETE** | `docs/PRODUCT_AUDIT.md`, `docs/UI_UX_AUDIT.md`, `docs/PERFORMANCE_AUDIT.md`, `docs/TECHNICAL_DEBT.md` |
 | **Design System & Financial Logic Specs** | **100% COMPLETE** | `docs/DESIGN_SYSTEM.md`, `docs/FINANCIAL_LOGIC.md` |
-| **Automated Tests** | **96 Passed (100%)** | 14 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory |
-| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 7.3s |
+| **Automated Tests** | **104 Passed (100%)** | 15 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory, Deterministic Insights, Indian FY |
+| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 7.0s on Node 22 LTS |
 | **Vercel Production Deployment** | **Live** | Synced to `main` at `Nehal-Alam/WealthOvers` |
 
 ---
@@ -30,8 +30,8 @@
 | **Phase 3** | Transaction & Account Improvements | **COMPLETED** | Split transactions with live allocation calculator, floating bulk operations toolbar (bulk categorization, review queue, bulk deletion), quick view tabs (All, Needs Review, Expenses, Income, Transfers, Refunds), date range filters + custom picker, export to CSV, account statement reconciliation dialog |
 | **Phase 4** | Investment & Liability Improvements | **COMPLETED** | Multi-asset portfolio (Indian/US equities, MFs, SIPs, Gold, FDs, PPF/EPF), XIRR analytics, P&L breakdown, Credit Card utilization meter & statement due date urgency tracking, 1-click bill payment transfer dialog, Loan reducing-balance amortization & interactive prepayment/foreclosure simulator with interest savings engine, Tangible asset solvency & equity ratio visualizer |
 | **Phase 5** | Planning, Goals & Automation | **COMPLETED** | Category budgets with rollover and daily safe spend burn rate, forward cash-flow forecasting (30, 60, 90-day horizons), financial goal trajectory with completion forecasting, companion automation health & ingestion telemetry |
-| **Phase 6** | Financial Insights & Reports | **READY TO START** | Deterministic insights engine (Where did money go, spending anomalies, runway), multi-format export (CSV, Excel, PDF), Indian FY (April-March) reporting toggle |
-| **Phase 7** | Performance, Accessibility & Final Testing | Pending | LCP <= 2.5s, INP <= 200ms, CLS <= 0.1, Lighthouse 90+, WCAG 2.1 AA audit, full 96+ automated test suite run, `docs/FINAL_QA_REPORT.md` signoff |
+| **Phase 6** | Financial Insights & Reports | **COMPLETED** | Deterministic insights engine (runway, spending anomalies, category concentration, savings velocity), Indian Financial Year (April–March) filter toggle, multi-format export (CSV, JSON audit ledger, Print/PDF) |
+| **Phase 7** | Performance, Accessibility & Final Testing | **READY TO START** | LCP <= 2.5s, INP <= 200ms, CLS <= 0.1, Lighthouse 90+, WCAG 2.1 AA audit, full 104+ automated test suite run, `docs/FINAL_QA_REPORT.md` signoff |
 
 ---
 
