@@ -367,7 +367,7 @@ export function DashboardClient({
             amount={balanceSheet.netWorth}
             subtitle="Assets minus all debt obligations"
             icon={ShieldCheck}
-            iconColor="#365CF5"
+            iconColor="indigo"
             coloredAmount
           />
           <MetricCard
@@ -375,14 +375,14 @@ export function DashboardClient({
             amount={balanceSheet.totalAssets}
             subtitle="Liquid cash, investments & fixed assets"
             icon={Landmark}
-            iconColor="#0F9F75"
+            iconColor="emerald"
           />
           <MetricCard
             title="Total Liabilities"
             amount={balanceSheet.totalLiabilities}
             subtitle="Credit cards, loans & liabilities"
             icon={Scale}
-            iconColor="#E05B67"
+            iconColor="coral"
           />
         </div>
 
@@ -393,28 +393,28 @@ export function DashboardClient({
             amount={balanceSheet.totalLiquid}
             subtitle="Checking, savings & cash"
             icon={Wallet}
-            iconColor="#365CF5"
+            iconColor="indigo"
           />
           <MetricCard
             title="Monthly Income"
             amount={balanceSheet.monthlyInflow}
             subtitle="Salary & inflows this month"
             icon={TrendingUp}
-            iconColor="#0F9F75"
+            iconColor="emerald"
           />
           <MetricCard
             title="Monthly Expenses"
             amount={balanceSheet.monthlyOutflow}
             subtitle="Purchases & bill outflows"
             icon={TrendingDown}
-            iconColor="#E05B67"
+            iconColor="coral"
           />
           <MetricCard
             title="Savings Rate"
             amount={`${balanceSheet.savingsRate}%`}
             subtitle={`Net saved: ₹${parseFloat(balanceSheet.netSavings).toLocaleString()}`}
             icon={Percent}
-            iconColor="#8B7CF6"
+            iconColor="violet"
           />
         </div>
       </div>
@@ -673,7 +673,7 @@ export function DashboardClient({
                       <div className="flex items-center space-x-3">
                         <span
                           className="h-3 w-3 rounded-full shrink-0"
-                          style={{ backgroundColor: acc.color || "#365CF5" }}
+                          style={{ backgroundColor: acc.color || "hsl(var(--primary))" }}
                         />
                         <div>
                           <p className="font-semibold text-xs sm:text-sm leading-tight text-foreground">

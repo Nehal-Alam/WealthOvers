@@ -222,7 +222,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                           variant="outline"
                           className={`text-[10px] px-1.5 py-0 font-medium ${
                             util > 50
-                              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                              ? "bg-destructive/10 text-destructive border-destructive/30"
                               : util > 30
                               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
                               : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
@@ -234,7 +234,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                       <span
                         className={`font-mono font-bold ${
                           util > 50
-                            ? "text-rose-600 dark:text-rose-400"
+                            ? "text-destructive"
                             : util > 30
                             ? "text-amber-600 dark:text-amber-400"
                             : "text-emerald-600 dark:text-emerald-400"
@@ -248,7 +248,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                       value={util}
                       indicatorClassName={
                         util > 50
-                          ? "bg-rose-500"
+                          ? "bg-destructive"
                           : util > 30
                           ? "bg-amber-500"
                           : "bg-emerald-500"
@@ -305,7 +305,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                                   </span>
                                   {!stmt.is_settled && (
                                     daysUntilDue <= 3 ? (
-                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-rose-500/10 text-rose-600 border-rose-500/30 animate-pulse">
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive border-destructive/30 animate-pulse">
                                         {daysUntilDue <= 0 ? "Due today!" : `Due in ${daysUntilDue}d!`}
                                       </Badge>
                                     ) : daysUntilDue <= 7 ? (

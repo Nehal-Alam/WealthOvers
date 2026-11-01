@@ -236,7 +236,7 @@ export function LoanAmortizationModal({
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
+                <div className="p-3 rounded-xl border bg-primary/10 border-primary/20 text-primary">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-medium">Time to Debt-Free</span>
                     <Clock className="h-4 w-4" />
@@ -296,7 +296,7 @@ export function LoanAmortizationModal({
                     <TableCell className="text-right font-mono text-emerald-600 dark:text-emerald-400 font-medium">
                       <MoneyDisplay amount={row.principalComponent} />
                     </TableCell>
-                    <TableCell className="text-right font-mono text-rose-600 dark:text-rose-400">
+                    <TableCell className="text-right font-mono text-destructive">
                       <MoneyDisplay amount={row.interestComponent} />
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold">

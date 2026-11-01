@@ -158,12 +158,12 @@ export function AssetsLiabilitiesView({
               <span className="text-sm font-semibold">Tangible Asset Solvency & Equity Ratio</span>
             </div>
             <div className="flex items-center gap-4 text-xs font-mono font-medium">
-              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="flex items-center gap-1.5 text-emerald-500">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Unencumbered Equity: {equityPercent}%
               </span>
-              <span className="flex items-center gap-1.5 text-rose-500">
-                <span className="h-2 w-2 rounded-full bg-rose-500" />
+              <span className="flex items-center gap-1.5 text-destructive">
+                <span className="h-2 w-2 rounded-full bg-destructive" />
                 Debt Leverage: {debtToAssetRatio}%
               </span>
             </div>
@@ -175,7 +175,7 @@ export function AssetsLiabilitiesView({
               title={`Equity: ${equityPercent}%`}
             />
             <div
-              className="bg-rose-500 transition-all duration-300"
+              className="bg-destructive transition-all duration-300"
               style={{ width: `${debtToAssetRatio}%` }}
               title={`Debt: ${debtToAssetRatio}%`}
             />
@@ -264,7 +264,7 @@ export function AssetsLiabilitiesView({
                         <span className="text-muted-foreground">Appreciation</span>
                         <span
                           className={`font-mono font-bold flex items-center gap-1 ${
-                            isGain ? "text-emerald-600" : "text-rose-600"
+                            isGain ? "text-emerald-500" : "text-destructive"
                           }`}
                         >
                           {isGain ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -325,7 +325,7 @@ export function AssetsLiabilitiesView({
                         </span>
                         <MoneyDisplay
                           amount={lia.outstanding_amount}
-                          className="text-base font-bold text-rose-600 dark:text-rose-400"
+                          className="text-base font-bold text-destructive"
                         />
                       </div>
 

@@ -74,10 +74,10 @@ export function GoalsView({ goals }: GoalsViewProps) {
   const getGoalCategoryBadgeClass = (category: string) => {
     const c = category.toLowerCase();
     if (c.includes("emergency") || c.includes("safety")) {
-      return "border-blue-500/30 text-blue-500 bg-blue-500/10";
+      return "border-primary/30 text-primary bg-primary/10";
     }
     if (c.includes("retire") || c.includes("pension")) {
-      return "border-purple-500/30 text-purple-500 bg-purple-500/10";
+      return "border-violet-500/30 text-violet-500 bg-violet-500/10";
     }
     if (c.includes("home") || c.includes("house") || c.includes("property")) {
       return "border-emerald-500/30 text-emerald-500 bg-emerald-500/10";
@@ -86,10 +86,10 @@ export function GoalsView({ goals }: GoalsViewProps) {
       return "border-amber-500/30 text-amber-500 bg-amber-500/10";
     }
     if (c.includes("vacation") || c.includes("travel") || c.includes("trip")) {
-      return "border-cyan-500/30 text-cyan-500 bg-cyan-500/10";
+      return "border-primary/20 text-primary bg-primary/5";
     }
     if (c.includes("wedding") || c.includes("family") || c.includes("education")) {
-      return "border-rose-500/30 text-rose-500 bg-rose-500/10";
+      return "border-destructive/30 text-destructive bg-destructive/10";
     }
     return "border-border text-muted-foreground bg-muted/40";
   };

@@ -84,21 +84,21 @@ export const TransactionTable = React.memo(function TransactionTable({
         );
       case "expense":
         return (
-          <Badge className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20 gap-1 font-medium">
+          <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20 gap-1 font-medium">
             <TrendingDown className="h-3 w-3" />
             <span>Expense</span>
           </Badge>
         );
       case "refund":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 gap-1 font-medium">
+          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20 gap-1 font-medium">
             <TrendingUp className="h-3 w-3" />
             <span>Refund</span>
           </Badge>
         );
       case "transfer":
         return (
-          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20 gap-1 font-medium">
+          <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 gap-1 font-medium">
             <ArrowLeftRight className="h-3 w-3" />
             <span>Transfer</span>
           </Badge>
@@ -244,7 +244,7 @@ export const TransactionTable = React.memo(function TransactionTable({
                     positiveSign={isPositive}
                     colored={isPositive || isNegative}
                     className={`font-semibold text-sm ${
-                      isNegative ? "text-rose-600 dark:text-rose-400" : ""
+                      isNegative ? "text-destructive" : ""
                     }`}
                   />
                 </TableCell>

@@ -239,3 +239,4 @@ The following indexes are missing and directly degrade query performance on join
    - Convert `assets/page.tsx` and custom budget date checks to parallel asynchronous promises.
 5. **Harmonize Memoized Auth**:
    - Ensure all server components use `getAuthenticatedUser()`.
+

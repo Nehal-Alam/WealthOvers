@@ -85,7 +85,7 @@ export function CreateLiabilityDialog({ trigger }: CreateLiabilityDialogProps) {
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-rose-500" />
+            <AlertCircle className="h-4 w-4 text-destructive" />
             <span>Add External Liability</span>
           </DialogTitle>
           <DialogDescription>

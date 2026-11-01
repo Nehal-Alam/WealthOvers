@@ -176,7 +176,7 @@ export function ReconcileAccountDialog({
                   <ArrowUpRight className="h-3.5 w-3.5" /> +{account.currency} {parseFloat(adjustment.adjustmentAmount).toFixed(2)} (Credit)
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
+                <span className="inline-flex items-center gap-1 font-semibold text-destructive">
                   <ArrowDownRight className="h-3.5 w-3.5" /> -{account.currency} {parseFloat(adjustment.adjustmentAmount).toFixed(2)} (Debit)
                 </span>
               )}

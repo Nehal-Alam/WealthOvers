@@ -401,7 +401,7 @@ export function TransactionLedger({
           amount={totalInflow}
           subtitle={`${filteredTransactions.filter((t) => t.transaction_type === "income" || t.transaction_type === "refund").length} credit transactions`}
           icon={TrendingUp}
-          iconColor="#0F9F75"
+          iconColor="emerald"
           coloredAmount
         />
         <MetricCard
@@ -409,7 +409,7 @@ export function TransactionLedger({
           amount={totalOutflow}
           subtitle={`${filteredTransactions.filter((t) => t.transaction_type === "expense").length} debit transactions`}
           icon={TrendingDown}
-          iconColor="#E05B67"
+          iconColor="coral"
           coloredAmount={false}
         />
         <MetricCard
@@ -417,7 +417,7 @@ export function TransactionLedger({
           amount={netCashFlow}
           subtitle="Net change across filtered period"
           icon={Receipt}
-          iconColor="#365CF5"
+          iconColor="indigo"
           coloredAmount
         />
       </div>
@@ -471,7 +471,7 @@ export function TransactionLedger({
           onClick={() => setViewTab("expense")}
           className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
         >
-          <TrendingDown className="h-3 w-3 text-rose-500" />
+          <TrendingDown className="h-3 w-3 text-destructive" />
           <span>Expenses</span>
         </Button>
 

@@ -62,11 +62,11 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
     switch (type) {
       case "income":
       case "refund":
-        return <TrendingUp className="h-4 w-4 text-emerald-600" />;
+        return <TrendingUp className="h-4 w-4 text-emerald-500" />;
       case "expense":
-        return <TrendingDown className="h-4 w-4 text-rose-600" />;
+        return <TrendingDown className="h-4 w-4 text-destructive" />;
       case "transfer":
-        return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
+        return <ArrowLeftRight className="h-4 w-4 text-primary" />;
       default:
         return null;
     }
@@ -80,17 +80,17 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
         const needsReview = txn.is_reviewed === false || !txn.category_id;
 
         return (
-          <Card key={txn.id} className="overflow-hidden border shadow-sm">
+          <Card key={txn.id} className="overflow-hidden border border-border/80 bg-card shadow-xs">
             <CardContent className="p-3.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start space-x-3">
                   <div
                     className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                       isPositive
-                        ? "bg-emerald-500/10 text-emerald-600"
+                        ? "bg-emerald-500/10 text-emerald-500"
                         : isNegative
-                        ? "bg-rose-500/10 text-rose-600"
-                        : "bg-blue-500/10 text-blue-600"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-primary/10 text-primary"
                     }`}
                   >
                     {getTypeIcon(txn.transaction_type)}
@@ -142,7 +142,7 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
                       positiveSign={isPositive}
                       colored={isPositive || isNegative}
                       className={`font-bold text-sm ${
-                        isNegative ? "text-rose-600 dark:text-rose-400" : ""
+                        isNegative ? "text-destructive" : ""
                       }`}
                     />
                   </div>

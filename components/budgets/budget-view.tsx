@@ -166,7 +166,7 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
 
       {/* Overspending Alert Banner */}
       {isOverBudget && (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <div className="text-sm">
             <span className="font-semibold">Budget Exceeded!</span> You have spent{" "}
@@ -247,10 +247,10 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
             <span
               className={`text-sm font-bold font-mono ${
                 isOverBudget
-                  ? "text-rose-600"
+                  ? "text-destructive"
                   : isWarning
-                  ? "text-amber-600"
-                  : "text-emerald-600"
+                  ? "text-amber-500"
+                  : "text-emerald-500"
               }`}
             >
               {percentage}%
@@ -262,7 +262,7 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
             value={Math.min(percentage, 100)}
             indicatorClassName={
               isOverBudget
-                ? "bg-rose-500"
+                ? "bg-destructive"
                 : isWarning
                 ? "bg-amber-500"
                 : "bg-emerald-500"
@@ -312,8 +312,8 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
                               amount={util.remaining}
                               className={
                                 util.isOverBudget
-                                  ? "text-rose-600 font-semibold"
-                                  : "text-emerald-600 font-semibold"
+                                  ? "text-destructive font-semibold"
+                                  : "text-emerald-500 font-semibold"
                               }
                             />
                           </span>
@@ -324,7 +324,7 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
                           variant="outline"
                           className={`text-[10px] py-0 px-1.5 h-4 font-mono font-bold ${
                             util.isOverBudget
-                              ? "border-rose-500/30 text-rose-500 bg-rose-500/10"
+                              ? "border-destructive/30 text-destructive bg-destructive/10"
                               : util.percentage >= currentBudget.alert_threshold_percent
                               ? "border-amber-500/30 text-amber-500 bg-amber-500/10"
                               : "border-emerald-500/30 text-emerald-500 bg-emerald-500/10"
@@ -339,7 +339,7 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
                       value={Math.min(util.percentage, 100)}
                       indicatorClassName={
                         util.isOverBudget
-                          ? "bg-rose-500"
+                          ? "bg-destructive"
                           : util.percentage >= currentBudget.alert_threshold_percent
                           ? "bg-amber-500"
                           : "bg-primary"

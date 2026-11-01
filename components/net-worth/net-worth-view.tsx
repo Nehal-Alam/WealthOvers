@@ -172,9 +172,9 @@ export function NetWorthView({
   // 3. Asset Allocation Data for Chart
   const assetChartData = React.useMemo(() => {
     return [
-      { name: "Liquid Cash", amount: parseFloat(totalLiquid), color: "#365CF5" },
-      { name: "Investments", amount: parseFloat(totalInvestments), color: "#0F9F75" },
-      { name: "Fixed Assets", amount: parseFloat(totalFixedAssets), color: "#8B7CF6" },
+      { name: "Liquid Cash", amount: parseFloat(totalLiquid), color: "#4F46E5" },
+      { name: "Investments", amount: parseFloat(totalInvestments), color: "#10B981" },
+      { name: "Fixed Assets", amount: parseFloat(totalFixedAssets), color: "#8B5CF6" },
     ].filter((item) => item.amount > 0);
   }, [totalLiquid, totalInvestments, totalFixedAssets]);
 

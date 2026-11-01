@@ -45,7 +45,7 @@ export const MoneyDisplay = React.memo(function MoneyDisplay({
   let colorClass = "";
   if (colored) {
     if (isPositive) colorClass = "text-emerald-600 dark:text-emerald-400";
-    else if (isNegative) colorClass = "text-rose-600 dark:text-rose-400";
+    else if (isNegative) colorClass = "text-destructive";
     else colorClass = "text-muted-foreground";
   }
 

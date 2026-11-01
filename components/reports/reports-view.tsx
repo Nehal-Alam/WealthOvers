@@ -534,7 +534,7 @@ export function ReportsView({
                       isPositive
                         ? "border-emerald-500/20 bg-emerald-500/[0.04]"
                         : isAlert
-                        ? "border-rose-500/20 bg-rose-500/[0.04]"
+                        ? "border-destructive/20 bg-destructive/[0.04]"
                         : isWarning
                         ? "border-amber-500/20 bg-amber-500/[0.04]"
                         : "border-primary/20 bg-primary/[0.02]"
@@ -542,7 +542,7 @@ export function ReportsView({
                   >
                     <div className="mt-0.5 shrink-0">
                       {isPositive && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                      {isAlert && <AlertTriangle className="h-4 w-4 text-rose-500" />}
+                      {isAlert && <AlertTriangle className="h-4 w-4 text-destructive" />}
                       {isWarning && <AlertTriangle className="h-4 w-4 text-amber-500" />}
                       {item.type === "neutral" && <ShieldCheck className="h-4 w-4 text-primary" />}
                     </div>

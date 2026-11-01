@@ -492,7 +492,7 @@ export function InvestmentPortfolioView({
                           </span>
                           <div
                             className={`font-mono text-sm font-bold flex items-center justify-end gap-1 ${
-                              metrics.isProfit ? "text-emerald-600" : "text-rose-600"
+                              metrics.isProfit ? "text-emerald-500" : "text-destructive"
                             }`}
                           >
                             {metrics.isProfit ? (

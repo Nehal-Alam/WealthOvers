@@ -199,7 +199,7 @@ export function RecurringList({
                     <span className="text-emerald-600 dark:text-emerald-400">
                       In: <MoneyDisplay amount={period.inflows} />
                     </span>
-                    <span className="text-rose-600 dark:text-rose-400">
+                    <span className="text-destructive">
                       Out: <MoneyDisplay amount={period.outflows} />
                     </span>
                   </div>
@@ -236,10 +236,10 @@ export function RecurringList({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start space-x-3">
                       <div
-                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
                           isIncome
-                            ? "bg-emerald-500/10 text-emerald-600"
-                            : "bg-rose-500/10 text-rose-600"
+                            ? "bg-emerald-500/10 text-emerald-500"
+                            : "bg-destructive/10 text-destructive"
                         }`}
                       >
                         {isIncome ? (
@@ -301,7 +301,7 @@ export function RecurringList({
                         }
                         if (days <= 3) {
                           return (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-rose-500/30 text-rose-500 bg-rose-500/10">
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-destructive/30 text-destructive bg-destructive/10">
                               Due in {days}d
                             </Badge>
                           );

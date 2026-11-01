@@ -4,73 +4,87 @@
 
 @layer base {
   :root {
-    /* WealthOvers Light Mode Tokens */
-    --background: 220 27% 97%;         /* #F5F7FB Canvas */
+    /* WealthOvers Light Theme (PREMIUM INDIGO + EMERALD + SLATE) */
+    --background: 216 47% 97%;         /* #F4F7FB Canvas */
     --foreground: 221 38% 15%;         /* #172033 Primary Text */
 
     --card: 0 0% 100%;                 /* #FFFFFF Card Surface */
-    --card-foreground: 221 38% 15%;
-    --card-elevated: 216 33% 97%;      /* #F1F4F9 Elevated Surface */
-    --card-sunken: 216 28% 95%;        /* #E9EDF5 Inset / Form Input */
+    --card-foreground: 221 38% 15%;    /* #172033 Primary Text */
+    --card-elevated: 210 40% 98%;      /* #F8FAFC Elevated Surface */
+    --card-sunken: 214 32% 94%;        /* Form inputs / sunken surface */
 
-    --popover: 0 0% 100%;
+    --popover: 0 0% 100%;              /* #FFFFFF Popover Surface */
     --popover-foreground: 221 38% 15%;
 
-    --primary: 228 91% 59%;            /* #365CF5 Primary Brand Indigo */
+    --primary: 243 75% 59%;            /* #4F46E5 Primary Brand Indigo */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 216 28% 95%;
+    --secondary: 210 40% 96%;
     --secondary-foreground: 221 38% 15%;
 
-    --muted: 216 28% 95%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;   /* #64748B Secondary Text */
 
-    --accent: 216 33% 97%;
+    --accent: 210 40% 96%;
     --accent-foreground: 221 38% 15%;
 
-    --destructive: 355 69% 62%;        /* #E05B67 Coral */
+    --destructive: 0 91% 71%;          /* #F87171 Coral / Expenses & Losses */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 28% 92%;             /* #E5EAF2 Structural Borders */
-    --border-interactive: 217 20% 84%; /* Hover / Focus Borders */
-    --input: 217 28% 92%;
-    --ring: 228 91% 59%;
+    --border: 214 32% 91%;             /* #E2E8F0 Structural Borders */
+    --border-interactive: 214 25% 82%; /* Hover / Focus Borders */
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%;               /* #4F46E5 Focus Ring */
 
-    --radius: 0.625rem;
+    /* Semantic Brand Tokens (Available via CSS variables) */
+    --brand-indigo: 243 75% 59%;       /* #4F46E5 Primary Actions */
+    --brand-emerald: 160 84% 39%;      /* #10B981 Income & Gains */
+    --brand-coral: 0 91% 71%;          /* #F87171 Expenses & Losses */
+    --brand-violet: 258 90% 66%;       /* #8B5CF6 Analytics */
+    --brand-amber: 38 92% 50%;         /* #F59E0B Pending & Warnings */
+
+    --radius: 0.75rem;                 /* 12px Card Radius */
   }
 
   .dark {
-    /* WealthOvers Dark Mode Tokens */
-    --background: 220 49% 8%;          /* #0B1220 Canvas */
-    --foreground: 219 55% 94%;         /* #E7EDF8 Primary Text */
+    /* WealthOvers Dark Theme (PREMIUM INDIGO + EMERALD + SLATE) */
+    --background: 220 49% 8.4%;        /* #0B1220 Canvas */
+    --foreground: 221 47% 93%;         /* #E5EAF5 Primary Text */
 
-    --card: 219 46% 12%;               /* #111B2E Card Surface */
-    --card-foreground: 219 55% 94%;
-    --card-elevated: 218 42% 15%;      /* #172338 Elevated Surface */
-    --card-sunken: 220 52% 6%;         /* #070C16 Inset / Form Input */
+    --card: 218 47% 12.5%;             /* #111C2F Card Surface */
+    --card-foreground: 221 47% 93%;    /* #E5EAF5 Primary Text */
+    --card-elevated: 216 42% 18%;      /* #1A2940 Elevated Surface */
+    --card-sunken: 220 52% 6%;         /* Inset / Form Input */
 
-    --popover: 219 46% 12%;
-    --popover-foreground: 219 55% 94%;
+    --popover: 218 47% 12.5%;          /* #111C2F Popover Surface */
+    --popover-foreground: 221 47% 93%;
 
-    --primary: 228 91% 59%;            /* #365CF5 Primary Brand Indigo */
+    --primary: 243 75% 59%;            /* #4F46E5 Primary Brand Indigo */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 218 42% 15%;
-    --secondary-foreground: 219 55% 94%;
+    --secondary: 216 42% 18%;
+    --secondary-foreground: 221 47% 93%;
 
-    --muted: 218 42% 15%;
-    --muted-foreground: 215 23% 67%;   /* #9AA9BE Secondary Text */
+    --muted: 216 42% 18%;
+    --muted-foreground: 215 20% 65%;   /* #94A3B8 Secondary Text */
 
-    --accent: 218 42% 15%;
-    --accent-foreground: 219 55% 94%;
+    --accent: 216 42% 18%;
+    --accent-foreground: 221 47% 93%;
 
-    --destructive: 355 69% 62%;        /* #E05B67 Coral */
+    --destructive: 0 91% 71%;          /* #F87171 Coral / Expenses & Losses */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 22%;             /* #25334A Structural Borders */
-    --border-interactive: 217 28% 30%; /* Hover / Focus Borders */
-    --input: 217 33% 22%;
-    --ring: 228 91% 59%;
+    --border: 215 34% 23%;             /* #26364D Structural Borders */
+    --border-interactive: 215 28% 32%; /* Hover / Focus Borders */
+    --input: 215 34% 23%;
+    --ring: 243 75% 59%;               /* #4F46E5 Focus Ring */
+
+    /* Semantic Brand Tokens (Available via CSS variables) */
+    --brand-indigo: 243 75% 59%;       /* #4F46E5 Primary Actions */
+    --brand-emerald: 160 84% 39%;      /* #10B981 Income & Gains */
+    --brand-coral: 0 91% 71%;          /* #F87171 Expenses & Losses */
+    --brand-violet: 258 90% 66%;       /* #8B5CF6 Analytics */
+    --brand-amber: 38 92% 50%;         /* #F59E0B Pending & Warnings */
   }
 }
 
@@ -86,7 +100,22 @@
   }
 }
 
-/* Custom scrollbar for sleek fintech look */
+/* Fast subtle 120-180ms transitions for interactions */
+.transition-smooth {
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Respect user reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom sleek scrollbar for fintech look */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -106,4 +135,3 @@
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
 }
-

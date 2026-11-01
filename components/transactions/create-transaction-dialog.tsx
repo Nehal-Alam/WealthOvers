@@ -306,15 +306,15 @@ export function CreateTransactionDialog({
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="expense" className="gap-1.5 data-[state=active]:text-rose-600">
+            <TabsTrigger value="expense" className="gap-1.5 data-[state=active]:text-destructive">
               <TrendingDown className="h-4 w-4" />
               <span>Expense</span>
             </TabsTrigger>
-            <TabsTrigger value="income" className="gap-1.5 data-[state=active]:text-emerald-600">
+            <TabsTrigger value="income" className="gap-1.5 data-[state=active]:text-emerald-500">
               <TrendingUp className="h-4 w-4" />
               <span>Income</span>
             </TabsTrigger>
-            <TabsTrigger value="transfer" className="gap-1.5 data-[state=active]:text-blue-600">
+            <TabsTrigger value="transfer" className="gap-1.5 data-[state=active]:text-primary">
               <ArrowLeftRight className="h-4 w-4" />
               <span>Transfer</span>
             </TabsTrigger>
@@ -496,7 +496,7 @@ export function CreateTransactionDialog({
                       <AlertCircle className="h-3.5 w-3.5" /> ₹{splitAllocation.remaining} remaining
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
+                    <span className="inline-flex items-center gap-1 font-semibold text-destructive">
                       <AlertCircle className="h-3.5 w-3.5" /> Over-allocated by ₹{Math.abs(parseFloat(splitAllocation.difference)).toFixed(2)}
                     </span>
                   )}

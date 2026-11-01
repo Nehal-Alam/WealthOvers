@@ -77,9 +77,9 @@ export function CategoryList({ categories }: CategoryListProps) {
       case "income":
         return <TrendingUp className="h-4 w-4 text-emerald-500" />;
       case "expense":
-        return <TrendingDown className="h-4 w-4 text-rose-500" />;
+        return <TrendingDown className="h-4 w-4 text-destructive" />;
       case "investment":
-        return <Coins className="h-4 w-4 text-purple-500" />;
+        return <Coins className="h-4 w-4 text-violet-500" />;
       default:
         return <Folder className="h-4 w-4 text-muted-foreground" />;
     }

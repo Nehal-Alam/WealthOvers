@@ -188,3 +188,4 @@ To satisfy the core requirement of making navigation feel instantaneous, we will
    - Configure smart prefetching on high-frequency navigation links (`/dashboard`, `/net-worth`, `/transactions`, `/accounts`, `/investments`).
 7. **Immediate Active Navigation State Feedback**:
    - Enhance `AppSidebar` and `MobileNav` to provide instant feedback upon click, using short 120ms transitions.
+

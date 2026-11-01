@@ -219,7 +219,7 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             onClick={() => runSimulation("offline_batch")}
             className="gap-1.5 text-xs"
           >
-            <WifiOff className="h-3 w-3 text-blue-500" />
+            <WifiOff className="h-3 w-3 text-primary" />
             2. Test Offline Recovery Batch (3 txns)
           </Button>
 
@@ -239,9 +239,9 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             variant="outline"
             disabled={isSimulating}
             onClick={() => runSimulation("malicious_otp")}
-            className="gap-1.5 text-xs text-rose-600 border-rose-200 dark:border-rose-900"
+            className="gap-1.5 text-xs text-destructive border-destructive/30"
           >
-            <ShieldAlert className="h-3 w-3 text-rose-500" />
+            <ShieldAlert className="h-3 w-3 text-destructive" />
             4. Test OTP Defense Rejection
           </Button>
         </div>
