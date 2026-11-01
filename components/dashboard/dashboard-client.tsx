@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { format, isThisMonth, subMonths, isSameMonth } from "date-fns";
+import { format, isThisMonth, subMonths } from "date-fns";
 import {
   TrendingUp,
   TrendingDown,
@@ -28,6 +28,14 @@ import {
   BarChart3,
   Scale,
   FileSpreadsheet,
+  PieChart,
+  Briefcase,
+  Clock,
+  ArrowUpRight,
+  ArrowDownRight,
+  Layers,
+  RotateCcw,
+  Info,
 } from "lucide-react";
 
 import { Tables } from "@/types/database";
@@ -37,7 +45,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/financial/metric-card";
 import { MoneyDisplay } from "@/components/financial/money-display";
-import { CreateTransactionDialog } from "@/components/transactions/create-transaction-dialog";
 import { TransferFundsDialog } from "@/components/accounts/transfer-funds-dialog";
 import { CreateAccountDialog } from "@/components/accounts/create-account-dialog";
 import { CreateInvestmentDialog } from "@/components/investments/create-investment-dialog";
@@ -57,6 +64,7 @@ import {
   calculateBudgetUtilization,
   calculateBalanceSheetRatios,
   calculateInvestmentReturns,
+  generateDeterministicInsights,
   DEFAULT_USD_INR_RATE,
 } from "@/lib/calculations/financial";
 
@@ -72,6 +80,7 @@ interface DashboardClientProps {
   loans?: any[];
   liabilities?: any[];
   goals?: any[];
+  monthTransactions?: any[];
   precomputedSummary?: {
     totalLiquid?: string;
     totalCredit?: string;
@@ -94,10 +103,11 @@ export function DashboardClient({
   loans = [],
   liabilities = [],
   goals = [],
+  monthTransactions = [],
   precomputedSummary,
 }: DashboardClientProps) {
-  const { openQuickTransaction, dashboardWidgets, toggleDashboardWidget } = useUIStore();
-  const [selectedPeriod, setSelectedPeriod] = React.useState<"month" | "quarter" | "year" | "all">("month");
+  const { openQuickTransaction, dashboardWidgets, toggleDashboardWidget, setDashboardWidgetVisible } = useUIStore();
+  const [selectedPeriod, setSelectedPeriod] = React.useState<"month" | "quarter" | "year">("month");
   const [customizeOpen, setCustomizeOpen] = React.useState(false);
 
   const activeAccounts = React.useMemo(
@@ -154,7 +164,8 @@ export function DashboardClient({
     let outflow = precomputedSummary?.monthlyOutflow || "0.0000";
 
     if (!precomputedSummary) {
-      for (const t of recentTransactions) {
+      const sourceTxns = monthTransactions.length > 0 ? monthTransactions : recentTransactions;
+      for (const t of sourceTxns) {
         if (isThisMonth(new Date(t.transaction_date))) {
           if (t.transaction_type === "income" || t.transaction_type === "refund") {
             inflow = addMoney(inflow, t.amount);
@@ -184,18 +195,9 @@ export function DashboardClient({
       netSavings,
       savingsRate: precomputedSummary?.savingsRate || savingsRatePercent,
     };
-  }, [activeAccounts, investments, assets, loans, liabilities, precomputedSummary, recentTransactions]);
+  }, [activeAccounts, investments, assets, loans, liabilities, precomputedSummary, monthTransactions, recentTransactions]);
 
-  // 2. Budget utilization
-  const budgetUtilization = React.useMemo(() => {
-    if (!activeBudget) return null;
-    return calculateBudgetUtilization(
-      activeBudget.total_amount,
-      activeBudget.totalSpent || "0.0000"
-    );
-  }, [activeBudget]);
-
-  // 3. Estimated Net Worth Trend (past 6 months trajectory)
+  // 2. Visualisation: Estimated Net Worth Trend (past 6 months trajectory)
   const netWorthTrend = React.useMemo(() => {
     const months = [5, 4, 3, 2, 1, 0].map((sub) => {
       const d = subMonths(new Date(), sub);
@@ -218,6 +220,143 @@ export function DashboardClient({
       };
     });
   }, [balanceSheet.netWorth, balanceSheet.netSavings]);
+
+  // 3. Visualisation: Monthly Cash Flow (Income vs Expenses comparison)
+  const cashFlowAnalysis = React.useMemo(() => {
+    const inflow = parseFloat(balanceSheet.monthlyInflow) || 0;
+    const outflow = parseFloat(balanceSheet.monthlyOutflow) || 0;
+    const totalVolume = Math.max(inflow + outflow, 1);
+    const inflowPct = Math.round((inflow / totalVolume) * 100);
+    const outflowPct = Math.round((outflow / totalVolume) * 100);
+    const netFlow = inflow - outflow;
+    const isPositive = netFlow >= 0;
+
+    return {
+      inflow,
+      outflow,
+      inflowPct,
+      outflowPct,
+      netFlow,
+      isPositive,
+      netSavingsFormatted: Math.abs(netFlow).toLocaleString(),
+    };
+  }, [balanceSheet.monthlyInflow, balanceSheet.monthlyOutflow]);
+
+  // 4. Visualisation: Expense Breakdown by Category
+  const expenseBreakdown = React.useMemo(() => {
+    const txns = monthTransactions.length > 0 ? monthTransactions : recentTransactions;
+    const catMap: Record<string, { name: string; color: string; amount: string; count: number }> = {};
+    let totalMonthExpense = "0.0000";
+
+    for (const t of txns) {
+      if (t.transaction_type === "expense") {
+        totalMonthExpense = addMoney(totalMonthExpense, t.amount);
+        const catId = t.category?.id || "uncategorized";
+        const catName = t.category?.name || "General & Other";
+        const catColor = t.category?.color || "#4F46E5";
+
+        if (!catMap[catId]) {
+          catMap[catId] = { name: catName, color: catColor, amount: "0.0000", count: 0 };
+        }
+        catMap[catId].amount = addMoney(catMap[catId].amount, t.amount);
+        catMap[catId].count += 1;
+      }
+    }
+
+    const totalNum = parseFloat(totalMonthExpense);
+    const sorted = Object.values(catMap)
+      .map((c) => {
+        const amt = parseFloat(c.amount);
+        const pct = totalNum > 0 ? Math.round((amt / totalNum) * 100) : 0;
+        return { ...c, percentage: pct, numAmount: amt };
+      })
+      .sort((a, b) => b.numAmount - a.numAmount);
+
+    return {
+      totalMonthExpense,
+      categories: sorted.slice(0, 5),
+      hasExpenses: sorted.length > 0,
+    };
+  }, [monthTransactions, recentTransactions]);
+
+  // 5. Visualisation: Investment Performance Summary & Holdings
+  const investmentPortfolio = React.useMemo(() => {
+    let totalInvested = "0.0000";
+    let totalValuation = "0.0000";
+
+    const holdingItems = investments.map((inv) => {
+      const ret = calculateInvestmentReturns(
+        inv.total_quantity || 0,
+        inv.average_buy_price || 0,
+        inv.current_nav_or_price || inv.average_buy_price || 0,
+        inv.currency || "INR",
+        DEFAULT_USD_INR_RATE
+      );
+      totalInvested = addMoney(totalInvested, ret.investedAmount);
+      totalValuation = addMoney(totalValuation, ret.currentValuation);
+
+      return {
+        ...inv,
+        investedAmount: ret.investedAmount,
+        currentValuation: ret.currentValuation,
+        unrealizedPnL: ret.unrealizedPnL,
+        absoluteReturnPercent: ret.absoluteReturnPercent,
+        isPositive: ret.isProfit,
+      };
+    });
+
+    const totalPnL = subtractMoney(totalValuation, totalInvested);
+    const isPositiveReturn = parseFloat(totalPnL) >= 0;
+    const investedNum = parseFloat(totalInvested);
+    const overallReturnPct =
+      investedNum > 0
+        ? ((parseFloat(totalPnL) / investedNum) * 100).toFixed(2)
+        : "0.00";
+
+    return {
+      totalInvested,
+      totalValuation,
+      totalPnL,
+      isPositiveReturn,
+      overallReturnPct,
+      holdings: holdingItems.slice(0, 4),
+      hasInvestments: investments.length > 0,
+    };
+  }, [investments]);
+
+  // 6. Deterministic Financial Insights Engine
+  const deterministicInsights = React.useMemo(() => {
+    const txns = monthTransactions.length > 0 ? monthTransactions : recentTransactions;
+    return generateDeterministicInsights(txns, balanceSheet.totalLiquid);
+  }, [monthTransactions, recentTransactions, balanceSheet.totalLiquid]);
+
+  // 7. Budget utilization
+  const budgetUtilization = React.useMemo(() => {
+    if (!activeBudget) return null;
+    return calculateBudgetUtilization(
+      activeBudget.total_amount,
+      activeBudget.totalSpent || "0.0000"
+    );
+  }, [activeBudget]);
+
+  // Widget Catalog for Customization Dialog
+  const widgetCatalog = [
+    { id: "netWorthTrend", label: "Net Worth Trajectory Chart", desc: "6-month estimated growth trend & velocity", icon: BarChart3 },
+    { id: "monthlyCashFlow", label: "Monthly Cash Flow (Inflow vs Outflow)", desc: "Income and expense visual progress", icon: ArrowLeftRight },
+    { id: "assetAllocation", label: "Asset Allocation Breakdown", desc: "Liquid vs Invested vs Tangible portfolio split", icon: Coins },
+    { id: "expenseBreakdown", label: "Expense Breakdown by Category", desc: "Top spending distribution & category breakdown", icon: PieChart },
+    { id: "investmentPerformance", label: "Investment Portfolio Performance", desc: "Invested capital, current valuation & returns", icon: TrendingUp },
+    { id: "financialInsights", label: "Financial Health Insights", desc: "Deterministic runway, spending drivers & guidance", icon: Sparkles },
+    { id: "budgetProgress", label: "Active Budget Progress Bar", desc: "Current envelope utilization & headroom", icon: PiggyBank },
+    { id: "accountsOverview", label: "Accounts & Banking Balances", desc: "Active bank accounts & cash balances", icon: Landmark },
+    { id: "recentTransactions", label: "Recent Transactions Ledger", desc: "Latest incoming and outgoing transactions", icon: Receipt },
+    { id: "upcomingBills", label: "Upcoming Bills & Subscriptions", desc: "Payments due in the next 30 days", icon: Calendar },
+    { id: "financialGoals", label: "Financial Goals Progress", desc: "Savings milestones and completion velocity", icon: Target },
+  ];
+
+  const handleSelectAllWidgets = (visible: boolean) => {
+    widgetCatalog.forEach((w) => setDashboardWidgetVisible(w.id, visible));
+  };
 
   return (
     <div className="space-y-6">
@@ -320,36 +459,61 @@ export function DashboardClient({
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md bg-card">
+            <DialogContent className="max-w-lg bg-card max-h-[85vh] flex flex-col">
               <DialogHeader>
-                <DialogTitle className="text-base font-bold">Customize Dashboard Widgets</DialogTitle>
+                <div className="flex items-center justify-between pr-4">
+                  <DialogTitle className="text-base font-bold">Customize Dashboard Widgets</DialogTitle>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSelectAllWidgets(true)}
+                      className="text-[11px] h-6 px-2 text-primary"
+                    >
+                      Show All
+                    </Button>
+                    <span className="text-muted-foreground text-xs">•</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSelectAllWidgets(false)}
+                      className="text-[11px] h-6 px-2 text-muted-foreground"
+                    >
+                      Hide All
+                    </Button>
+                  </div>
+                </div>
                 <CardDescription className="text-xs">
-                  Show or hide financial modules to personalize your daily view.
+                  Show or hide financial modules to personalize your daily view. All preferences are preserved.
                 </CardDescription>
               </DialogHeader>
-              <div className="py-2 space-y-3">
-                {[
-                  { id: "netWorthTrend", label: "Net Worth Trajectory Chart", desc: "6-month estimated growth trend" },
-                  { id: "monthlyCashFlow", label: "Monthly Cash Flow (Inflow vs Outflow)", desc: "Income and expense visual progress" },
-                  { id: "assetAllocation", label: "Asset Allocation Breakdown", desc: "Liquid vs Invested vs Tangible assets" },
-                  { id: "budgetProgress", label: "Active Budget Progress Bar", desc: "Current envelope utilization" },
-                  { id: "accountsOverview", label: "Accounts & Banking Balances", desc: "Active bank accounts & cash balances" },
-                  { id: "recentTransactions", label: "Recent Transactions Ledger", desc: "Latest incoming and outgoing transactions" },
-                  { id: "upcomingBills", label: "Upcoming Bills & Subscriptions", desc: "Payments due in the next 30 days" },
-                  { id: "financialGoals", label: "Financial Goals Progress", desc: "Milestones and savings velocity" },
-                ].map((w) => (
-                  <div key={w.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/80 bg-muted/20">
-                    <div className="pr-4">
-                      <p className="font-semibold text-xs text-foreground">{w.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{w.desc}</p>
+
+              <div className="py-2 space-y-2.5 overflow-y-auto max-h-[60vh] pr-1">
+                {widgetCatalog.map((w) => {
+                  const Icon = w.icon;
+                  const isChecked = dashboardWidgets[w.id] !== false;
+                  return (
+                    <div
+                      key={w.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg border border-border/80 bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-start gap-2.5 pr-4">
+                        <div className="p-1.5 rounded-md bg-muted/60 text-primary mt-0.5 shrink-0">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-xs text-foreground leading-snug">{w.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{w.desc}</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={isChecked}
+                        onCheckedChange={() => toggleDashboardWidget(w.id)}
+                        aria-label={`Toggle ${w.label}`}
+                      />
                     </div>
-                    <Switch
-                      checked={dashboardWidgets[w.id] !== false}
-                      onCheckedChange={() => toggleDashboardWidget(w.id)}
-                      aria-label={`Toggle ${w.label}`}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </DialogContent>
           </Dialog>
@@ -358,9 +522,10 @@ export function DashboardClient({
 
       {/* ─────────────────────────────────────────────────────────────
           SECTION 2: PRIMARY FINANCIAL HIERARCHY (7 CORE METRICS)
+          Better spacing & hierarchy: avoids displaying too many cards in one row
       ────────────────────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        {/* Row 1: Wealth Foundation (Net Worth, Gross Assets, Gross Liabilities) */}
+      <div className="space-y-3.5">
+        {/* Tier 1: Core Balance Sheet Pillars (3 Large Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
             title="Consolidated Net Worth"
@@ -380,14 +545,14 @@ export function DashboardClient({
           <MetricCard
             title="Total Liabilities"
             amount={balanceSheet.totalLiabilities}
-            subtitle="Credit cards, loans & liabilities"
+            subtitle="Credit cards, loans & external debts"
             icon={Scale}
             iconColor="coral"
           />
         </div>
 
-        {/* Row 2: Operational Cash Flow (Liquid, Income, Expense, Savings Rate) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Tier 2: Operational Cash Flow & Liquidity (Balanced 4 Cards Grid) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <MetricCard
             title="Liquid Capital"
             amount={balanceSheet.totalLiquid}
@@ -398,7 +563,7 @@ export function DashboardClient({
           <MetricCard
             title="Monthly Income"
             amount={balanceSheet.monthlyInflow}
-            subtitle="Salary & inflows this month"
+            subtitle="Total inflows this month"
             icon={TrendingUp}
             iconColor="emerald"
           />
@@ -420,10 +585,10 @@ export function DashboardClient({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SECTION 3: ANALYTICS WIDGETS (TREND, CASH FLOW, ALLOCATION)
+          SECTION 3: PRIMARY VISUALISATIONS (NET WORTH TREND & ASSET ALLOCATION)
       ────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Widget 1: Net Worth Trajectory */}
+        {/* Visualisation 1: Net Worth Trajectory */}
         {dashboardWidgets.netWorthTrend !== false && (
           <Card className="shadow-xs lg:col-span-2 border-border/80 bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -433,7 +598,7 @@ export function DashboardClient({
                   <span>Net Worth Trajectory</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Estimated 6-month growth trend
+                  Estimated 6-month wealth trajectory and growth pace
                 </CardDescription>
               </div>
               <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
@@ -444,8 +609,8 @@ export function DashboardClient({
               </Button>
             </CardHeader>
             <CardContent>
-              {/* Sparkline / Bar visualization */}
-              <div className="h-32 flex items-end justify-between gap-3 pt-4 px-2">
+              {/* Trajectory Bar Chart */}
+              <div className="h-36 flex items-end justify-between gap-3 pt-4 px-2">
                 {netWorthTrend.map((item, idx) => {
                   const maxVal = Math.max(...netWorthTrend.map((t) => t.value), 1);
                   const heightPercent = Math.min(100, Math.max(15, (item.value / maxVal) * 100));
@@ -476,7 +641,7 @@ export function DashboardClient({
               <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Monthly Savings Velocity: ₹{parseFloat(balanceSheet.netSavings).toLocaleString()}
+                  Monthly Savings Velocity: <span className="font-semibold text-foreground">₹{parseFloat(balanceSheet.netSavings).toLocaleString()}</span>
                 </span>
                 <span className="font-medium text-foreground">
                   Debt-to-Asset: {balanceSheet.debtToAssetRatio}%
@@ -486,7 +651,7 @@ export function DashboardClient({
           </Card>
         )}
 
-        {/* Widget 2: Asset Allocation Breakdown */}
+        {/* Visualisation 2: Asset Allocation Breakdown */}
         {dashboardWidgets.assetAllocation !== false && (
           <Card className="shadow-xs border-border/80 bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -499,6 +664,12 @@ export function DashboardClient({
                   Distribution across asset classes
                 </CardDescription>
               </div>
+              <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                <Link href="/assets">
+                  <span>Assets</span>
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               {parseFloat(balanceSheet.totalAssets) === 0 ? (
@@ -578,7 +749,343 @@ export function DashboardClient({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SECTION 4: BUDGET UTILIZATION ALERT
+          SECTION 4: OPERATIONAL VISUALISATIONS
+          (INCOME VS EXPENSES, EXPENSE BREAKDOWN, INVESTMENT PERFORMANCE)
+      ────────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Visualisation 3: Monthly Cash Flow (Income vs Expenses) */}
+        {dashboardWidgets.monthlyCashFlow !== false && (
+          <Card className="shadow-xs border-border/80 bg-card flex flex-col justify-between">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4 text-emerald-500" />
+                  <span>Income vs Expenses</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Monthly cash-flow comparison
+                </CardDescription>
+              </div>
+              <Badge
+                variant={cashFlowAnalysis.isPositive ? "outline" : "destructive"}
+                className={`text-[10px] ${
+                  cashFlowAnalysis.isPositive
+                    ? "text-emerald-500 border-emerald-500/30"
+                    : "text-destructive border-destructive/30"
+                }`}
+              >
+                {cashFlowAnalysis.isPositive ? "Surplus" : "Deficit"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Side-by-side Flow Meters */}
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3 text-emerald-500" />
+                      Inflow
+                    </span>
+                    <span className="font-semibold font-mono text-emerald-500">
+                      ₹{cashFlowAnalysis.inflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <Progress
+                    value={cashFlowAnalysis.inflowPct}
+                    className="h-2 bg-muted/40"
+                    indicatorClassName="bg-emerald-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <TrendingDown className="h-3 w-3 text-destructive" />
+                      Outflow
+                    </span>
+                    <span className="font-semibold font-mono text-destructive">
+                      ₹{cashFlowAnalysis.outflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <Progress
+                    value={cashFlowAnalysis.outflowPct}
+                    className="h-2 bg-muted/40"
+                    indicatorClassName="bg-destructive"
+                  />
+                </div>
+              </div>
+
+              {/* Net Flow Summary Box */}
+              <div className="p-3 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-between text-xs">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Net Monthly Cash Flow</p>
+                  <p className={`font-bold font-mono text-sm ${cashFlowAnalysis.isPositive ? "text-emerald-500" : "text-destructive"}`}>
+                    {cashFlowAnalysis.isPositive ? "+" : "-"}₹{cashFlowAnalysis.netSavingsFormatted}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-muted-foreground">Savings Rate</p>
+                  <p className="font-bold text-sm text-foreground">{balanceSheet.savingsRate}%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Visualisation 4: Expense Breakdown by Category */}
+        {dashboardWidgets.expenseBreakdown !== false && (
+          <Card className="shadow-xs border-border/80 bg-card flex flex-col justify-between">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <PieChart className="h-4 w-4 text-primary" />
+                  <span>Expense Breakdown</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Current month category spending
+                </CardDescription>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                <Link href="/reports">
+                  <span>Details</span>
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!expenseBreakdown.hasExpenses ? (
+                <div className="text-center py-6 text-xs text-muted-foreground">
+                  No expense transactions this month.
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openQuickTransaction("expense")}
+                      className="text-xs h-7"
+                    >
+                      Record First Expense
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {expenseBreakdown.categories.map((cat) => (
+                    <div key={cat.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 truncate pr-2">
+                          <span
+                            className="h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <span className="font-medium truncate text-foreground">{cat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-muted-foreground text-[11px]">{cat.percentage}%</span>
+                          <span className="font-semibold font-mono">₹{cat.numAmount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <Progress
+                        value={cat.percentage}
+                        className="h-1.5 bg-muted/40"
+                        indicatorClassName="bg-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Visualisation 5: Investment Performance */}
+        {dashboardWidgets.investmentPerformance !== false && (
+          <Card className="shadow-xs border-border/80 bg-card flex flex-col justify-between">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-violet-500" />
+                  <span>Investment Performance</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Portfolio valuation & unrealized P&L
+                </CardDescription>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                <Link href="/investments">
+                  <span>Portfolio</span>
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!investmentPortfolio.hasInvestments ? (
+                <div className="text-center py-6 text-xs text-muted-foreground">
+                  No investments recorded yet.
+                  <div className="mt-2">
+                    <CreateInvestmentDialog
+                      accounts={accounts}
+                      trigger={
+                        <Button size="sm" variant="outline" className="text-xs h-7">
+                          Add First Asset
+                        </Button>
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Portfolio Return Metrics */}
+                  <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg border border-border/60 bg-muted/20 text-xs">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Total Invested</p>
+                      <p className="font-semibold font-mono">
+                        ₹{parseFloat(investmentPortfolio.totalInvested).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Current Valuation</p>
+                      <p className="font-semibold font-mono">
+                        ₹{parseFloat(investmentPortfolio.totalValuation).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="col-span-2 pt-1 border-t border-border/40 flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground">Unrealized Return:</span>
+                      <span
+                        className={`font-bold font-mono ${
+                          investmentPortfolio.isPositiveReturn ? "text-emerald-500" : "text-destructive"
+                        }`}
+                      >
+                        {investmentPortfolio.isPositiveReturn ? "+" : "-"}₹
+                        {Math.abs(parseFloat(investmentPortfolio.totalPnL)).toLocaleString()} (
+                        {investmentPortfolio.overallReturnPct}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Top Holdings Mini-List */}
+                  <div className="space-y-1.5">
+                    {investmentPortfolio.holdings.map((h) => (
+                      <div
+                        key={h.id}
+                        className="flex items-center justify-between p-1.5 rounded-md text-xs hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="truncate pr-2">
+                          <p className="font-semibold leading-tight truncate text-foreground">{h.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">{h.symbol || h.asset_type}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold font-mono">₹{parseFloat(h.currentValuation).toLocaleString()}</p>
+                          <p
+                            className={`text-[10px] font-mono ${
+                              h.isPositive ? "text-emerald-500" : "text-destructive"
+                            }`}
+                          >
+                            {h.isPositive ? "+" : ""}{h.absoluteReturnPercent}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 5: FINANCIAL HEALTH INSIGHTS
+      ────────────────────────────────────────────────────────────── */}
+      {dashboardWidgets.financialInsights !== false && (
+        <Card className="shadow-xs border-border/80 bg-card">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Financial Health Insights</span>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Real-time deterministic calculations based on your cash flow and liquidity
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-[10px] font-mono text-primary border-primary/30">
+              Runway: {deterministicInsights.liquidRunwayMonths} Months
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* 3 Metric Pills */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg border border-border/60 bg-muted/20">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  Emergency Runway
+                </p>
+                <p className="text-base font-bold font-mono text-foreground mt-0.5">
+                  {deterministicInsights.liquidRunwayMonths} mo
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Living expenses covered by liquid cash</p>
+              </div>
+
+              <div className="p-3 rounded-lg border border-border/60 bg-muted/20">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <PieChart className="h-3.5 w-3.5 text-primary" />
+                  Top Expense Driver
+                </p>
+                <p className="text-base font-bold text-foreground mt-0.5 truncate">
+                  {deterministicInsights.topExpenseCategory ? deterministicInsights.topExpenseCategory.name : "None"}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {deterministicInsights.topExpenseCategory
+                    ? `${deterministicInsights.topExpenseCategory.percentage}% of total monthly outflows`
+                    : "No expense recorded"}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg border border-border/60 bg-muted/20">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
+                  Savings Velocity
+                </p>
+                <p className="text-base font-bold font-mono text-foreground mt-0.5">
+                  {balanceSheet.savingsRate}%
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  ₹{parseFloat(balanceSheet.netSavings).toLocaleString()} saved this month
+                </p>
+              </div>
+            </div>
+
+            {/* Insight Alerts */}
+            {deterministicInsights.insights.length > 0 && (
+              <div className="space-y-2 pt-1">
+                {deterministicInsights.insights.slice(0, 2).map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 ${
+                      item.type === "positive"
+                        ? "border-emerald-500/30 bg-emerald-500/5 text-foreground"
+                        : item.type === "warning"
+                        ? "border-amber-500/30 bg-amber-500/5 text-foreground"
+                        : "border-border/60 bg-muted/20 text-foreground"
+                    }`}
+                  >
+                    <Info className={`h-4 w-4 shrink-0 mt-0.5 ${
+                      item.type === "positive" ? "text-emerald-500" : item.type === "warning" ? "text-amber-500" : "text-primary"
+                    }`} />
+                    <div>
+                      <p className="font-semibold text-xs leading-tight">{item.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 6: ACTIVE BUDGET UTILIZATION ALERT
       ────────────────────────────────────────────────────────────── */}
       {dashboardWidgets.budgetProgress !== false && activeBudget && budgetUtilization && (
         <Card className="border-l-4 border-l-primary shadow-xs border-border/80 bg-card">
@@ -631,7 +1138,7 @@ export function DashboardClient({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          SECTION 5: MAIN ACTIVITY GRID (ACCOUNTS & TRANSACTIONS)
+          SECTION 7: MAIN ACTIVITY GRID (ACCOUNTS & RECENT TRANSACTIONS)
       ────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accounts Card */}
@@ -816,7 +1323,7 @@ export function DashboardClient({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SECTION 6: SECONDARY MODULES (BILLS & GOALS)
+          SECTION 8: PLANNING & COMMITMENTS (BILLS & GOALS)
       ────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Upcoming Bills */}

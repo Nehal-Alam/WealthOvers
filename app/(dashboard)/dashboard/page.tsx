@@ -32,6 +32,7 @@ export default async function DashboardPage() {
     loansResult,
     liabilitiesResult,
     goalsResult,
+    monthTransactionsResult,
     summaryRpcResult,
   ] = await Promise.all([
     // 1. User Profile
@@ -122,7 +123,21 @@ export default async function DashboardPage() {
       .order("target_date", { ascending: true })
       .limit(4),
 
-    // 12. Fast Server-side SQL Aggregation RPC
+    // 12. Month Transactions for Category Expense Breakdown & Deterministic Insights
+    supabase
+      .from("transactions")
+      .select(
+        `
+        id, amount, currency, transaction_type, transaction_date, description, category_id,
+        category:categories(id, name, color, icon)
+      `
+      )
+      .eq("user_id", user.id)
+      .gte("transaction_date", monthStart)
+      .lte("transaction_date", monthEnd)
+      .order("transaction_date", { ascending: false }),
+
+    // 13. Fast Server-side SQL Aggregation RPC
     supabase.rpc("get_dashboard_summary", {
       p_user_id: user.id,
       p_start_date: monthStart,
@@ -142,6 +157,7 @@ export default async function DashboardPage() {
   const loans = (loansResult.data as any[] | null) || [];
   const liabilities = (liabilitiesResult.data as any[] | null) || [];
   const goals = (goalsResult.data as any[] | null) || [];
+  const monthTransactions = (monthTransactionsResult.data as any[] | null) || [];
 
   // Parse active budget spend
   let activeBudget: any = null;
@@ -207,6 +223,7 @@ export default async function DashboardPage() {
         loans={loans}
         liabilities={liabilities}
         goals={goals}
+        monthTransactions={monthTransactions}
         precomputedSummary={precomputedSummary}
       />
     </div>
