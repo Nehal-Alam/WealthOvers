@@ -150,9 +150,9 @@ export function AppHeader({ user }: AppHeaderProps) {
               <span className="sr-only">Open navigation menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 flex flex-col bg-card border-r">
-            <SheetHeader className="p-4 border-b flex items-center space-x-2.5">
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-md shadow-primary/25">
+          <SheetContent side="left" className="w-72 p-0 flex flex-col bg-card border-r border-border/80">
+            <SheetHeader className="p-4 border-b border-border/80 flex items-center space-x-2.5">
+              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-xs">
                 <Wallet className="h-5 w-5" />
               </div>
               <SheetTitle className="text-base font-bold text-foreground">
@@ -173,14 +173,21 @@ export function AppHeader({ user }: AppHeaderProps) {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch={
+                          item.href === "/dashboard" ||
+                          item.href === "/net-worth" ||
+                          item.href === "/transactions" ||
+                          item.href === "/accounts" ||
+                          item.href === "/investments"
+                        }
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
                           isActive
-                            ? "bg-primary/10 text-primary font-semibold"
+                            ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         }`}
                       >
-                        <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`} />
                         <span>{item.title}</span>
                       </Link>
                     );
@@ -204,7 +211,7 @@ export function AppHeader({ user }: AppHeaderProps) {
       </div>
 
       {/* Right Controls: Search, Quick Add, Alerts, Theme, Privacy, Profile */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
         {/* Global Search / Command Bar Trigger */}
         <button
           onClick={() => setCommandMenuOpen(true)}

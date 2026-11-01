@@ -34,6 +34,7 @@ export function MobileNav() {
         {/* Slot 1: Overview / Dashboard */}
         <Link
           href="/dashboard"
+          prefetch={true}
           className={cn(
             "flex flex-col items-center justify-center w-14 py-1 gap-1 text-[10px] font-medium transition-colors rounded-lg",
             pathname === "/dashboard"
@@ -53,6 +54,7 @@ export function MobileNav() {
         {/* Slot 2: Transactions Ledger */}
         <Link
           href="/transactions"
+          prefetch={true}
           className={cn(
             "flex flex-col items-center justify-center w-14 py-1 gap-1 text-[10px] font-medium transition-colors rounded-lg",
             pathname.startsWith("/transactions")
@@ -73,7 +75,7 @@ export function MobileNav() {
         <Sheet open={actionDrawerOpen} onOpenChange={setActionDrawerOpen}>
           <SheetTrigger asChild>
             <button
-              className="relative -top-3 h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/35 hover:bg-primary/95 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              className="relative -top-3 h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md shadow-primary/25 hover:bg-primary/95 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               aria-label="Quick financial action"
             >
               <Plus className="h-6 w-6" />
@@ -144,6 +146,7 @@ export function MobileNav() {
         {/* Slot 4: Accounts & Banking */}
         <Link
           href="/accounts"
+          prefetch={true}
           className={cn(
             "flex flex-col items-center justify-center w-14 py-1 gap-1 text-[10px] font-medium transition-colors rounded-lg",
             pathname.startsWith("/accounts")
@@ -163,6 +166,7 @@ export function MobileNav() {
         {/* Slot 5: Investments & Portfolio */}
         <Link
           href="/investments"
+          prefetch={true}
           className={cn(
             "flex flex-col items-center justify-center w-14 py-1 gap-1 text-[10px] font-medium transition-colors rounded-lg",
             pathname.startsWith("/investments")

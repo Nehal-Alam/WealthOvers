@@ -98,7 +98,7 @@ export function AppSidebar() {
           className="flex items-center space-x-2.5 overflow-hidden"
           title="WealthOvers"
         >
-          <div className="h-9 w-9 shrink-0 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-md shadow-primary/25">
+          <div className="h-9 w-9 shrink-0 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-xs">
             <Wallet className="h-5 w-5" />
           </div>
           {isOpen && (
@@ -150,9 +150,16 @@ export function AppSidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={
+                      item.href === "/dashboard" ||
+                      item.href === "/net-worth" ||
+                      item.href === "/transactions" ||
+                      item.href === "/accounts" ||
+                      item.href === "/investments"
+                    }
                     title={!isOpen ? item.title : undefined}
                     className={cn(
-                      "flex items-center gap-3 py-2 rounded-lg text-sm font-medium transition-all group relative",
+                      "flex items-center gap-3 py-2 rounded-lg text-sm font-medium transition-all group relative duration-150",
                       isOpen ? "px-3" : "justify-center px-0",
                       isActive
                         ? "bg-primary text-primary-foreground font-semibold shadow-xs"
