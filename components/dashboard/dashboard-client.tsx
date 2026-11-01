@@ -49,6 +49,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   addMoney,
   subtractMoney,
@@ -338,23 +339,15 @@ export function DashboardClient({
                   { id: "financialGoals", label: "Financial Goals Progress", desc: "Milestones and savings velocity" },
                 ].map((w) => (
                   <div key={w.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/80 bg-muted/20">
-                    <div>
+                    <div className="pr-4">
                       <p className="font-semibold text-xs text-foreground">{w.label}</p>
                       <p className="text-[11px] text-muted-foreground">{w.desc}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleDashboardWidget(w.id)}
-                      className={`h-6 w-11 rounded-full transition-colors relative focus:outline-none ${
-                        dashboardWidgets[w.id] !== false ? "bg-primary" : "bg-muted"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                          dashboardWidgets[w.id] !== false ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
+                    <Switch
+                      checked={dashboardWidgets[w.id] !== false}
+                      onCheckedChange={() => toggleDashboardWidget(w.id)}
+                      aria-label={`Toggle ${w.label}`}
+                    />
                   </div>
                 ))}
               </div>
