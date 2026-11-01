@@ -8,6 +8,8 @@ import {
   calculateNetWorth,
   calculateBudgetUtilization,
   calculateNextOccurrence,
+  calculateBalanceSheetRatios,
+  calculateFinancialHealthScore,
 } from "../lib/calculations/financial";
 
 describe("Financial Calculations Engine", () => {
@@ -67,6 +69,46 @@ describe("Financial Calculations Engine", () => {
 
     const futureDate = calculateNextOccurrence("2026-12-01", "monthly", 1, new Date("2026-10-31"));
     expect(futureDate).toBe("2026-12-01");
+  });
+
+  it("calculates deterministic financial health score and balance sheet ratios", () => {
+    // 1. Balance sheet ratios test
+    const ratios = calculateBalanceSheetRatios({
+      liquidBalances: ["50000.00", "25000.00"], // 75k liquid
+      investmentValuations: ["100000.00"],      // 100k invested
+      tangibleAssets: ["200000.00"],            // 200k tangible -> Total Assets: 375k
+      creditLiabilities: ["15000.00"],          // 15k credit
+      loanLiabilities: ["50000.00"],            // 50k loan -> Total Debt: 65k
+      monthlyExpenses: 25000,
+    });
+
+    expect(ratios.totalAssets).toBe("375000.0000");
+    expect(ratios.totalLiabilities).toBe("65000.0000");
+    expect(ratios.netWorth).toBe("310000.0000");
+    expect(ratios.liquidNetWorth).toBe("60000.0000"); // 75k - 15k
+    expect(ratios.investedNetWorth).toBe("100000.0000");
+    expect(ratios.debtToAssetRatio).toBe("17.33"); // 65k / 375k * 100
+    expect(ratios.liquidityRatio).toBe("3.0"); // 75k / 25k
+
+    // 2. Health score test
+    const health = calculateFinancialHealthScore({
+      liquidCapital: "75000.00",
+      monthlyOutflow: "25000.00",
+      totalAssets: "375000.00",
+      totalLiabilities: "65000.00",
+      savingsRatePercent: "35.00",
+      creditUsed: "15000.00",
+      totalCreditLimit: "100000.00",
+    });
+
+    // Expect optimal/good rating based on 4 pillars
+    expect(health.score).toBeGreaterThanOrEqual(80);
+    expect(["Excellent", "Good"]).toContain(health.grade);
+    expect(health.pillars.length).toBe(4);
+    expect(health.pillars[0].name).toBe("Emergency Runway");
+    expect(health.pillars[1].name).toBe("Debt-to-Asset");
+    expect(health.pillars[2].name).toBe("Savings Rate");
+    expect(health.pillars[3].name).toBe("Credit Utilization");
   });
 });
 

@@ -21,28 +21,41 @@ export default async function DashboardPage() {
 
   // Execute ALL initial data queries concurrently in parallel (eliminating waterfall)
   const [
+    profileResult,
     accountsResult,
     categoriesResult,
     transactionsResult,
     activeBudgetsResult,
     recurringResult,
+    investmentsResult,
+    assetsResult,
+    loansResult,
+    liabilitiesResult,
+    goalsResult,
     summaryRpcResult,
   ] = await Promise.all([
-    // 1. Accounts with explicit fields (avoids select *)
+    // 1. User Profile
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+
+    // 2. Accounts with explicit fields
     supabase
       .from("accounts")
       .select("id, name, color, account_type, current_balance, currency, institution_name, account_number_masked, is_archived, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
 
-    // 2. Categories with explicit fields
+    // 3. Categories with explicit fields
     supabase
       .from("categories")
       .select("id, name, color, icon")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
 
-    // 3. 10 Recent transactions with related account and category
+    // 4. 10 Recent transactions with related account and category
     supabase
       .from("transactions")
       .select(
@@ -56,7 +69,7 @@ export default async function DashboardPage() {
       .order("transaction_date", { ascending: false })
       .limit(10),
 
-    // 4. Current active budget (if any)
+    // 5. Current active budget (if any)
     supabase
       .from("budgets")
       .select("id, name, total_amount, start_date, end_date, created_at")
@@ -66,7 +79,7 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(1),
 
-    // 5. Upcoming recurring rules
+    // 6. Upcoming recurring rules
     supabase
       .from("recurring_transactions")
       .select("id, name, amount, currency, next_occurrence_date, recurrence_interval, is_active")
@@ -76,7 +89,40 @@ export default async function DashboardPage() {
       .order("next_occurrence_date", { ascending: true })
       .limit(4),
 
-    // 6. Fast Server-side SQL Aggregation RPC
+    // 7. Investments
+    supabase
+      .from("investments")
+      .select("id, name, symbol, asset_type, broker_name, total_quantity, average_buy_price, current_nav_or_price, current_valuation, currency")
+      .eq("user_id", user.id)
+      .limit(6),
+
+    // 8. Fixed Assets
+    supabase
+      .from("assets")
+      .select("id, name, category, current_valuation")
+      .eq("user_id", user.id),
+
+    // 9. Loans
+    supabase
+      .from("loans")
+      .select("id, lender_or_borrower_name, loan_type, outstanding_balance, monthly_emi, annual_interest_rate")
+      .eq("user_id", user.id),
+
+    // 10. External Liabilities
+    supabase
+      .from("liabilities")
+      .select("id, name, category, outstanding_amount, due_date")
+      .eq("user_id", user.id),
+
+    // 11. Financial Goals
+    supabase
+      .from("financial_goals")
+      .select("id, name, target_amount, current_amount, target_date, category")
+      .eq("user_id", user.id)
+      .order("target_date", { ascending: true })
+      .limit(4),
+
+    // 12. Fast Server-side SQL Aggregation RPC
     supabase.rpc("get_dashboard_summary", {
       p_user_id: user.id,
       p_start_date: monthStart,
@@ -84,28 +130,42 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const profile = profileResult.data;
+  const userName = profile?.full_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || "Investor";
+
   const accounts = (accountsResult.data as Tables<"accounts">[] | null) || [];
   const categories = (categoriesResult.data as Tables<"categories">[] | null) || [];
   const recentTransactions = (transactionsResult.data as any[] | null) || [];
   const upcomingRecurring = (recurringResult.data as any[] | null) || [];
+  const investments = (investmentsResult.data as any[] | null) || [];
+  const assets = (assetsResult.data as any[] | null) || [];
+  const loans = (loansResult.data as any[] | null) || [];
+  const liabilities = (liabilitiesResult.data as any[] | null) || [];
+  const goals = (goalsResult.data as any[] | null) || [];
 
   // Parse active budget spend
   let activeBudget: any = null;
   const activeBudgets = activeBudgetsResult.data;
   if (activeBudgets && activeBudgets.length > 0) {
     const b = activeBudgets[0];
-    const { data: budgetExpenses } = await supabase
-      .from("transactions")
-      .select("amount")
-      .eq("user_id", user.id)
-      .eq("transaction_type", "expense")
-      .gte("transaction_date", b.start_date)
-      .lte("transaction_date", `${b.end_date}T23:59:59.999Z`);
+    // If budget covers the current month, monthly_outflow from RPC is the exact spend
+    let totalSpent = summaryRpcResult.data?.monthly_outflow || "0.0000";
 
-    let totalSpent = "0.0000";
-    if (budgetExpenses) {
-      for (const t of budgetExpenses) {
-        totalSpent = addMoney(totalSpent, t.amount);
+    // If budget dates differ from current month, compute from filtered transactions
+    if (b.start_date !== todayStr.slice(0, 7) + "-01") {
+      const { data: budgetExpenses } = await supabase
+        .from("transactions")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("transaction_type", "expense")
+        .gte("transaction_date", b.start_date)
+        .lte("transaction_date", `${b.end_date}T23:59:59.999Z`);
+
+      if (budgetExpenses) {
+        totalSpent = "0.0000";
+        for (const t of budgetExpenses) {
+          totalSpent = addMoney(totalSpent, t.amount);
+        }
       }
     }
 
@@ -136,11 +196,17 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <DashboardClient
+        userName={userName}
         accounts={accounts}
         recentTransactions={recentTransactions}
         categories={categories}
         activeBudget={activeBudget}
         upcomingRecurring={upcomingRecurring}
+        investments={investments}
+        assets={assets}
+        loans={loans}
+        liabilities={liabilities}
+        goals={goals}
         precomputedSummary={precomputedSummary}
       />
     </div>

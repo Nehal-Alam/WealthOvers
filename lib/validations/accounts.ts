@@ -63,3 +63,15 @@ export const transferFundsSchema = z
 
 export type TransferFundsInput = z.infer<typeof transferFundsSchema>;
 
+export const reconcileAccountSchema = z.object({
+  account_id: z.string().uuid("Please select an account"),
+  actual_balance: z
+    .string()
+    .regex(/^-?\d+(\.\d{1,4})?$/, "Enter a valid statement balance (e.g. 5420.50)"),
+  statement_date: z.string().min(10, "Select a valid statement date"),
+  notes: z.string().max(1000).optional().nullable(),
+});
+
+export type ReconcileAccountInput = z.infer<typeof reconcileAccountSchema>;
+
+

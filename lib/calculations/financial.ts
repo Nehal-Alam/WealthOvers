@@ -479,3 +479,319 @@ export function calculateGoalMonthlyRequired(
     monthsRemaining,
   };
 }
+
+export interface FinancialHealthResult {
+  score: number;
+  grade: "Excellent" | "Good" | "Fair" | "Needs Attention";
+  summary: string;
+  pillars: {
+    name: string;
+    score: number;
+    maxScore: number;
+    valueDisplay: string;
+    benchmark: string;
+    status: "optimal" | "moderate" | "warning";
+  }[];
+}
+
+/**
+ * Transparent 100-point Financial Health Score calculation
+ * Based on 4 deterministic financial pillars:
+ * 1. Emergency Liquidity Runway (25 pts)
+ * 2. Debt-to-Asset Ratio (25 pts)
+ * 3. Monthly Savings Discipline (25 pts)
+ * 4. Revolving Credit Utilization (25 pts)
+ */
+export function calculateFinancialHealthScore({
+  liquidCapital,
+  monthlyOutflow,
+  totalAssets,
+  totalLiabilities,
+  savingsRatePercent,
+  creditUsed = "0",
+  totalCreditLimit = "0",
+}: {
+  liquidCapital: number | string | Decimal;
+  monthlyOutflow: number | string | Decimal;
+  totalAssets: number | string | Decimal;
+  totalLiabilities: number | string | Decimal;
+  savingsRatePercent: number | string;
+  creditUsed?: number | string | Decimal;
+  totalCreditLimit?: number | string | Decimal;
+}): FinancialHealthResult {
+  const liquid = toDecimal(liquidCapital);
+  const outflow = toDecimal(monthlyOutflow);
+  const assets = toDecimal(totalAssets);
+  const liabilities = toDecimal(totalLiabilities);
+  const savingsRate = typeof savingsRatePercent === "number" ? savingsRatePercent : parseFloat(savingsRatePercent) || 0;
+  const used = toDecimal(creditUsed);
+  const limit = toDecimal(totalCreditLimit);
+
+  // Pillar 1: Emergency Liquidity Runway
+  let runwayMonths = 6;
+  if (outflow.greaterThan(0)) {
+    runwayMonths = liquid.dividedBy(outflow).toNumber();
+  } else if (liquid.isZero()) {
+    runwayMonths = 0;
+  }
+  let p1Score = 4;
+  let p1Status: "optimal" | "moderate" | "warning" = "warning";
+  if (runwayMonths >= 6) {
+    p1Score = 25;
+    p1Status = "optimal";
+  } else if (runwayMonths >= 3) {
+    p1Score = 18;
+    p1Status = "moderate";
+  } else if (runwayMonths >= 1) {
+    p1Score = 10;
+    p1Status = "moderate";
+  }
+
+  // Pillar 2: Debt-to-Asset Ratio
+  let debtRatio = 0;
+  if (assets.greaterThan(0)) {
+    debtRatio = liabilities.dividedBy(assets).times(100).toNumber();
+  } else if (liabilities.greaterThan(0)) {
+    debtRatio = 100;
+  }
+  let p2Score = 4;
+  let p2Status: "optimal" | "moderate" | "warning" = "warning";
+  if (debtRatio < 20) {
+    p2Score = 25;
+    p2Status = "optimal";
+  } else if (debtRatio < 40) {
+    p2Score = 20;
+    p2Status = "optimal";
+  } else if (debtRatio < 60) {
+    p2Score = 12;
+    p2Status = "moderate";
+  }
+
+  // Pillar 3: Savings Discipline
+  let p3Score = 5;
+  let p3Status: "optimal" | "moderate" | "warning" = "warning";
+  if (savingsRate >= 30) {
+    p3Score = 25;
+    p3Status = "optimal";
+  } else if (savingsRate >= 20) {
+    p3Score = 20;
+    p3Status = "optimal";
+  } else if (savingsRate >= 10) {
+    p3Score = 14;
+    p3Status = "moderate";
+  }
+
+  // Pillar 4: Credit Utilization
+  let creditUtil = 0;
+  let p4Score = 25;
+  let p4Status: "optimal" | "moderate" | "warning" = "optimal";
+  if (limit.greaterThan(0)) {
+    creditUtil = used.dividedBy(limit).times(100).toNumber();
+    if (creditUtil < 10) {
+      p4Score = 25;
+      p4Status = "optimal";
+    } else if (creditUtil < 30) {
+      p4Score = 20;
+      p4Status = "optimal";
+    } else if (creditUtil < 50) {
+      p4Score = 10;
+      p4Status = "moderate";
+    } else {
+      p4Score = 3;
+      p4Status = "warning";
+    }
+  }
+
+  const overallScore = Math.min(100, Math.max(0, p1Score + p2Score + p3Score + p4Score));
+  let grade: "Excellent" | "Good" | "Fair" | "Needs Attention" = "Needs Attention";
+  let summary = "High leverage or low liquidity reserves require attention.";
+
+  if (overallScore >= 85) {
+    grade = "Excellent";
+    summary = "Outstanding financial stability, robust liquidity, and disciplined debt control.";
+  } else if (overallScore >= 70) {
+    grade = "Good";
+    summary = "Solid financial foundation with healthy savings and manageable debt levels.";
+  } else if (overallScore >= 50) {
+    grade = "Fair";
+    summary = "Moderate stability; consider boosting emergency liquidity and trimming expenses.";
+  }
+
+  return {
+    score: overallScore,
+    grade,
+    summary,
+    pillars: [
+      {
+        name: "Emergency Runway",
+        score: p1Score,
+        maxScore: 25,
+        valueDisplay: `${runwayMonths.toFixed(1)} months`,
+        benchmark: "≥ 6 months",
+        status: p1Status,
+      },
+      {
+        name: "Debt-to-Asset",
+        score: p2Score,
+        maxScore: 25,
+        valueDisplay: `${debtRatio.toFixed(1)}%`,
+        benchmark: "< 30%",
+        status: p2Status,
+      },
+      {
+        name: "Savings Rate",
+        score: p3Score,
+        maxScore: 25,
+        valueDisplay: `${savingsRate.toFixed(1)}%`,
+        benchmark: "≥ 20%",
+        status: p3Status,
+      },
+      {
+        name: "Credit Utilization",
+        score: p4Score,
+        maxScore: 25,
+        valueDisplay: limit.greaterThan(0) ? `${creditUtil.toFixed(1)}%` : "No Cards",
+        benchmark: "< 30%",
+        status: p4Status,
+      },
+    ],
+  };
+}
+
+/**
+ * Consolidated Balance Sheet & Net Worth Ratios
+ */
+export function calculateBalanceSheetRatios({
+  liquidBalances,
+  investmentValuations = [],
+  tangibleAssets = [],
+  creditLiabilities = [],
+  loanLiabilities = [],
+  manualLiabilities = [],
+  monthlyExpenses = 0,
+}: {
+  liquidBalances: (number | string | Decimal)[];
+  investmentValuations?: (number | string | Decimal)[];
+  tangibleAssets?: (number | string | Decimal)[];
+  creditLiabilities?: (number | string | Decimal)[];
+  loanLiabilities?: (number | string | Decimal)[];
+  manualLiabilities?: (number | string | Decimal)[];
+  monthlyExpenses?: number | string | Decimal;
+}) {
+  let totalLiquid = new Decimal(0);
+  for (const b of liquidBalances) totalLiquid = totalLiquid.plus(toDecimal(b));
+
+  let totalInvestments = new Decimal(0);
+  for (const inv of investmentValuations) totalInvestments = totalInvestments.plus(toDecimal(inv));
+
+  let totalTangible = new Decimal(0);
+  for (const ast of tangibleAssets) totalTangible = totalTangible.plus(toDecimal(ast));
+
+  let totalCredit = new Decimal(0);
+  for (const c of creditLiabilities) totalCredit = totalCredit.plus(toDecimal(c));
+
+  let totalLoans = new Decimal(0);
+  for (const l of loanLiabilities) totalLoans = totalLoans.plus(toDecimal(l));
+
+  let totalManualLia = new Decimal(0);
+  for (const m of manualLiabilities) totalManualLia = totalManualLia.plus(toDecimal(m));
+
+  const totalAssets = totalLiquid.plus(totalInvestments).plus(totalTangible);
+  const totalLiabilities = totalCredit.plus(totalLoans).plus(totalManualLia);
+  const netWorth = totalAssets.minus(totalLiabilities);
+
+  const liquidNetWorth = totalLiquid.minus(totalCredit);
+  const investedNetWorth = totalInvestments;
+  const tangibleNetWorth = totalTangible.minus(totalLoans).minus(totalManualLia);
+
+  let debtToAssetRatio = "0.00";
+  if (totalAssets.greaterThan(0)) {
+    debtToAssetRatio = totalLiabilities.dividedBy(totalAssets).times(100).toFixed(2);
+  }
+
+  const exp = toDecimal(monthlyExpenses);
+  let liquidityRatio = "0.0";
+  if (exp.greaterThan(0)) {
+    liquidityRatio = totalLiquid.dividedBy(exp).toFixed(1);
+  }
+
+  return {
+    totalLiquid: totalLiquid.toFixed(4),
+    totalInvestments: totalInvestments.toFixed(4),
+    totalTangible: totalTangible.toFixed(4),
+    totalAssets: totalAssets.toFixed(4),
+    totalLiabilities: totalLiabilities.toFixed(4),
+    netWorth: netWorth.toFixed(4),
+    liquidNetWorth: liquidNetWorth.toFixed(4),
+    investedNetWorth: investedNetWorth.toFixed(4),
+    tangibleNetWorth: tangibleNetWorth.toFixed(4),
+    debtToAssetRatio,
+    liquidityRatio,
+  };
+}
+
+/**
+ * Validate that split allocation items equal the parent transaction total exactly
+ */
+export function validateSplitAmounts(
+  totalAmount: number | string | Decimal,
+  splits: Array<{ amount: number | string | Decimal }>
+): {
+  isValid: boolean;
+  totalAllocated: string;
+  difference: string;
+  remaining: string;
+} {
+  let sum = new Decimal(0);
+  for (const s of splits) {
+    sum = sum.plus(toDecimal(s.amount));
+  }
+  const expected = toDecimal(totalAmount);
+  const diff = expected.minus(sum);
+
+  return {
+    isValid: diff.abs().lessThan(0.0001),
+    totalAllocated: sum.toFixed(4),
+    difference: diff.toFixed(4),
+    remaining: diff.toFixed(2),
+  };
+}
+
+/**
+ * Calculate the adjustment transaction required to reconcile an account balance
+ */
+export function calculateReconciliationAdjustment(
+  currentBalance: number | string | Decimal,
+  actualBalance: number | string | Decimal
+): {
+  difference: string;
+  adjustmentType: "income" | "expense" | "none";
+  adjustmentAmount: string;
+} {
+  const current = toDecimal(currentBalance);
+  const actual = toDecimal(actualBalance);
+  const diff = actual.minus(current);
+
+  if (diff.abs().lessThan(0.0001)) {
+    return {
+      difference: "0.0000",
+      adjustmentType: "none",
+      adjustmentAmount: "0.0000",
+    };
+  }
+
+  if (diff.isPositive()) {
+    return {
+      difference: diff.toFixed(4),
+      adjustmentType: "income",
+      adjustmentAmount: diff.toFixed(4),
+    };
+  } else {
+    return {
+      difference: diff.toFixed(4),
+      adjustmentType: "expense",
+      adjustmentAmount: diff.abs().toFixed(4),
+    };
+  }
+}
+

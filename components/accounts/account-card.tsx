@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Landmark,
   Wallet,
@@ -14,6 +15,9 @@ import {
   Archive,
   RotateCcw,
   Trash2,
+  Scale,
+  Receipt,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +37,7 @@ import {
   archiveAccountAction,
   deleteAccountAction,
 } from "@/app/(dashboard)/accounts/actions";
+import { ReconcileAccountDialog } from "@/components/accounts/reconcile-account-dialog";
 
 interface AccountCardProps {
   account: Tables<"accounts">;
@@ -47,6 +52,9 @@ export function AccountCard({
   onEdit,
   onTransfer,
 }: AccountCardProps) {
+  const router = useRouter();
+  const [isReconcileOpen, setIsReconcileOpen] = React.useState(false);
+
   const getAccountTypeIcon = (type: string) => {
     switch (type) {
       case "credit_card":
@@ -143,13 +151,23 @@ export function AccountCard({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-52">
               {!account.is_archived && (
-                <DropdownMenuItem onClick={() => onTransfer(account)}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  <span>Transfer From</span>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => onTransfer(account)}>
+                    <ArrowLeftRight className="mr-2 h-4 w-4" />
+                    <span>Transfer Funds</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsReconcileOpen(true)}>
+                    <Scale className="mr-2 h-4 w-4" />
+                    <span>Reconcile Balance</span>
+                  </DropdownMenuItem>
+                </>
               )}
+              <DropdownMenuItem onClick={() => router.push(`/transactions?accountId=${account.id}`)}>
+                <Receipt className="mr-2 h-4 w-4" />
+                <span>View Transactions</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEdit(account)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 <span>Edit Account</span>
@@ -200,6 +218,13 @@ export function AccountCard({
           </div>
         </div>
       </CardContent>
+
+      {/* Account Balance Reconciliation Dialog */}
+      <ReconcileAccountDialog
+        account={account}
+        open={isReconcileOpen}
+        onOpenChange={setIsReconcileOpen}
+      />
     </Card>
   );
 }

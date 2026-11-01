@@ -6,10 +6,13 @@ import {
   createAccountSchema,
   updateAccountSchema,
   transferFundsSchema,
+  reconcileAccountSchema,
   CreateAccountInput,
   UpdateAccountInput,
   TransferFundsInput,
+  ReconcileAccountInput,
 } from "@/lib/validations/accounts";
+import { calculateReconciliationAdjustment } from "@/lib/calculations/financial";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -245,4 +248,89 @@ export async function transferFundsAction(input: TransferFundsInput): Promise<Ac
     return { success: false, error: errorMsg };
   }
 }
+
+export async function reconcileAccountBalanceAction(
+  input: ReconcileAccountInput
+): Promise<ActionResult> {
+  try {
+    const validated = reconcileAccountSchema.parse(input);
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized. Please log in." };
+    }
+
+    // Fetch account details
+    const { data: account, error: accError } = await supabase
+      .from("accounts")
+      .select("id, name, currency, current_balance, account_type")
+      .eq("id", validated.account_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (accError || !account) {
+      return { success: false, error: "Account not found or access denied." };
+    }
+
+    const { adjustmentType, adjustmentAmount, difference } =
+      calculateReconciliationAdjustment(account.current_balance, validated.actual_balance);
+
+    if (adjustmentType === "none") {
+      return {
+        success: true,
+        message: `Account "${account.name}" balance is already in perfect sync with statement (${account.currency} ${validated.actual_balance}).`,
+      };
+    }
+
+    const isPositiveAdjustment = adjustmentType === "income";
+    const sign = isPositiveAdjustment ? "+" : "-";
+
+    const desc = `Reconciliation Adjustment (${sign}${account.currency} ${parseFloat(adjustmentAmount).toFixed(2)})`;
+    const notes = validated.notes
+      ? `${validated.notes.trim()} | Statement date: ${validated.statement_date}`
+      : `Reconciled with statement dated ${validated.statement_date}. Previous system balance: ${account.currency} ${parseFloat(String(account.current_balance)).toFixed(2)}. Target: ${account.currency} ${validated.actual_balance}.`;
+
+    // Insert adjustment transaction
+    // The database trigger automatically updates accounts.current_balance to match validated.actual_balance!
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert({
+        user_id: user.id,
+        account_id: validated.account_id,
+        amount: parseFloat(adjustmentAmount),
+        currency: account.currency || "INR",
+        transaction_type: adjustmentType,
+        transaction_date: new Date(validated.statement_date).toISOString(),
+        description: desc,
+        notes,
+        tags: ["reconciliation", "adjustment"],
+        source: "manual",
+        is_reviewed: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/accounts");
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    revalidatePath("/reports");
+    return {
+      success: true,
+      message: `Account "${account.name}" reconciled successfully. Balance adjusted by ${sign}${account.currency} ${parseFloat(adjustmentAmount).toFixed(2)} to match statement.`,
+      data,
+    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to reconcile account balance";
+    return { success: false, error: errorMsg };
+  }
+}
+
 

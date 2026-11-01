@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +23,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoneyDisplay } from "@/components/financial/money-display";
-import { deleteTransactionAction } from "@/app/(dashboard)/transactions/actions";
+import {
+  deleteTransactionAction,
+  markTransactionsReviewedAction,
+} from "@/app/(dashboard)/transactions/actions";
 
 interface TransactionMobileFeedProps {
   transactions: any[];
@@ -45,9 +49,19 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
     }
   };
 
+  const handleMarkReviewed = async (id: string) => {
+    const res = await markTransactionsReviewedAction({ transaction_ids: [id] });
+    if (res.success) {
+      toast.success(res.message || "Marked as reviewed");
+    } else {
+      toast.error(res.error || "Failed to mark as reviewed");
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "income":
+      case "refund":
         return <TrendingUp className="h-4 w-4 text-emerald-600" />;
       case "expense":
         return <TrendingDown className="h-4 w-4 text-rose-600" />;
@@ -62,7 +76,8 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
     <div className="space-y-3">
       {transactions.map((txn) => {
         const isNegative = txn.transaction_type === "expense";
-        const isPositive = txn.transaction_type === "income";
+        const isPositive = txn.transaction_type === "income" || txn.transaction_type === "refund";
+        const needsReview = txn.is_reviewed === false || !txn.category_id;
 
         return (
           <Card key={txn.id} className="overflow-hidden border shadow-sm">
@@ -82,19 +97,36 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-sm leading-tight text-foreground">
-                      {txn.description}
-                    </h4>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="font-semibold text-sm leading-tight text-foreground">
+                        {txn.description}
+                      </h4>
+                      {needsReview && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10"
+                        >
+                          Review
+                        </Badge>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs text-muted-foreground">
                       <span>{format(new Date(txn.transaction_date), "dd MMM")}</span>
                       <span>•</span>
                       <span>{txn.account?.name}</span>
-                      {txn.category && (
+                      {txn.category ? (
                         <>
                           <span>•</span>
                           <span className="font-medium text-foreground">
                             {txn.category.name}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-600 dark:text-amber-400 italic">
+                            Uncategorized
                           </span>
                         </>
                       )}
@@ -127,6 +159,12 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {needsReview && (
+                        <DropdownMenuItem onClick={() => handleMarkReviewed(txn.id)}>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
+                          <span>Mark Reviewed</span>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => onEdit(txn)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Edit</span>

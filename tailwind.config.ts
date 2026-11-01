@@ -18,7 +18,10 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          interactive: "hsl(var(--border-interactive))",
+        },
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
@@ -50,30 +53,45 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          elevated: "hsl(var(--card-elevated))",
+          sunken: "hsl(var(--card-sunken))",
+        },
+        brand: {
+          indigo: "#365CF5",
+          emerald: "#0F9F75",
+          coral: "#E05B67",
+          violet: "#8B7CF6",
+          amber: "#D99A35",
         },
         income: {
-          DEFAULT: "#10b981",
+          DEFAULT: "#0F9F75",
           foreground: "#ffffff",
           muted: "#ecfdf5",
-          dark: "#059669",
+          dark: "#0a7d5b",
         },
         expense: {
-          DEFAULT: "#ef4444",
+          DEFAULT: "#E05B67",
           foreground: "#ffffff",
           muted: "#fef2f2",
-          dark: "#dc2626",
+          dark: "#c43f4c",
         },
         investment: {
-          DEFAULT: "#8b5cf6",
+          DEFAULT: "#8B7CF6",
           foreground: "#ffffff",
           muted: "#f5f3ff",
-          dark: "#7c3aed",
+          dark: "#7260e0",
         },
         transfer: {
-          DEFAULT: "#3b82f6",
+          DEFAULT: "#365CF5",
           foreground: "#ffffff",
           muted: "#eff6ff",
-          dark: "#2563eb",
+          dark: "#2548cb",
+        },
+        amber: {
+          DEFAULT: "#D99A35",
+          foreground: "#ffffff",
+          muted: "#fffbeb",
+          dark: "#b87e22",
         },
       },
       borderRadius: {
