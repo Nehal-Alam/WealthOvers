@@ -28,6 +28,7 @@ import {
   addMoney,
   subtractMoney,
   calculateGoalMonthlyRequired,
+  calculateGoalTrajectory,
 } from "@/lib/calculations/financial";
 
 interface GoalWithContributions extends Tables<"financial_goals"> {
@@ -69,6 +70,29 @@ export function GoalsView({ goals }: GoalsViewProps) {
         overallProgress: pct,
       };
     }, [goals]);
+
+  const getGoalCategoryBadgeClass = (category: string) => {
+    const c = category.toLowerCase();
+    if (c.includes("emergency") || c.includes("safety")) {
+      return "border-blue-500/30 text-blue-500 bg-blue-500/10";
+    }
+    if (c.includes("retire") || c.includes("pension")) {
+      return "border-purple-500/30 text-purple-500 bg-purple-500/10";
+    }
+    if (c.includes("home") || c.includes("house") || c.includes("property")) {
+      return "border-emerald-500/30 text-emerald-500 bg-emerald-500/10";
+    }
+    if (c.includes("car") || c.includes("vehicle") || c.includes("bike")) {
+      return "border-amber-500/30 text-amber-500 bg-amber-500/10";
+    }
+    if (c.includes("vacation") || c.includes("travel") || c.includes("trip")) {
+      return "border-cyan-500/30 text-cyan-500 bg-cyan-500/10";
+    }
+    if (c.includes("wedding") || c.includes("family") || c.includes("education")) {
+      return "border-rose-500/30 text-rose-500 bg-rose-500/10";
+    }
+    return "border-border text-muted-foreground bg-muted/40";
+  };
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete goal "${name}"?`)) return;
@@ -146,14 +170,50 @@ export function GoalsView({ goals }: GoalsViewProps) {
             );
             const isCompleted = metrics.progressPercent >= 100;
 
+            let recentVelocity = 0;
+            if (goal.contributions && goal.contributions.length > 0) {
+              const sum = goal.contributions.reduce((acc: number, c: any) => acc + parseFloat(c.amount.toString()), 0);
+              recentVelocity = sum / Math.max(1, goal.contributions.length);
+            }
+            const trajectory = calculateGoalTrajectory(
+              goal.target_amount,
+              goal.current_amount,
+              goal.target_date,
+              recentVelocity
+            );
+
             return (
-              <Card key={goal.id} className="overflow-hidden border shadow-sm">
+              <Card
+                key={goal.id}
+                className={`overflow-hidden border shadow-sm transition-all hover:shadow-md ${
+                  isCompleted ? "border-emerald-500/30 bg-emerald-500/[0.03]" : ""
+                }`}
+              >
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
-                        {goal.category}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getGoalCategoryBadgeClass(
+                            goal.category
+                          )}`}
+                        >
+                          {goal.category}
+                        </Badge>
+                        {!isCompleted && trajectory.projectedMonthsToComplete !== null && (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] py-0 px-1.5 h-4.5 ${
+                              trajectory.isOnTrack
+                                ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/10"
+                                : "border-amber-500/30 text-amber-500 bg-amber-500/10"
+                            }`}
+                          >
+                            {trajectory.isOnTrack ? "On Track" : "Pacing Lag"}
+                          </Badge>
+                        )}
+                      </div>
                       <CardTitle className="text-base font-semibold mt-1">
                         {goal.name}
                       </CardTitle>

@@ -11,6 +11,9 @@ import {
   Clock,
   Wifi,
   AlertTriangle,
+  Activity,
+  CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,6 +21,7 @@ import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MetricCard } from "@/components/financial/metric-card";
 import { PairDeviceDialog } from "./pair-device-dialog";
 import { SyncHistoryTable } from "./sync-history-table";
 import { SyncSimulatorCard } from "./sync-simulator-card";
@@ -61,6 +65,20 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
     }
   };
 
+  // Telemetry Aggregates
+  const { activeDevicesCount, totalTransactionsSynced, successRate } = React.useMemo(() => {
+    const active = devices.filter((d) => d.status === "active").length;
+    const synced = syncLogs.reduce((acc, l) => acc + (l.records_ingested || 0), 0);
+    const rate = syncLogs.length > 0
+      ? Math.round((syncLogs.filter((l) => l.sync_status === "success").length / syncLogs.length) * 100)
+      : 100;
+    return {
+      activeDevicesCount: active,
+      totalTransactionsSynced: synced,
+      successRate: rate,
+    };
+  }, [devices, syncLogs]);
+
   return (
     <div className="space-y-8">
       {/* Top Header */}
@@ -72,6 +90,31 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
           </p>
         </div>
         <PairDeviceDialog />
+      </div>
+
+      {/* Sync Telemetry KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard
+          title="Active Devices"
+          amount={activeDevicesCount}
+          subtitle={`${devices.length} total paired hardware`}
+          icon={Smartphone}
+          iconColor="#3B82F6"
+        />
+        <MetricCard
+          title="Synced Transactions"
+          amount={totalTransactionsSynced}
+          subtitle="Processed via companion channel"
+          icon={Zap}
+          iconColor="#8B5CF6"
+        />
+        <MetricCard
+          title="Ingestion Success Rate"
+          amount={`${successRate}%`}
+          subtitle="On-device SMS parser reliability"
+          icon={CheckCircle2}
+          iconColor="#10B981"
+        />
       </div>
 
       {/* Security & Privacy Banner */}

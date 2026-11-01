@@ -11,13 +11,16 @@ import {
   CheckCircle,
   PauseCircle,
   Landmark,
+  ArrowRight,
+  Sparkles,
+  AlertCircle,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 
 import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { MoneyDisplay } from "@/components/financial/money-display";
@@ -27,7 +30,11 @@ import {
   toggleRecurringActiveAction,
   deleteRecurringAction,
 } from "@/app/(dashboard)/recurring/actions";
-import { addMoney, multiplyMoney } from "@/lib/calculations/financial";
+import {
+  addMoney,
+  multiplyMoney,
+  calculateCashFlowForecast,
+} from "@/lib/calculations/financial";
 
 interface RecurringWithRelations extends Tables<"recurring_transactions"> {
   account?: Tables<"accounts">;
@@ -111,6 +118,11 @@ export function RecurringList({
     return { monthlyExpenses: exp, monthlyIncome: inc, activeCount: count };
   }, [recurringRules]);
 
+  // Forward Cash Flow Projections (30, 60, 90 Days)
+  const cashFlowForecast = React.useMemo(() => {
+    return calculateCashFlowForecast(recurringRules, [30, 60, 90]);
+  }, [recurringRules]);
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -150,6 +162,53 @@ export function RecurringList({
           iconColor="#3B82F6"
         />
       </div>
+
+      {/* Forward Cash-Flow Projection Card */}
+      {activeCount > 0 && (
+        <Card className="border shadow-sm overflow-hidden bg-card/60 backdrop-blur-sm">
+          <CardHeader className="p-4 pb-2 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">
+                  Forward Recurring Cash-Flow Outlook
+                </CardTitle>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Based on active scheduled debits and income
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
+              {cashFlowForecast.map((period, idx) => (
+                <div key={period.days} className={`${idx > 0 ? "pt-3 sm:pt-0 sm:pl-4" : ""}`}>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    {period.label} Horizon
+                  </div>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-xs text-muted-foreground">Net Impact:</span>
+                    <MoneyDisplay
+                      amount={period.netCashFlow}
+                      positiveSign
+                      colored
+                      className="font-mono font-bold text-base"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      In: <MoneyDisplay amount={period.inflows} />
+                    </span>
+                    <span className="text-rose-600 dark:text-rose-400">
+                      Out: <MoneyDisplay amount={period.outflows} />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rules List */}
       {recurringRules.length === 0 ? (
@@ -223,14 +282,39 @@ export function RecurringList({
 
                   {/* Footer with Next Due & Active Toggle */}
                   <div className="mt-4 pt-3 border-t flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-primary" />
-                      <span>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5 text-primary" />
                         Next:{" "}
                         <strong className="text-foreground">
                           {format(new Date(rule.next_occurrence_date), "dd MMM yyyy")}
                         </strong>
                       </span>
+                      {rule.is_active && (() => {
+                        const days = differenceInDays(new Date(rule.next_occurrence_date), new Date());
+                        if (days <= 0) {
+                          return (
+                            <Badge variant="destructive" className="text-[10px] py-0 px-1.5 h-4 gap-1 animate-pulse">
+                              <AlertCircle className="h-2.5 w-2.5" /> Due Today
+                            </Badge>
+                          );
+                        }
+                        if (days <= 3) {
+                          return (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-rose-500/30 text-rose-500 bg-rose-500/10">
+                              Due in {days}d
+                            </Badge>
+                          );
+                        }
+                        if (days <= 7) {
+                          return (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-amber-500/30 text-amber-500 bg-amber-500/10">
+                              Due in {days}d
+                            </Badge>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div className="flex items-center space-x-2">

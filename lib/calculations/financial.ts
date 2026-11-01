@@ -617,6 +617,179 @@ export function calculateGoalMonthlyRequired(
   };
 }
 
+/**
+ * Calculate the daily allowable safe spending rate given remaining budget and cycle end date
+ */
+export function calculateDailySafeSpend(
+  remainingAmount: number | string | Decimal,
+  endDateStr: string | Date,
+  referenceDate: string | Date = new Date()
+): {
+  daysRemaining: number;
+  dailySafeSpend: string;
+  isOverspent: boolean;
+} {
+  const rem = toDecimal(remainingAmount);
+  const end = typeof endDateStr === "string" ? parseISO(endDateStr) : endDateStr;
+  const now = typeof referenceDate === "string" ? parseISO(referenceDate) : referenceDate;
+  const daysDiff = differenceInDays(end, now);
+  const daysRemaining = Math.max(1, daysDiff + 1);
+
+  if (rem.lessThanOrEqualTo(0)) {
+    return {
+      daysRemaining,
+      dailySafeSpend: "0.0000",
+      isOverspent: rem.isNegative(),
+    };
+  }
+
+  const daily = rem.dividedBy(daysRemaining);
+  return {
+    daysRemaining,
+    dailySafeSpend: daily.toFixed(4),
+    isOverspent: false,
+  };
+}
+
+export interface RecurringRuleForecastItem {
+  amount: number | string | Decimal;
+  recurrence_interval: string;
+  transaction_type: string;
+  is_active: boolean;
+}
+
+export interface CashFlowForecastPeriod {
+  days: number;
+  label: string;
+  inflows: string;
+  outflows: string;
+  netCashFlow: string;
+  isNetPositive: boolean;
+}
+
+/**
+ * Projects multi-horizon cash flow (30, 60, 90 days) from recurring rules
+ */
+export function calculateCashFlowForecast(
+  rules: RecurringRuleForecastItem[],
+  horizonDays: number[] = [30, 60, 90]
+): CashFlowForecastPeriod[] {
+  return horizonDays.map((days) => {
+    let inflows = new Decimal(0);
+    let outflows = new Decimal(0);
+
+    for (const rule of rules) {
+      if (!rule.is_active) continue;
+      const amt = toDecimal(rule.amount);
+
+      // Estimate number of occurrences within the horizon
+      let occurrences = 0;
+      switch (rule.recurrence_interval) {
+        case "daily":
+          occurrences = days;
+          break;
+        case "weekly":
+          occurrences = Math.floor(days / 7);
+          break;
+        case "biweekly":
+          occurrences = Math.floor(days / 14);
+          break;
+        case "monthly":
+          occurrences = Math.floor(days / 30);
+          break;
+        case "quarterly":
+          occurrences = Math.floor(days / 90);
+          break;
+        case "half_yearly":
+          occurrences = Math.floor(days / 180);
+          break;
+        case "yearly":
+          occurrences = Math.floor(days / 365);
+          break;
+        default:
+          occurrences = Math.floor(days / 30);
+          break;
+      }
+
+      if (occurrences < 1 && days >= 30 && rule.recurrence_interval === "monthly") {
+        occurrences = 1;
+      }
+
+      const totalPeriodAmount = amt.times(occurrences);
+      if (rule.transaction_type === "income") {
+        inflows = inflows.plus(totalPeriodAmount);
+      } else {
+        outflows = outflows.plus(totalPeriodAmount);
+      }
+    }
+
+    const net = inflows.minus(outflows);
+
+    return {
+      days,
+      label: `${days} Days`,
+      inflows: inflows.toFixed(4),
+      outflows: outflows.toFixed(4),
+      netCashFlow: net.toFixed(4),
+      isNetPositive: net.greaterThanOrEqualTo(0),
+    };
+  });
+}
+
+/**
+ * Calculate goal completion trajectory based on current monthly contribution velocity
+ */
+export function calculateGoalTrajectory(
+  targetAmount: number | string | Decimal,
+  currentAmount: number | string | Decimal,
+  targetDateStr: string | Date,
+  monthlyVelocity: number | string | Decimal = 0,
+  referenceDate: string | Date = new Date()
+): {
+  projectedMonthsToComplete: number | null;
+  projectedCompletionDate: string | null;
+  isOnTrack: boolean;
+  varianceMonths: number;
+} {
+  const target = toDecimal(targetAmount);
+  const current = toDecimal(currentAmount);
+  const remaining = target.minus(current);
+  const velocity = toDecimal(monthlyVelocity);
+
+  const targetDate = typeof targetDateStr === "string" ? parseISO(targetDateStr) : targetDateStr;
+  const now = typeof referenceDate === "string" ? parseISO(referenceDate) : referenceDate;
+  const targetMonthsRemaining = Math.max(1, differenceInCalendarMonths(targetDate, now));
+
+  if (remaining.lessThanOrEqualTo(0)) {
+    return {
+      projectedMonthsToComplete: 0,
+      projectedCompletionDate: format(now, "yyyy-MM-dd"),
+      isOnTrack: true,
+      varianceMonths: 0,
+    };
+  }
+
+  if (velocity.lessThanOrEqualTo(0)) {
+    return {
+      projectedMonthsToComplete: null,
+      projectedCompletionDate: null,
+      isOnTrack: false,
+      varianceMonths: -targetMonthsRemaining,
+    };
+  }
+
+  const projectedMonths = Math.ceil(remaining.dividedBy(velocity).toNumber());
+  const projectedDate = addMonths(now, projectedMonths);
+  const variance = targetMonthsRemaining - projectedMonths;
+
+  return {
+    projectedMonthsToComplete: projectedMonths,
+    projectedCompletionDate: format(projectedDate, "yyyy-MM-dd"),
+    isOnTrack: variance >= 0,
+    varianceMonths: variance,
+  };
+}
+
 export interface FinancialHealthResult {
   score: number;
   grade: "Excellent" | "Good" | "Fair" | "Needs Attention";
