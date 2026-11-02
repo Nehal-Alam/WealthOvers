@@ -31,7 +31,7 @@
 | **Phase 3** | Global Layout Redesign | **COMPLETED** | Persistent app shell, collapsible sidebar, desktop header with controls & mobile drawer, bottom nav with FAB quick action & `prefetch={true}` |
 | **Phase 4** | Dashboard Redesign | **COMPLETED** | 7 core financial KPIs, 5 clean visualisations (Net Worth Trend, Income vs Expenses, Asset Allocation, Expense Breakdown, Investment Performance), 6 sections (Recent Transactions, Accounts Overview, Upcoming Bills, Budget Progress, Financial Goals, Financial Health Insights), 11-widget customizer with Show/Hide All |
 | **Phase 5** | Make Navigation Extremely Fast | **COMPLETED** | Added route-level `loading.tsx` skeletons across all 16 dashboard routes, request-memoized auth (`getAuthenticatedUser()`), eliminated waterfalls, optimized prefetch on primary routes |
-| **Phase 6** | Supabase Query Optimisation | **PENDING** | Composite indexes migration, eliminate N+1 queries, explicit column selects across all routes |
+| **Phase 6** | Supabase Query Optimisation | **COMPLETED** | Applied migration `20261102000000_composite_indexes.sql` on live DB (9 composite & FK indexes), eliminated N+1 budget loop (batch range query), explicit column projections across all routes |
 | **Phase 7** | React & Bundle Optimisation | **PENDING** | Dynamic imports for heavy libraries, minimal client component boundaries, bundle audit |
 | **Phase 8** | Smooth UX & Transitions | **PENDING** | Short 120-180ms CSS transitions, instant button feedback, zero full-page blocking |
 | **Phase 9** | Financial Correctness Audit | **PENDING** | Decimal-safe verification across all KPIs, accurate currency, no mock figures |
