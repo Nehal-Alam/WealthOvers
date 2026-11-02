@@ -599,6 +599,7 @@ export function DashboardClient({
           <MetricCard
             title="Savings Rate"
             amount={`${balanceSheet.savingsRate}%`}
+            formatType="percent"
             subtitle={`Net saved: ₹${parseFloat(balanceSheet.netSavings).toLocaleString()}`}
             icon={Percent}
             iconColor="violet"

@@ -97,6 +97,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
         <MetricCard
           title="Active Devices"
           amount={activeDevicesCount}
+          formatType="count"
           subtitle={`${devices.length} total paired hardware`}
           icon={Smartphone}
           iconColor="#3B82F6"
@@ -104,6 +105,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
         <MetricCard
           title="Synced Transactions"
           amount={totalTransactionsSynced}
+          formatType="count"
           subtitle="Processed via companion channel"
           icon={Zap}
           iconColor="#8B5CF6"
@@ -111,6 +113,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
         <MetricCard
           title="Ingestion Success Rate"
           amount={`${successRate}%`}
+          formatType="percent"
           subtitle="On-device SMS parser reliability"
           icon={CheckCircle2}
           iconColor="#10B981"

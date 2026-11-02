@@ -161,6 +161,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
         <MetricCard
           title="Overall Goal Progress"
           amount={`${overallProgress}%`}
+          formatType="percent"
           subtitle={`${goals.filter((g) => g.current_amount >= g.target_amount).length} of ${goals.length} goals achieved`}
           icon={Sparkles}
           iconColor="#8B5CF6"

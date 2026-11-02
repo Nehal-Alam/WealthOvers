@@ -61,11 +61,19 @@ export function RecurringList({
   accounts,
   categories,
 }: RecurringListProps) {
+  const [optimisticOverrides, setOptimisticOverrides] = React.useState<Record<string, boolean>>({});
+
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
-    const res = await toggleRecurringActiveAction(id, !currentStatus);
+    const nextStatus = !currentStatus;
+    // Optimistic immediate update
+    setOptimisticOverrides((prev) => ({ ...prev, [id]: nextStatus }));
+
+    const res = await toggleRecurringActiveAction(id, nextStatus);
     if (res.success) {
       toast.success(res.message);
     } else {
+      // Reversible safe rollback
+      setOptimisticOverrides((prev) => ({ ...prev, [id]: currentStatus }));
       toast.error(res.error || "Failed to toggle status");
     }
   };
@@ -87,7 +95,12 @@ export function RecurringList({
     let count = 0;
 
     for (const rule of recurringRules) {
-      if (!rule.is_active) continue;
+      const isActive =
+        optimisticOverrides[rule.id] !== undefined
+          ? optimisticOverrides[rule.id]
+          : rule.is_active;
+
+      if (!isActive) continue;
       count++;
 
       // Normalize frequency to monthly estimate
@@ -166,6 +179,7 @@ export function RecurringList({
         <MetricCard
           title="Active Rules"
           amount={activeCount}
+          formatType="count"
           subtitle={`${recurringRules.length - activeCount} rules paused`}
           icon={Clock}
           iconColor="#3B82F6"
@@ -233,12 +247,16 @@ export function RecurringList({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {recurringRules.map((rule) => {
             const isIncome = rule.transaction_type === "income";
+            const isActive =
+              optimisticOverrides[rule.id] !== undefined
+                ? optimisticOverrides[rule.id]
+                : rule.is_active;
 
             return (
               <Card
                 key={rule.id}
                 className={`overflow-hidden border transition-all hover:shadow-md ${
-                  !rule.is_active ? "opacity-60 bg-muted/30" : ""
+                  !isActive ? "opacity-60 bg-muted/30" : ""
                 }`}
               >
                 <CardContent className="p-4">
@@ -299,7 +317,7 @@ export function RecurringList({
                           {format(new Date(rule.next_occurrence_date), "dd MMM yyyy")}
                         </strong>
                       </span>
-                      {rule.is_active && (() => {
+                      {isActive && (() => {
                         const days = differenceInDays(new Date(rule.next_occurrence_date), new Date());
                         if (days <= 0) {
                           return (
@@ -328,9 +346,9 @@ export function RecurringList({
 
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={rule.is_active}
+                        checked={isActive}
                         onCheckedChange={() =>
-                          handleToggleActive(rule.id, rule.is_active)
+                          handleToggleActive(rule.id, isActive)
                         }
                         aria-label="Toggle active status"
                       />

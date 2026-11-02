@@ -18,6 +18,7 @@ interface MetricCardProps {
   };
   coloredAmount?: boolean;
   className?: string;
+  formatType?: "currency" | "percent" | "count";
 }
 
 function resolveIconColorClass(color?: string): string {
@@ -58,8 +59,23 @@ export const MetricCard = React.memo(function MetricCard({
   trend,
   coloredAmount = false,
   className,
+  formatType,
 }: MetricCardProps) {
   const iconClasses = React.useMemo(() => resolveIconColorClass(iconColor), [iconColor]);
+
+  // Determine whether this metric represents a percentage, a discrete count, or a currency
+  const isPercent =
+    formatType === "percent" ||
+    (typeof amount === "string" && amount.includes("%"));
+
+  const isCount =
+    formatType === "count" ||
+    currency?.toLowerCase() === "count" ||
+    (typeof amount === "number" &&
+      (title.toLowerCase().includes("rule") ||
+        title.toLowerCase().includes("device") ||
+        title.toLowerCase().includes("synced") ||
+        title.toLowerCase().includes("count")));
 
   return (
     <Card className={cn("overflow-hidden border border-border/80 bg-card shadow-xs transition-colors", className)}>
@@ -77,11 +93,29 @@ export const MetricCard = React.memo(function MetricCard({
 
         <div className="mt-2.5 sm:mt-3">
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            <MoneyDisplay
-              amount={amount}
-              currency={currency}
-              colored={coloredAmount}
-            />
+            {isPercent ? (
+              <span
+                className={cn(
+                  "font-mono tracking-tight",
+                  coloredAmount &&
+                    (parseFloat(String(amount)) >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-destructive")
+                )}
+              >
+                {amount}
+              </span>
+            ) : isCount ? (
+              <span className="font-mono tracking-tight">
+                {typeof amount === "number" ? amount.toLocaleString() : amount}
+              </span>
+            ) : (
+              <MoneyDisplay
+                amount={amount}
+                currency={currency}
+                colored={coloredAmount}
+              />
+            )}
           </div>
 
           {(subtitle || trend) && (

@@ -144,6 +144,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
         <MetricCard
           title="Credit Utilization"
           amount={`${overallUtilization}%`}
+          formatType="percent"
           subtitle={
             overallUtilization <= 30
               ? "Healthy (under 30%)"

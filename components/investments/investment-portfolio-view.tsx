@@ -299,6 +299,7 @@ export function InvestmentPortfolioView({
         <MetricCard
           title="Annualized XIRR"
           amount={portfolioXIRR !== null ? `${portfolioXIRR}%` : `${absoluteReturnPercent}%`}
+          formatType="percent"
           subtitle={
             portfolioXIRR !== null
               ? `Annualized rate • Abs: ${absoluteReturnPercent}%`

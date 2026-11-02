@@ -456,6 +456,7 @@ export function ReportsView({
         <MetricCard
           title="Savings Rate"
           amount={`${savingsRate}%`}
+          formatType="percent"
           subtitle="Proportion of income saved"
           icon={Percent}
           iconColor="#8B5CF6"

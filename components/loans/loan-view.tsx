@@ -135,6 +135,7 @@ export function LoanView({ loans }: LoanViewProps) {
         <MetricCard
           title="Active Loans"
           amount={loans.length}
+          formatType="count"
           subtitle="Registered debt accounts"
           icon={Clock}
           iconColor="#3B82F6"
