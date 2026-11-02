@@ -11,14 +11,14 @@ import {
 } from "recharts";
 
 const CHART_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#06B6D4",
-  "#14B8A6",
+  "#244B3C", // Forest Green
+  "#8BA58C", // Sage
+  "#39805B", // Success Green
+  "#C77A65", // Terracotta
+  "#C39148", // Warm Amber
+  "#6366F1", // Indigo
+  "#06B6D4", // Cyan
+  "#14B8A6", // Teal
 ];
 
 interface CategoryPieChartProps {
@@ -52,6 +52,14 @@ export function CategoryPieChart({ data }: CategoryPieChartProps) {
             ))}
           </Pie>
           <Tooltip
+            contentStyle={{
+              backgroundColor: "var(--surface)",
+              borderColor: "var(--border)",
+              borderRadius: "1rem",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              color: "var(--text-primary)",
+              fontSize: "12px",
+            }}
             formatter={(val: any) => [
               `₹${parseFloat(val).toLocaleString("en-IN")}`,
               "Spent",
@@ -63,4 +71,3 @@ export function CategoryPieChart({ data }: CategoryPieChartProps) {
     </div>
   );
 }
-

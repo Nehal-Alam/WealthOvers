@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Target,
   PlusCircle,
@@ -10,6 +11,8 @@ import {
   Trash2,
   TrendingUp,
   Sparkles,
+  Layers,
+  Calculator,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -17,10 +20,11 @@ import { toast } from "sonner";
 import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
+import { ProgressRing } from "@/components/goals/progress-ring";
+import { GoalCalculator } from "@/components/goals/goal-calculator";
 import dynamic from "next/dynamic";
 
 const CreateGoalDialog = dynamic(
@@ -58,6 +62,7 @@ interface GoalsViewProps {
 export function GoalsView({ goals }: GoalsViewProps) {
   const [contributeTargetGoal, setContributeTargetGoal] =
     React.useState<Tables<"financial_goals"> | null>(null);
+  const [showCalculator, setShowCalculator] = React.useState<boolean>(false);
 
   // Aggregate Metrics
   const { totalTarget, totalCurrent, totalRemaining, overallProgress } =
@@ -93,21 +98,21 @@ export function GoalsView({ goals }: GoalsViewProps) {
       return "border-primary/30 text-primary bg-primary/10";
     }
     if (c.includes("retire") || c.includes("pension")) {
-      return "border-violet-500/30 text-violet-500 bg-violet-500/10";
+      return "border-primary/30 text-primary bg-primary/10";
     }
     if (c.includes("home") || c.includes("house") || c.includes("property")) {
-      return "border-emerald-500/30 text-emerald-500 bg-emerald-500/10";
+      return "border-success/30 text-success bg-success/10";
     }
     if (c.includes("car") || c.includes("vehicle") || c.includes("bike")) {
-      return "border-amber-500/30 text-amber-500 bg-amber-500/10";
+      return "border-warning/30 text-warning bg-warning/10";
     }
     if (c.includes("vacation") || c.includes("travel") || c.includes("trip")) {
       return "border-primary/20 text-primary bg-primary/5";
     }
     if (c.includes("wedding") || c.includes("family") || c.includes("education")) {
-      return "border-destructive/30 text-destructive bg-destructive/10";
+      return "border-danger/30 text-danger bg-danger/10";
     }
-    return "border-border text-muted-foreground bg-muted/40";
+    return "border-border text-text-secondary bg-surface-secondary";
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -125,14 +130,51 @@ export function GoalsView({ goals }: GoalsViewProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Financial Goals</h2>
-          <p className="text-sm text-muted-foreground">
-            Plan, monitor, and achieve milestone financial targets with required monthly pacing.
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary">
+            Financial Goals & Milestones
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+            SVG circular progress meters, target pacing, and monthly contribution calculators.
           </p>
         </div>
 
-        <CreateGoalDialog />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="gap-1.5 h-9 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary"
+          >
+            <Calculator className="h-4 w-4" />
+            <span>{showCalculator ? "Hide Calculator" : "Goal Calculator"}</span>
+          </Button>
+
+          <CreateGoalDialog />
+        </div>
       </div>
+
+      {/* Unified Plan Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70 w-fit">
+        <Link
+          href="/budgets"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>Monthly Budgets</span>
+        </Link>
+
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-surface shadow-2xs">
+          <Target className="h-3.5 w-3.5" />
+          <span>Financial Goals</span>
+        </div>
+      </div>
+
+      {/* Goal Calculator (Collapsible / Active) */}
+      {showCalculator && (
+        <div className="animate-in fade-in slide-in-from-top-2">
+          <GoalCalculator />
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -141,14 +183,14 @@ export function GoalsView({ goals }: GoalsViewProps) {
           amount={totalTarget}
           subtitle="Combined milestone targets"
           icon={Target}
-          iconColor="#3B82F6"
+          iconColor="forest"
         />
         <MetricCard
           title="Total Saved So Far"
           amount={totalCurrent}
           subtitle="Accumulated goal capital"
           icon={PiggyBank}
-          iconColor="#10B981"
+          iconColor="emerald"
           coloredAmount
         />
         <MetricCard
@@ -156,7 +198,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
           amount={totalRemaining}
           subtitle="Remaining capital to accumulate"
           icon={TrendingUp}
-          iconColor="#F59E0B"
+          iconColor="coral"
         />
         <MetricCard
           title="Overall Goal Progress"
@@ -164,16 +206,17 @@ export function GoalsView({ goals }: GoalsViewProps) {
           formatType="percent"
           subtitle={`${goals.filter((g) => g.current_amount >= g.target_amount).length} of ${goals.length} goals achieved`}
           icon={Sparkles}
-          iconColor="#8B5CF6"
+          iconColor="indigo"
         />
       </div>
 
+      {/* Goals Grid */}
       {goals.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-          <Target className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-base font-semibold">No financial goals set</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Create long-term targets like retirement, a home purchase, or emergency reserves.
+        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface">
+          <Target className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
+          <h3 className="text-base font-semibold text-text-primary">No financial goals set</h3>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4 max-w-md mx-auto">
+            Create long-term targets like retirement, a home purchase, or emergency reserves to start tracking your progress.
           </p>
           <CreateGoalDialog />
         </div>
@@ -199,20 +242,22 @@ export function GoalsView({ goals }: GoalsViewProps) {
               recentVelocity
             );
 
+            const remainingAmount = subtractMoney(goal.target_amount, goal.current_amount);
+
             return (
               <Card
                 key={goal.id}
-                className={`overflow-hidden border shadow-sm transition-all hover:shadow-md ${
-                  isCompleted ? "border-emerald-500/30 bg-emerald-500/[0.03]" : ""
+                className={`overflow-hidden border border-border/80 bg-surface rounded-2xl shadow-2xs transition-all hover:shadow-xs ${
+                  isCompleted ? "border-success/30 bg-success/5" : ""
                 }`}
               >
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getGoalCategoryBadgeClass(
+                          className={`text-[10px] py-0 px-2 h-4.5 font-medium rounded-md ${getGoalCategoryBadgeClass(
                             goal.category
                           )}`}
                         >
@@ -221,17 +266,17 @@ export function GoalsView({ goals }: GoalsViewProps) {
                         {!isCompleted && trajectory.projectedMonthsToComplete !== null && (
                           <Badge
                             variant="outline"
-                            className={`text-[10px] py-0 px-1.5 h-4.5 ${
+                            className={`text-[10px] py-0 px-1.5 h-4.5 rounded-md ${
                               trajectory.isOnTrack
-                                ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/10"
-                                : "border-amber-500/30 text-amber-500 bg-amber-500/10"
+                                ? "border-success/30 text-success bg-success/10"
+                                : "border-warning/30 text-warning bg-warning/10"
                             }`}
                           >
                             {trajectory.isOnTrack ? "On Track" : "Pacing Lag"}
                           </Badge>
                         )}
                       </div>
-                      <CardTitle className="text-base font-semibold mt-1">
+                      <CardTitle className="text-base font-bold text-text-primary mt-1.5 truncate">
                         {goal.name}
                       </CardTitle>
                     </div>
@@ -239,7 +284,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 text-text-secondary hover:text-danger shrink-0"
                       onClick={() => handleDelete(goal.id, goal.name)}
                       aria-label="Delete goal"
                     >
@@ -249,36 +294,43 @@ export function GoalsView({ goals }: GoalsViewProps) {
                 </CardHeader>
 
                 <CardContent className="p-4 pt-2 space-y-4">
-                  {/* Progress Bar */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-muted-foreground">Progress</span>
-                      <span
-                        className={`text-xs font-mono font-bold ${
-                          isCompleted ? "text-emerald-600" : "text-primary"
-                        }`}
-                      >
-                        {metrics.progressPercent}%
-                      </span>
-                    </div>
-
-                    <Progress
-                      value={metrics.progressPercent}
-                      indicatorClassName={isCompleted ? "bg-emerald-500" : "bg-primary"}
-                      className="h-2"
+                  {/* Leftovers-style Circular Progress Ring & Numbers */}
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-secondary/40 border border-border/60">
+                    <ProgressRing
+                      progress={metrics.progressPercent}
+                      size={72}
+                      strokeWidth={6.5}
+                      strokeColor={isCompleted ? "#39805B" : "var(--primary)"}
+                      trackColor="var(--border)"
                     />
 
-                    <div className="flex justify-between text-xs text-muted-foreground pt-0.5">
-                      <span>Saved: <MoneyDisplay amount={goal.current_amount} /></span>
-                      <span>Target: <MoneyDisplay amount={goal.target_amount} /></span>
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="text-text-secondary">Saved</span>
+                        <span className="font-bold tabular-nums text-text-primary">
+                          ₹{parseFloat(goal.current_amount as any).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline text-xs">
+                        <span className="text-text-secondary">Target</span>
+                        <span className="font-bold tabular-nums text-text-primary">
+                          ₹{parseFloat(goal.target_amount as any).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline text-xs pt-0.5 border-t border-border/50">
+                        <span className="text-text-secondary">Remaining</span>
+                        <span className={`font-bold tabular-nums ${isCompleted ? "text-success" : "text-text-primary"}`}>
+                          {isCompleted ? "Goal Reached!" : `₹${parseFloat(remainingAmount).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Monthly Required Target */}
                   {!isCompleted ? (
-                    <div className="p-2.5 rounded-lg border bg-muted/30 flex justify-between items-center text-xs">
+                    <div className="p-2.5 rounded-xl border border-border/70 bg-surface flex justify-between items-center text-xs">
                       <div>
-                        <span className="text-muted-foreground block text-[11px]">
+                        <span className="text-text-secondary block text-[11px] font-medium">
                           Required Monthly Savings
                         </span>
                         <span className="font-mono font-bold text-sm text-primary">
@@ -286,31 +338,31 @@ export function GoalsView({ goals }: GoalsViewProps) {
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-muted-foreground block text-[11px]">
-                          Time Remaining
+                        <span className="text-text-secondary block text-[11px] font-medium">
+                          Time Left
                         </span>
-                        <span className="font-mono font-semibold">
+                        <span className="font-mono font-semibold text-text-primary">
                           {metrics.monthsRemaining} month(s)
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center gap-2 text-xs font-semibold">
+                    <div className="p-2.5 rounded-xl border border-success/30 bg-success/10 text-success flex items-center gap-2 text-xs font-semibold">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       <span>Target Milestone Achieved!</span>
                     </div>
                   )}
 
                   {/* Footer Action */}
-                  <div className="flex items-center justify-between pt-2 border-t text-xs">
-                    <span className="text-muted-foreground flex items-center gap-1">
+                  <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+                    <span className="text-text-secondary flex items-center gap-1 text-[11px]">
                       <Calendar className="h-3 w-3" />
                       Target: {format(new Date(goal.target_date), "MMM yyyy")}
                     </span>
 
                     <Button
                       size="sm"
-                      className="h-7 text-xs gap-1"
+                      className="h-8 text-xs gap-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface font-semibold shadow-xs transition-colors"
                       onClick={() => setContributeTargetGoal(goal)}
                     >
                       <PiggyBank className="h-3.5 w-3.5" />
@@ -333,4 +385,3 @@ export function GoalsView({ goals }: GoalsViewProps) {
     </div>
   );
 }
-

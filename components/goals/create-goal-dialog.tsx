@@ -78,19 +78,19 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="gap-2">
+          <Button className="gap-2 bg-primary hover:bg-primary-hover text-surface rounded-xl shadow-xs transition-colors">
             <PlusCircle className="h-4 w-4" />
             <span>New Financial Goal</span>
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="sm:max-w-[460px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-text-primary">
             <Target className="h-5 w-5 text-primary" />
             <span>Create Financial Goal</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-text-secondary">
             Target long-term savings goals with automated monthly milestone projections.
           </DialogDescription>
         </DialogHeader>
@@ -98,92 +98,123 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {/* Goal Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="goal-name">Goal Title</Label>
+            <Label htmlFor="goal-name" className="text-xs font-medium text-text-secondary">
+              Goal Name
+            </Label>
             <Input
               id="goal-name"
-              placeholder="e.g. Emergency Fund, House Downpayment, Retirement"
+              placeholder="e.g. Emergency Fund, Apartment Down Payment"
               {...register("name")}
+              className="h-9 text-xs bg-surface border-border text-text-primary"
             />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p className="text-xs text-danger">{errors.name.message}</p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Category</Label>
-            <Select
-              defaultValue="General"
-              onValueChange={(val) => setValue("category", val)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Emergency Fund">Emergency Fund</SelectItem>
-                <SelectItem value="Real Estate">House / Downpayment</SelectItem>
-                <SelectItem value="Retirement">Retirement Corpus</SelectItem>
-                <SelectItem value="Vehicle">Vehicle / Automobile</SelectItem>
-                <SelectItem value="Education">Higher Education</SelectItem>
-                <SelectItem value="Vacation">Vacation & Travel</SelectItem>
-                <SelectItem value="Wealth Creation">Wealth Creation</SelectItem>
-                <SelectItem value="General">General Savings</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
-            {/* Target Amount */}
+            {/* Target Corpus */}
             <div className="space-y-1.5">
-              <Label htmlFor="goal-target">Target Amount (INR)</Label>
+              <Label htmlFor="goal-target" className="text-xs font-medium text-text-secondary">
+                Target Corpus (INR)
+              </Label>
               <Input
                 id="goal-target"
                 type="number"
                 step="0.01"
-                placeholder="1000000.00"
+                placeholder="500000.00"
                 {...register("target_amount")}
+                className="h-9 text-xs font-semibold tabular-nums bg-surface border-border"
               />
               {errors.target_amount && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.target_amount.message}
                 </p>
               )}
             </div>
 
-            {/* Current Amount */}
+            {/* Current Seed Capital */}
             <div className="space-y-1.5">
-              <Label htmlFor="goal-current">Already Saved</Label>
+              <Label htmlFor="goal-current" className="text-xs font-medium text-text-secondary">
+                Already Saved (INR)
+              </Label>
               <Input
                 id="goal-current"
                 type="number"
                 step="0.01"
-                placeholder="100000.00"
+                placeholder="0.00"
                 {...register("current_amount")}
+                className="h-9 text-xs font-semibold tabular-nums bg-surface border-border"
               />
+              {errors.current_amount && (
+                <p className="text-xs text-danger">
+                  {errors.current_amount.message}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="goal-date">Target Date</Label>
-            <Input id="goal-date" type="date" {...register("target_date")} />
-            {errors.target_date && (
-              <p className="text-xs text-destructive">
-                {errors.target_date.message}
-              </p>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Target Date */}
+            <div className="space-y-1.5">
+              <Label htmlFor="goal-date" className="text-xs font-medium text-text-secondary">
+                Target Date
+              </Label>
+              <Input
+                id="goal-date"
+                type="date"
+                {...register("target_date")}
+                className="h-9 text-xs bg-surface border-border"
+              />
+              {errors.target_date && (
+                <p className="text-xs text-danger">
+                  {errors.target_date.message}
+                </p>
+              )}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-1.5">
+              <Label htmlFor="goal-cat" className="text-xs font-medium text-text-secondary">
+                Category
+              </Label>
+              <Select
+                defaultValue="General"
+                onValueChange={(val) => setValue("category", val)}
+              >
+                <SelectTrigger id="goal-cat" className="h-9 text-xs bg-surface border-border">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface text-text-primary border-border">
+                  <SelectItem value="Emergency">Emergency Reserve</SelectItem>
+                  <SelectItem value="Retirement">Retirement</SelectItem>
+                  <SelectItem value="Home">Home & Real Estate</SelectItem>
+                  <SelectItem value="Vehicle">Vehicle Purchase</SelectItem>
+                  <SelectItem value="Vacation">Vacation / Travel</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="General">General Milestone</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Goal
+              Create Goal
             </Button>
           </DialogFooter>
         </form>
@@ -191,4 +222,3 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
     </Dialog>
   );
 }
-

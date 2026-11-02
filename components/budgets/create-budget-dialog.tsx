@@ -106,43 +106,55 @@ export function CreateBudgetDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="gap-2">
+          <Button className="gap-2 bg-primary hover:bg-primary-hover text-surface rounded-xl shadow-xs transition-colors">
             <PlusCircle className="h-4 w-4" />
             <span>Create Budget</span>
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>Create Monthly Budget</DialogTitle>
-          <DialogDescription>
-            Set spending limits and allocate budgets to expense categories.
+      <DialogContent className="sm:max-w-[520px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-bold tracking-tight text-text-primary">
+            Create Monthly Budget
+          </DialogTitle>
+          <DialogDescription className="text-xs text-text-secondary">
+            Set spending limits and allocate budgets to expense envelopes.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {/* Budget Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="bgt-name">Budget Title</Label>
-            <Input id="bgt-name" placeholder="e.g. November 2026 Budget" {...register("name")} />
+            <Label htmlFor="bgt-name" className="text-xs font-medium text-text-secondary">
+              Budget Title
+            </Label>
+            <Input
+              id="bgt-name"
+              placeholder="e.g. November 2026 Budget"
+              {...register("name")}
+              className="h-9 text-xs bg-surface border-border text-text-primary"
+            />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p className="text-xs text-danger">{errors.name.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Total Budget Amount */}
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-amt">Total Limit (INR)</Label>
+              <Label htmlFor="bgt-amt" className="text-xs font-medium text-text-secondary">
+                Total Limit (INR)
+              </Label>
               <Input
                 id="bgt-amt"
                 type="number"
                 step="0.01"
                 placeholder="50000.00"
                 {...register("total_amount")}
+                className="h-9 text-xs font-semibold tabular-nums bg-surface border-border"
               />
               {errors.total_amount && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.total_amount.message}
                 </p>
               )}
@@ -150,7 +162,9 @@ export function CreateBudgetDialog({
 
             {/* Threshold Percent */}
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-thresh">Alert Threshold (%)</Label>
+              <Label htmlFor="bgt-thresh" className="text-xs font-medium text-text-secondary">
+                Alert Threshold (%)
+              </Label>
               <Input
                 id="bgt-thresh"
                 type="number"
@@ -158,31 +172,38 @@ export function CreateBudgetDialog({
                 max="100"
                 defaultValue={85}
                 {...register("alert_threshold_percent", { valueAsNumber: true })}
+                className="h-9 text-xs bg-surface border-border"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-start">Start Date</Label>
-              <Input id="bgt-start" type="date" {...register("start_date")} />
+              <Label htmlFor="bgt-start" className="text-xs font-medium text-text-secondary">
+                Start Date
+              </Label>
+              <Input id="bgt-start" type="date" {...register("start_date")} className="h-9 text-xs bg-surface border-border" />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-end">End Date</Label>
-              <Input id="bgt-end" type="date" {...register("end_date")} />
+              <Label htmlFor="bgt-end" className="text-xs font-medium text-text-secondary">
+                End Date
+              </Label>
+              <Input id="bgt-end" type="date" {...register("end_date")} className="h-9 text-xs bg-surface border-border" />
             </div>
           </div>
 
           {/* Category Allocations */}
-          <div className="space-y-2 pt-2 border-t">
+          <div className="space-y-2 pt-2 border-t border-border/60">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold">Category Allocations (Optional)</Label>
+              <Label className="text-xs font-semibold text-text-primary">
+                Category Allocations (Optional)
+              </Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 text-xs gap-1"
+                className="h-7 text-xs gap-1 rounded-lg border-border text-text-secondary hover:text-text-primary"
                 onClick={() => {
                   if (expenseCategories.length > 0) {
                     append({
@@ -206,10 +227,10 @@ export function CreateBudgetDialog({
                       setValue(`allocations.${idx}.category_id`, val)
                     }
                   >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-8 text-xs bg-surface border-border">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-surface text-text-primary border-border">
                       {expenseCategories.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -224,7 +245,7 @@ export function CreateBudgetDialog({
                     type="number"
                     step="0.01"
                     placeholder="Limit"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs font-semibold tabular-nums bg-surface border-border"
                     {...register(`allocations.${idx}.allocated_amount`)}
                   />
                 </div>
@@ -233,7 +254,7 @@ export function CreateBudgetDialog({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className="h-8 w-8 text-text-secondary hover:text-danger rounded-lg"
                   onClick={() => remove(idx)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -243,11 +264,11 @@ export function CreateBudgetDialog({
           </div>
 
           {/* Rollover Toggle */}
-          <div className="flex items-center justify-between rounded-lg border p-3 mt-2">
+          <div className="flex items-center justify-between rounded-xl border border-border p-3 bg-surface-secondary/40">
             <div className="space-y-0.5">
-              <Label className="text-sm">Budget Rollover</Label>
-              <p className="text-xs text-muted-foreground">
-                Roll forward unused funds into next month&apos;s budget.
+              <Label className="text-xs font-medium text-text-primary">Budget Rollover</Label>
+              <p className="text-[11px] text-text-secondary">
+                Roll forward unused funds into next month&apos;s budget cycle.
               </p>
             </div>
             <Switch
@@ -256,16 +277,21 @@ export function CreateBudgetDialog({
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Budget
             </Button>
@@ -275,4 +301,3 @@ export function CreateBudgetDialog({
     </Dialog>
   );
 }
-
