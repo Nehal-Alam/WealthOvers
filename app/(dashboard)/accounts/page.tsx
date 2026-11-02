@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { AccountGrid } from "@/components/accounts/account-grid";
 
@@ -10,13 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
+  const supabase = await createClient();
   const { data: accountsData } = await supabase
     .from("accounts")
     .select("*")

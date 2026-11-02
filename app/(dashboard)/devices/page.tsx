@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { DevicesView } from "@/components/devices/devices-view";
 
@@ -10,14 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default async function DevicesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const supabase = await createClient();
 
   const [devicesRes, syncLogsRes] = await Promise.all([
     supabase

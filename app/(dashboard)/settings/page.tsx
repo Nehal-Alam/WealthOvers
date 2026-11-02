@@ -1,19 +1,19 @@
 import React from "react";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Globe, Shield, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Tables } from "@/types/database";
 
 export default async function SettingsPage() {
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
   const { data: settingsData } = await supabase
     .from("user_settings")
     .select("*")

@@ -155,7 +155,11 @@ export function AppSidebar() {
                       item.href === "/net-worth" ||
                       item.href === "/transactions" ||
                       item.href === "/accounts" ||
-                      item.href === "/investments"
+                      item.href === "/investments" ||
+                      item.href === "/budgets" ||
+                      item.href === "/reports"
+                        ? true
+                        : undefined
                     }
                     title={!isOpen ? item.title : undefined}
                     className={cn(

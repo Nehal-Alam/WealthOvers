@@ -83,13 +83,18 @@ export function CommandMenu() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCommandMenuOpen, setCommandMenuOpen, togglePrivacyMode]);
 
-  // Reset query on open
+  // Reset query on open and prefetch primary routes
   React.useEffect(() => {
     if (isCommandMenuOpen) {
       setQuery("");
       setSelectedIndex(0);
+      router.prefetch("/dashboard");
+      router.prefetch("/net-worth");
+      router.prefetch("/transactions");
+      router.prefetch("/accounts");
+      router.prefetch("/investments");
     }
-  }, [isCommandMenuOpen]);
+  }, [isCommandMenuOpen, router]);
 
   const navigate = React.useCallback(
     (href: string) => {

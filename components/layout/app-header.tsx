@@ -178,7 +178,11 @@ export function AppHeader({ user }: AppHeaderProps) {
                           item.href === "/net-worth" ||
                           item.href === "/transactions" ||
                           item.href === "/accounts" ||
-                          item.href === "/investments"
+                          item.href === "/investments" ||
+                          item.href === "/budgets" ||
+                          item.href === "/reports"
+                            ? true
+                            : undefined
                         }
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${

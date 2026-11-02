@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { BudgetView } from "@/components/budgets/budget-view";
 import { addMoney } from "@/lib/calculations/financial";
@@ -11,39 +11,40 @@ export const metadata: Metadata = {
 };
 
 export default async function BudgetsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch all budgets with allocated categories
-  const { data: budgetsData } = await supabase
-    .from("budgets")
-    .select(
+  const supabase = await createClient();
+
+  // Fetch all budgets and categories concurrently in parallel
+  const [budgetsResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("budgets")
+      .select(
+        `
+        *,
+        budget_categories:budget_categories(
+          id,
+          category_id,
+          allocated_amount,
+          category:categories(id, name, color, icon)
+        )
       `
-      *,
-      budget_categories:budget_categories(
-        id,
-        category_id,
-        allocated_amount,
-        category:categories(id, name, color, icon)
       )
-    `
-    )
-    .eq("user_id", user.id)
-    .order("start_date", { ascending: false });
+      .eq("user_id", user.id)
+      .order("start_date", { ascending: false }),
+    supabase
+      .from("categories")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+  ]);
 
-  // Fetch expense categories
-  const { data: categoriesData } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("name", { ascending: true });
-
-  const rawBudgets = (budgetsData || []) as any[];
-  const categories = (categoriesData || []) as Tables<"categories">[];
+  const rawBudgets = (budgetsResult.data || []) as any[];
+  const categories = (categoriesResult.data || []) as Tables<"categories">[];
 
   // For each budget, fetch actual expenses in its date range to calculate spending
   const budgetsWithSpending = await Promise.all(

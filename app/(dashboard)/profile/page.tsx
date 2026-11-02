@@ -1,5 +1,6 @@
 import React from "react";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { User, Mail, Shield, Calendar, KeyRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import type { Tables } from "@/types/database";
 
 export default async function ProfilePage() {
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
   const { data: profileData } = await supabase
     .from("profiles")
     .select("*")
