@@ -55,7 +55,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex bg-background">
       {/* Desktop Collapsible Left Sidebar */}
-      <AppSidebar />
+      <AppSidebar user={userData} />
 
       {/* Main Viewport Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
