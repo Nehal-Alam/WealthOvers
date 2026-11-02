@@ -84,7 +84,7 @@ describe("Phase 2: Shared Application Layout & Navigation Redesign", () => {
       expect(mobileNavContent).toContain("<span>Home</span>");
       expect(mobileNavContent).toContain('href="/transactions"');
       expect(mobileNavContent).toContain("<span>Activity</span>");
-      expect(mobileNavContent).toContain('href="/reports"');
+      expect(mobileNavContent).toContain('href="/insights"');
       expect(mobileNavContent).toContain("<span>Insights</span>");
       expect(mobileNavContent).toContain('href="/budgets"');
       expect(mobileNavContent).toContain("<span>Plan</span>");

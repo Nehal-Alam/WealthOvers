@@ -69,7 +69,7 @@ const navSections: { group?: string; items: NavSectionItem[] }[] = [
   {
     group: "PLANNING & INSIGHTS",
     items: [
-      { title: "Insights", href: "/reports", icon: BarChart3, tab: "insights" },
+      { title: "Insights", href: "/insights", icon: BarChart3 },
       { title: "Plan", href: "/budgets", icon: Target },
       { title: "Investments", href: "/investments", icon: Coins },
     ],
@@ -85,7 +85,7 @@ const navSections: { group?: string; items: NavSectionItem[] }[] = [
   {
     group: "SYSTEM",
     items: [
-      { title: "Reports", href: "/reports", icon: FileSpreadsheet, tab: "export" },
+      { title: "Reports", href: "/reports", icon: FileSpreadsheet },
       { title: "Automation", href: "/devices", icon: Smartphone },
       { title: "Settings", href: "/settings", icon: Settings },
     ],
@@ -120,13 +120,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
     "WO";
 
   const isItemActive = (item: NavSectionItem) => {
-    if (item.href === "/reports") {
-      const currentTab = searchParams.get("tab");
-      if (item.tab === "export") {
-        return pathname === "/reports" && currentTab === "export";
-      }
-      return pathname === "/reports" && (!currentTab || currentTab === "insights");
-    }
     if (item.exact) {
       return pathname === item.href;
     }

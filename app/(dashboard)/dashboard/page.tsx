@@ -34,6 +34,7 @@ export default async function DashboardPage() {
     goalsResult,
     monthTransactionsResult,
     summaryRpcResult,
+    creditCardsResult,
   ] = await Promise.all([
     // 1. User Profile
     supabase
@@ -143,6 +144,12 @@ export default async function DashboardPage() {
       p_start_date: monthStart,
       p_end_date: monthEnd,
     }),
+
+    // 14. Credit Cards
+    supabase
+      .from("credit_cards")
+      .select("id, account_id, card_name, issuer_name, last_four_digits, credit_limit, current_outstanding, payment_due_day, statement_date_day")
+      .eq("user_id", user.id),
   ]);
 
   const profile = profileResult.data;
@@ -158,6 +165,7 @@ export default async function DashboardPage() {
   const liabilities = (liabilitiesResult.data as any[] | null) || [];
   const goals = (goalsResult.data as any[] | null) || [];
   const monthTransactions = (monthTransactionsResult.data as any[] | null) || [];
+  const creditCards = (creditCardsResult.data as any[] | null) || [];
 
   // Parse active budget spend
   let activeBudget: any = null;
@@ -224,6 +232,7 @@ export default async function DashboardPage() {
         liabilities={liabilities}
         goals={goals}
         monthTransactions={monthTransactions}
+        creditCards={creditCards}
         precomputedSummary={precomputedSummary}
       />
     </div>

@@ -133,8 +133,10 @@ describe("Phase 5: Insights & Planning Hub (Leftovers-Inspired)", () => {
       expect(content).toContain("Interactive Timeline");
     });
 
-    it("ReportsView integrates DailySpendingScrubber and tabbed view controls", () => {
-      const compPath = path.resolve(process.cwd(), "components/reports/reports-view.tsx");
+    it("ReportsView or InsightsView integrates DailySpendingScrubber and tabbed view controls", () => {
+      const compPath = fs.existsSync(path.resolve(process.cwd(), "components/insights/insights-view.tsx"))
+        ? path.resolve(process.cwd(), "components/insights/insights-view.tsx")
+        : path.resolve(process.cwd(), "components/reports/reports-view.tsx");
       const content = fs.readFileSync(compPath, "utf-8");
 
       expect(content).toContain("DailySpendingScrubber");

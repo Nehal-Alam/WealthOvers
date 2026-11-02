@@ -161,10 +161,10 @@ export function calculateSavingsRate(
 }
 
 /**
- * Calculate Net Worth:
+ * Legacy Calculate Net Worth Helper:
  * Net Worth = Liquid Accounts + Investments + Assets - Liabilities - Loans - Credit Cards
  */
-export function calculateNetWorth(
+export function calculateLegacyNetWorth(
   liquidBalances: (number | string | Decimal)[],
   investmentValuations: (number | string | Decimal)[] = [],
   assetValuations: (number | string | Decimal)[] = [],
@@ -968,6 +968,243 @@ export function calculateFinancialHealthScore({
   };
 }
 
+export interface NetWorthCalculationInput {
+  accounts: Array<{
+    id?: string;
+    account_type: string;
+    current_balance: number | string | Decimal;
+    is_archived?: boolean;
+    currency?: string;
+  }>;
+  investments?: Array<{
+    id?: string;
+    total_quantity?: number | string | Decimal;
+    average_buy_price?: number | string | Decimal;
+    current_nav_or_price?: number | string | Decimal;
+    current_valuation?: number | string | Decimal;
+    currency?: string;
+    asset_type?: string;
+  }>;
+  assets?: Array<{
+    id?: string;
+    category?: string;
+    current_valuation: number | string | Decimal;
+  }>;
+  loans?: Array<{
+    id?: string;
+    loan_type: string;
+    outstanding_balance: number | string | Decimal;
+    principal_amount?: number | string | Decimal;
+  }>;
+  liabilities?: Array<{
+    id?: string;
+    category?: string;
+    outstanding_amount: number | string | Decimal;
+  }>;
+  creditCards?: Array<{
+    id?: string;
+    account_id?: string;
+    credit_limit?: number | string | Decimal;
+    current_outstanding?: number | string | Decimal;
+  }>;
+  asOfDate?: string | Date;
+}
+
+export interface NetWorthBreakdown {
+  totalAssets: string;
+  totalLiabilities: string;
+  netWorth: string;
+  isNetPositive: boolean;
+  assetsBreakdown: {
+    liquidAccounts: string;
+    fixedDeposits: string;
+    investments: string;
+    tangibleAssets: string;
+    receivables: string;
+  };
+  liabilitiesBreakdown: {
+    creditCards: string;
+    loans: string;
+    borrowedMoney: string;
+    otherDebts: string;
+  };
+  debtToAssetRatio: string;
+  solvencyRatio: string;
+}
+
+/**
+ * Authoritative Central Financial Net Worth Calculation Engine
+ * Total Net Worth = Total Assets - Total Liabilities
+ * Follows strict financial accounting rules:
+ * - Internal transfers excluded from P&L
+ * - Zero double counting of investments or cards
+ * - Money lent (loan_given) counted as Receivable Asset
+ * - Borrowing & loans counted as Liabilities
+ */
+export function calculateNetWorth(input: NetWorthCalculationInput): NetWorthBreakdown;
+export function calculateNetWorth(
+  liquidBalances: (number | string | Decimal)[],
+  investmentValuations?: (number | string | Decimal)[],
+  assetValuations?: (number | string | Decimal)[],
+  liabilityBalances?: (number | string | Decimal)[]
+): string;
+export function calculateNetWorth(
+  inputOrLiquid: NetWorthCalculationInput | (number | string | Decimal)[],
+  investmentValuations: (number | string | Decimal)[] = [],
+  assetValuations: (number | string | Decimal)[] = [],
+  liabilityBalances: (number | string | Decimal)[] = []
+): NetWorthBreakdown | string {
+  if (Array.isArray(inputOrLiquid)) {
+    return calculateLegacyNetWorth(
+      inputOrLiquid,
+      investmentValuations,
+      assetValuations,
+      liabilityBalances
+    );
+  }
+
+  const {
+    accounts = [],
+    investments = [],
+    assets = [],
+    loans = [],
+    liabilities = [],
+    creditCards = [],
+  } = inputOrLiquid;
+
+  const activeAccounts = accounts.filter((a) => !a.is_archived);
+
+  // Set of account IDs already tracked via credit_cards table
+  const trackedCreditAccountIds = new Set(
+    creditCards.map((c) => c.account_id).filter(Boolean)
+  );
+
+  let liquidAccounts = new Decimal(0);
+  let fixedDeposits = new Decimal(0);
+  let standaloneCreditDebt = new Decimal(0);
+
+  for (const acc of activeAccounts) {
+    const bal = toDecimal(acc.current_balance);
+
+    if (acc.account_type === "credit_card") {
+      // If tracked via credit_cards table, avoid double counting
+      if (!trackedCreditAccountIds.has(acc.id)) {
+        standaloneCreditDebt = standaloneCreditDebt.plus(bal.abs());
+      }
+    } else if (acc.account_type === "loan_account") {
+      // Loan accounts tracked via loans table
+    } else if (acc.account_type === "fixed_deposit" || acc.account_type === "recurring_deposit") {
+      if (bal.greaterThan(0)) {
+        fixedDeposits = fixedDeposits.plus(bal);
+      }
+    } else {
+      // Regular liquid bank / cash / wallet accounts
+      liquidAccounts = liquidAccounts.plus(bal);
+    }
+  }
+
+  // 2. Investments Valuation
+  let totalInvestments = new Decimal(0);
+  for (const inv of investments) {
+    let val: Decimal;
+    if (inv.current_valuation !== undefined && inv.current_valuation !== null) {
+      val = toDecimal(inv.current_valuation);
+    } else {
+      const qty = toDecimal(inv.total_quantity || 0);
+      const price = toDecimal(inv.current_nav_or_price || inv.average_buy_price || 0);
+      val = qty.times(price);
+    }
+
+    if (inv.currency && inv.currency.toUpperCase() === "USD") {
+      val = val.times(DEFAULT_USD_INR_RATE);
+    }
+    totalInvestments = totalInvestments.plus(val);
+  }
+
+  // 3. Tangible Assets (Real estate, vehicles, physical gold, etc.)
+  let totalTangible = new Decimal(0);
+  for (const ast of assets) {
+    totalTangible = totalTangible.plus(toDecimal(ast.current_valuation || 0));
+  }
+
+  // 4. Loans: Distinguish Lending (Receivable Asset) vs Borrowing (Liability)
+  let totalReceivables = new Decimal(0); // Money lent to others (loan_given)
+  let totalLoans = new Decimal(0); // Personal, home, auto loans
+  let totalBorrowedMoney = new Decimal(0); // loan_received
+
+  for (const l of loans) {
+    const balance = toDecimal(l.outstanding_balance || 0);
+    if (l.loan_type === "loan_given") {
+      // Money lent is an asset to be collected
+      totalReceivables = totalReceivables.plus(balance);
+    } else if (l.loan_type === "loan_received") {
+      totalBorrowedMoney = totalBorrowedMoney.plus(balance);
+    } else {
+      totalLoans = totalLoans.plus(balance);
+    }
+  }
+
+  // 5. Credit Cards Liabilities
+  let totalCreditCards = standaloneCreditDebt;
+  for (const card of creditCards) {
+    totalCreditCards = totalCreditCards.plus(toDecimal(card.current_outstanding || 0));
+  }
+
+  // 6. External Manual Liabilities
+  let totalOtherDebts = new Decimal(0);
+  for (const lia of liabilities) {
+    totalOtherDebts = totalOtherDebts.plus(toDecimal(lia.outstanding_amount || 0));
+  }
+
+  // Aggregate Totals
+  const totalAssets = liquidAccounts
+    .plus(fixedDeposits)
+    .plus(totalInvestments)
+    .plus(totalTangible)
+    .plus(totalReceivables);
+
+  const totalLiabilities = totalCreditCards
+    .plus(totalLoans)
+    .plus(totalBorrowedMoney)
+    .plus(totalOtherDebts);
+
+  const netWorth = totalAssets.minus(totalLiabilities);
+
+  let debtToAssetRatio = "0.00";
+  if (totalAssets.greaterThan(0)) {
+    debtToAssetRatio = totalLiabilities.dividedBy(totalAssets).times(100).toFixed(2);
+  }
+
+  let solvencyRatio = "0.00";
+  if (totalLiabilities.greaterThan(0)) {
+    solvencyRatio = totalAssets.dividedBy(totalLiabilities).toFixed(2);
+  } else if (totalAssets.greaterThan(0)) {
+    solvencyRatio = "100.00";
+  }
+
+  return {
+    totalAssets: totalAssets.toFixed(4),
+    totalLiabilities: totalLiabilities.toFixed(4),
+    netWorth: netWorth.toFixed(4),
+    isNetPositive: netWorth.greaterThanOrEqualTo(0),
+    assetsBreakdown: {
+      liquidAccounts: liquidAccounts.toFixed(4),
+      fixedDeposits: fixedDeposits.toFixed(4),
+      investments: totalInvestments.toFixed(4),
+      tangibleAssets: totalTangible.toFixed(4),
+      receivables: totalReceivables.toFixed(4),
+    },
+    liabilitiesBreakdown: {
+      creditCards: totalCreditCards.toFixed(4),
+      loans: totalLoans.toFixed(4),
+      borrowedMoney: totalBorrowedMoney.toFixed(4),
+      otherDebts: totalOtherDebts.toFixed(4),
+    },
+    debtToAssetRatio,
+    solvencyRatio,
+  };
+}
+
 /**
  * Consolidated Balance Sheet & Net Worth Ratios
  */
@@ -1168,16 +1405,17 @@ export function generateDeterministicInsights(
 
   for (const t of transactions) {
     const amt = toDecimal(t.amount);
-    if (t.transaction_type === "income" || t.transaction_type === "refund") {
+    const info = getTransactionDisplayInfo(t);
+    if (info.direction === "inflow") {
       totalIncome = totalIncome.plus(amt);
-    } else if (t.transaction_type === "expense") {
+    } else if (info.direction === "outflow") {
       totalExpense = totalExpense.plus(amt);
-      const catName = t.category?.name || "Uncategorized";
+      const catName = t.category?.name || info.badgeLabel || "Uncategorized";
       categoryExpenses[catName] = (categoryExpenses[catName] || new Decimal(0)).plus(amt);
 
       if (!maxTransaction || amt.greaterThan(maxTransaction.decimal)) {
         maxTransaction = {
-          description: t.description || "Expense",
+          description: t.description || info.badgeLabel || "Expense",
           amount: amt.toFixed(4),
           date: t.transaction_date,
           decimal: amt,
@@ -1459,6 +1697,271 @@ export function calculateSafeToSpend(params: SafeToSpendParams): SafeToSpendResu
     paceStatus,
     healthScore,
     pacingPercentage,
+  };
+}
+
+export type TransactionDirection = "inflow" | "outflow" | "neutral";
+
+export interface TransactionCashFlowInfo {
+  direction: TransactionDirection;
+  isDebit: boolean;
+  isCredit: boolean;
+  isTransfer: boolean;
+  displaySign: "+" | "-" | "⇄ ";
+  textColorClass: "text-danger" | "text-success" | "text-primary";
+  badgeVariant:
+    | "expense"
+    | "income"
+    | "transfer"
+    | "refund"
+    | "investment_buy"
+    | "investment_sell"
+    | "loan_repayment"
+    | "loan_disbursement"
+    | "other";
+  badgeLabel: string;
+}
+
+export interface LedgerCashFlowSummary {
+  totalInflow: string;
+  totalOutflow: string;
+  netCashFlow: string;
+  creditCount: number;
+  debitCount: number;
+  transferCount: number;
+}
+
+export function getTransactionDisplayInfo(
+  txn: {
+    transaction_type: string;
+    amount?: number | string | Decimal | null;
+    description?: string | null;
+    notes?: string | null;
+    account_id?: string | null;
+    destination_account_id?: string | null;
+  },
+  contextAccountId?: string | null
+): TransactionCashFlowInfo {
+  const type = txn.transaction_type;
+  const desc = (txn.description || "").toLowerCase();
+  const notes = (txn.notes || "").toLowerCase();
+
+  // 1. Single Account Context for Transfers
+  if (type === "transfer") {
+    if (contextAccountId && contextAccountId !== "all") {
+      if (txn.account_id === contextAccountId) {
+        return {
+          direction: "outflow",
+          isDebit: true,
+          isCredit: false,
+          isTransfer: true,
+          displaySign: "-",
+          textColorClass: "text-danger",
+          badgeVariant: "transfer",
+          badgeLabel: "Transfer Out",
+        };
+      }
+      if (txn.destination_account_id === contextAccountId) {
+        return {
+          direction: "inflow",
+          isDebit: false,
+          isCredit: true,
+          isTransfer: true,
+          displaySign: "+",
+          textColorClass: "text-success",
+          badgeVariant: "transfer",
+          badgeLabel: "Transfer In",
+        };
+      }
+    }
+    // Global context: neutral between owned accounts
+    return {
+      direction: "neutral",
+      isDebit: false,
+      isCredit: false,
+      isTransfer: true,
+      displaySign: "⇄ ",
+      textColorClass: "text-primary",
+      badgeVariant: "transfer",
+      badgeLabel: "Transfer",
+    };
+  }
+
+  // 2. Inflows / Credits
+  if (type === "income") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "income",
+      badgeLabel: "Income",
+    };
+  }
+
+  if (type === "refund") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "refund",
+      badgeLabel: "Refund",
+    };
+  }
+
+  if (type === "investment_sell") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "investment_sell",
+      badgeLabel: "Investment Sell",
+    };
+  }
+
+  // 3. Outflows / Debits
+  if (type === "expense") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "expense",
+      badgeLabel: "Expense",
+    };
+  }
+
+  if (type === "investment_buy") {
+    const isSip = desc.includes("sip") || notes.includes("sip");
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "investment_buy",
+      badgeLabel: isSip ? "SIP Installment" : "Investment Buy",
+    };
+  }
+
+  // 4. Loans & Debts
+  if (type === "loan_repayment") {
+    const isReceived = desc.includes("repayment received") || desc.includes("received");
+    if (isReceived) {
+      return {
+        direction: "inflow",
+        isDebit: false,
+        isCredit: true,
+        isTransfer: false,
+        displaySign: "+",
+        textColorClass: "text-success",
+        badgeVariant: "loan_repayment",
+        badgeLabel: "Loan Repayment Received",
+      };
+    }
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "loan_repayment",
+      badgeLabel: "Loan EMI Payment",
+    };
+  }
+
+  if (type === "loan_disbursement") {
+    const isLending = desc.includes("money lent") || desc.includes("lent");
+    if (isLending) {
+      return {
+        direction: "outflow",
+        isDebit: true,
+        isCredit: false,
+        isTransfer: false,
+        displaySign: "-",
+        textColorClass: "text-danger",
+        badgeVariant: "loan_disbursement",
+        badgeLabel: "Money Lent",
+      };
+    }
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "loan_disbursement",
+      badgeLabel: "Loan Disbursement",
+    };
+  }
+
+  // Fallback
+  return {
+    direction: "neutral",
+    isDebit: false,
+    isCredit: false,
+    isTransfer: false,
+    displaySign: "⇄ ",
+    textColorClass: "text-primary",
+    badgeVariant: "other",
+    badgeLabel: type,
+  };
+}
+
+export function calculateLedgerCashFlow(
+  transactions: Array<{
+    transaction_type: string;
+    amount: number | string | Decimal | null;
+    description?: string | null;
+    notes?: string | null;
+    account_id?: string | null;
+    destination_account_id?: string | null;
+  }>,
+  contextAccountId?: string | null
+): LedgerCashFlowSummary {
+  let inflow = new Decimal(0);
+  let outflow = new Decimal(0);
+  let creditCount = 0;
+  let debitCount = 0;
+  let transferCount = 0;
+
+  for (const txn of transactions) {
+    const info = getTransactionDisplayInfo(txn, contextAccountId);
+    const amt = toDecimal(txn.amount);
+
+    if (info.direction === "inflow") {
+      inflow = inflow.plus(amt);
+      creditCount++;
+    } else if (info.direction === "outflow") {
+      outflow = outflow.plus(amt);
+      debitCount++;
+    } else if (info.direction === "neutral") {
+      transferCount++;
+    }
+  }
+
+  const net = inflow.minus(outflow);
+
+  return {
+    totalInflow: inflow.toFixed(4),
+    totalOutflow: outflow.toFixed(4),
+    netCashFlow: net.toFixed(4),
+    creditCount,
+    debitCount,
+    transferCount,
   };
 }
 

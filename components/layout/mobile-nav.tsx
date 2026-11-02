@@ -30,7 +30,7 @@ export function MobileNav() {
 
   const isHomeActive = pathname === "/dashboard";
   const isActivityActive = pathname.startsWith("/transactions");
-  const isInsightsActive = pathname.startsWith("/reports");
+  const isInsightsActive = pathname.startsWith("/insights");
   const isPlanActive =
     pathname.startsWith("/budgets") ||
     pathname.startsWith("/goals") ||
@@ -177,7 +177,7 @@ export function MobileNav() {
 
       {/* Destination 3: Insights */}
       <Link
-        href="/reports"
+        href="/insights"
         prefetch={true}
         className={cn(
           "flex flex-col items-center justify-center w-14 py-1 gap-0.5 text-[10px] font-medium transition-colors rounded-lg",

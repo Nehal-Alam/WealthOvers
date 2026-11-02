@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   ListFilter,
   Layers,
+  Coins,
 } from "lucide-react";
 import {
   isThisMonth,
@@ -65,7 +66,7 @@ import { TransactionTimeline } from "@/components/transactions/transaction-timel
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { TransactionMobileFeed } from "@/components/transactions/transaction-mobile-feed";
 import { MetricCard } from "@/components/financial/metric-card";
-import { addMoney, subtractMoney } from "@/lib/calculations/financial";
+import { addMoney, subtractMoney, calculateLedgerCashFlow } from "@/lib/calculations/financial";
 import {
   bulkUpdateCategoryAction,
   bulkDeleteTransactionsAction,
@@ -145,6 +146,8 @@ export function TransactionLedger({
         if (txn.transaction_type !== "expense") return false;
       } else if (viewTab === "income") {
         if (txn.transaction_type !== "income") return false;
+      } else if (viewTab === "investment") {
+        if (txn.transaction_type !== "investment_buy" && txn.transaction_type !== "investment_sell") return false;
       } else if (viewTab === "transfer") {
         if (txn.transaction_type !== "transfer") return false;
       } else if (viewTab === "refund") {
@@ -373,22 +376,11 @@ export function TransactionLedger({
     toast.success(`Exported ${filteredTransactions.length} transactions to CSV`);
   };
 
-  // Aggregate Metrics using Decimal precision
-  const { totalInflow, totalOutflow, netCashFlow } = React.useMemo(() => {
-    let inflow = "0.0000";
-    let outflow = "0.0000";
-
-    for (const txn of filteredTransactions) {
-      if (txn.transaction_type === "income" || txn.transaction_type === "refund") {
-        inflow = addMoney(inflow, txn.amount);
-      } else if (txn.transaction_type === "expense") {
-        outflow = addMoney(outflow, txn.amount);
-      }
-    }
-
-    const net = subtractMoney(inflow, outflow);
-    return { totalInflow: inflow, totalOutflow: outflow, netCashFlow: net };
-  }, [filteredTransactions]);
+  // Aggregate Metrics using Central Financial Cash Flow Engine
+  const { totalInflow, totalOutflow, netCashFlow, creditCount, debitCount } =
+    React.useMemo(() => {
+      return calculateLedgerCashFlow(filteredTransactions, selectedAccountId);
+    }, [filteredTransactions, selectedAccountId]);
 
   return (
     <div className="space-y-6">
@@ -451,7 +443,7 @@ export function TransactionLedger({
         <MetricCard
           title="Total Inflow"
           amount={totalInflow}
-          subtitle={`${filteredTransactions.filter((t) => t.transaction_type === "income" || t.transaction_type === "refund").length} credit transactions`}
+          subtitle={`${creditCount} credit transaction${creditCount === 1 ? "" : "s"}`}
           icon={TrendingUp}
           iconColor="emerald"
           coloredAmount
@@ -459,7 +451,7 @@ export function TransactionLedger({
         <MetricCard
           title="Total Outflow"
           amount={totalOutflow}
-          subtitle={`${filteredTransactions.filter((t) => t.transaction_type === "expense").length} debit transactions`}
+          subtitle={`${debitCount} debit transaction${debitCount === 1 ? "" : "s"}`}
           icon={TrendingDown}
           iconColor="coral"
           coloredAmount={false}
@@ -545,6 +537,19 @@ export function TransactionLedger({
 
         <button
           type="button"
+          onClick={() => setViewTab("investment")}
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "investment"
+              ? "bg-primary text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
+        >
+          <Coins className="h-3 w-3" />
+          <span>Investments</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setViewTab("transfer")}
           className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
             viewTab === "transfer"
@@ -602,8 +607,12 @@ export function TransactionLedger({
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="expense">Expense</SelectItem>
               <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="investment_buy">Investment (Buy / SIP)</SelectItem>
+              <SelectItem value="investment_sell">Investment (Sell)</SelectItem>
               <SelectItem value="transfer">Transfer</SelectItem>
               <SelectItem value="refund">Refund</SelectItem>
+              <SelectItem value="loan_repayment">Loan Repayment</SelectItem>
+              <SelectItem value="loan_disbursement">Loan Disbursement</SelectItem>
             </SelectContent>
           </Select>
 
@@ -775,6 +784,7 @@ export function TransactionLedger({
                 onEdit={setEditingTransaction}
                 selectedIds={selectedIds}
                 onToggleSelect={handleToggleSelect}
+                selectedAccountId={selectedAccountId}
               />
             ) : (
               <TransactionTable
@@ -784,6 +794,7 @@ export function TransactionLedger({
                 onToggleSelect={handleToggleSelect}
                 onToggleSelectAll={handleToggleSelectAll}
                 allSelected={allSelectedInPage}
+                selectedAccountId={selectedAccountId}
               />
             )}
           </div>
@@ -795,6 +806,7 @@ export function TransactionLedger({
               onEdit={setEditingTransaction}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
+              selectedAccountId={selectedAccountId}
             />
           </div>
 

@@ -18,6 +18,7 @@ import {
   HeartPulse,
   Plane,
   Briefcase,
+  Coins,
   Tag,
   AlertCircle,
 } from "lucide-react";
@@ -37,13 +38,14 @@ import {
   deleteTransactionAction,
   markTransactionsReviewedAction,
 } from "@/app/(dashboard)/transactions/actions";
-import { addMoney, subtractMoney } from "@/lib/calculations/financial";
+import { addMoney, subtractMoney, getTransactionDisplayInfo } from "@/lib/calculations/financial";
 
 interface TransactionTimelineProps {
   transactions: any[];
   onEdit: (transaction: any) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  selectedAccountId?: string;
 }
 
 function getCategoryIcon(name: string) {
@@ -72,6 +74,17 @@ function getCategoryIcon(name: string) {
   if (lower.includes("salary") || lower.includes("wage") || lower.includes("income") || lower.includes("freelance")) {
     return <Briefcase className="h-4 w-4" />;
   }
+  if (
+    lower.includes("invest") ||
+    lower.includes("stock") ||
+    lower.includes("mutual") ||
+    lower.includes("sip") ||
+    lower.includes("wealth") ||
+    lower.includes("gold") ||
+    lower.includes("crypto")
+  ) {
+    return <Coins className="h-4 w-4" />;
+  }
   return <Tag className="h-4 w-4" />;
 }
 
@@ -80,6 +93,7 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
   onEdit,
   selectedIds = new Set(),
   onToggleSelect,
+  selectedAccountId,
 }: TransactionTimelineProps) {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this transaction? Account balance will be restored.")) {
@@ -127,9 +141,10 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
       let incomeSum = "0.0000";
 
       for (const t of txns) {
-        if (t.transaction_type === "expense") {
+        const info = getTransactionDisplayInfo(t, selectedAccountId);
+        if (info.direction === "outflow") {
           expenseSum = addMoney(expenseSum, t.amount);
-        } else if (t.transaction_type === "income" || t.transaction_type === "refund") {
+        } else if (info.direction === "inflow") {
           incomeSum = addMoney(incomeSum, t.amount);
         }
       }
@@ -158,7 +173,7 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
     });
 
     return groups;
-  }, [transactions]);
+  }, [transactions, selectedAccountId]);
 
   return (
     <div className="space-y-6">
@@ -191,9 +206,8 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
             {/* List of Transactions for this Date */}
             <div className="rounded-2xl border border-border/80 bg-surface divide-y divide-border/60 overflow-hidden shadow-2xs">
               {group.transactions.map((txn) => {
-                const isExpense = txn.transaction_type === "expense";
-                const isIncome = txn.transaction_type === "income" || txn.transaction_type === "refund";
-                const isTransfer = txn.transaction_type === "transfer";
+                const info = getTransactionDisplayInfo(txn, selectedAccountId);
+                const isTransfer = info.isTransfer;
                 const needsReview = txn.is_reviewed === false || !txn.category_id;
                 const isSelected = selectedIds.has(txn.id);
 
@@ -259,6 +273,14 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
                           <span className="font-medium text-text-primary/80">
                             {txn.account?.name || "Account"}
                           </span>
+                          {info.badgeLabel && info.badgeVariant !== "expense" && info.badgeVariant !== "income" && (
+                            <>
+                              <span>·</span>
+                              <span className="font-medium text-primary">
+                                {info.badgeLabel}
+                              </span>
+                            </>
+                          )}
                           {isTransfer && txn.destination_account?.name && (
                             <>
                               <span>→</span>
@@ -284,15 +306,9 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
                       <div className="text-right">
                         <div className="flex items-baseline justify-end gap-0.5">
                           <span
-                            className={`text-base font-bold tabular-nums tracking-tight ${
-                              isExpense
-                                ? "text-danger"
-                                : isIncome
-                                ? "text-success"
-                                : "text-primary"
-                            }`}
+                            className={`text-base font-bold tabular-nums tracking-tight ${info.textColorClass}`}
                           >
-                            {isExpense ? "-" : isIncome ? "+" : "⇄ "}
+                            {info.displaySign}
                             ₹{parseFloat(txn.amount).toLocaleString("en-IN", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,

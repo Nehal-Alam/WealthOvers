@@ -33,6 +33,7 @@ export type CreateLoanInput = z.infer<typeof createLoanSchema>;
 
 export const recordLoanPaymentSchema = z.object({
   loan_id: z.string().uuid(),
+  funding_account_id: z.string().uuid().optional().nullable(),
   payment_date: z.string().min(10, "Select payment date"),
   emi_amount: z
     .string()

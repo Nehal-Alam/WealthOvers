@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createCreditCardSchema = z.object({
-  account_id: z.string().uuid("Please select an associated credit card account"),
+  account_id: z.string().uuid().optional().nullable().or(z.literal("")),
   card_name: z.string().min(1, "Card name is required").max(100),
   issuer_name: z.string().min(1, "Issuer name is required").max(100),
   last_four_digits: z.string().regex(/^\d{4}$/, "Must be exactly 4 digits"),
@@ -38,5 +38,20 @@ export const createCreditCardStatementSchema = z.object({
 
 export type CreateCreditCardStatementInput = z.infer<
   typeof createCreditCardStatementSchema
+>;
+
+export const recordCreditCardRepaymentSchema = z.object({
+  credit_card_id: z.string().uuid("Select credit card"),
+  paying_account_id: z.string().uuid("Select bank account for repayment"),
+  amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter valid repayment amount")
+    .refine((val) => parseFloat(val) > 0, "Repayment must be greater than zero"),
+  payment_date: z.string().min(10, "Select payment date"),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+export type RecordCreditCardRepaymentInput = z.infer<
+  typeof recordCreditCardRepaymentSchema
 >;
 

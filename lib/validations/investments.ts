@@ -74,3 +74,29 @@ export type RecordInvestmentTransactionInput = z.infer<
   typeof recordInvestmentTransactionSchema
 >;
 
+export const createSipSchema = z.object({
+  investment_id: z.string().uuid("Select investment asset"),
+  account_id: z.string().uuid("Select funding account"),
+  sip_name: z.string().min(1, "SIP name is required").max(150),
+  amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter valid SIP amount")
+    .refine((val) => parseFloat(val) > 0, "SIP amount must be greater than zero"),
+  frequency: z
+    .enum([
+      "daily",
+      "weekly",
+      "biweekly",
+      "monthly",
+      "quarterly",
+      "half_yearly",
+      "yearly",
+    ])
+    .default("monthly"),
+  deduction_day: z.number().int().min(1).max(31).default(5),
+  next_due_date: z.string().min(10, "Select next due date"),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+export type CreateSipInput = z.infer<typeof createSipSchema>;
+

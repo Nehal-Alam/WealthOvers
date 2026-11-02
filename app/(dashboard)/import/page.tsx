@@ -22,9 +22,9 @@ export default async function ImportPage() {
   const [accountsRes, categoriesRes, importJobsRes] = await Promise.all([
     supabase
       .from("accounts")
-      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
+      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, created_at, updated_at")
       .eq("user_id", user.id)
-      .eq("is_active", true)
+      .eq("is_archived", false)
       .order("name", { ascending: true }),
     supabase
       .from("categories")

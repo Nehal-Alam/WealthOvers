@@ -1352,6 +1352,125 @@ export type Database = {
         }
         Relationships: []
       }
+      sip_schedules: {
+        Row: {
+          id: string
+          user_id: string
+          investment_id: string
+          account_id: string
+          sip_name: string
+          amount: number
+          frequency: Database["public"]["Enums"]["recurrence_interval_enum"]
+          deduction_day: number
+          next_due_date: string
+          is_active: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          investment_id: string
+          account_id: string
+          sip_name: string
+          amount: number
+          frequency?: Database["public"]["Enums"]["recurrence_interval_enum"]
+          deduction_day: number
+          next_due_date: string
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          investment_id?: string
+          account_id?: string
+          sip_name?: string
+          amount?: number
+          frequency?: Database["public"]["Enums"]["recurrence_interval_enum"]
+          deduction_day?: number
+          next_due_date?: string
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_schedules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sip_schedules_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      sip_installments: {
+        Row: {
+          id: string
+          sip_id: string
+          user_id: string
+          scheduled_date: string
+          processed_date: string
+          amount: number
+          units_allotted: number | null
+          nav_at_execution: number | null
+          status: string
+          transaction_id: string | null
+          idempotency_key: string | null
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sip_id: string
+          user_id?: string
+          scheduled_date: string
+          processed_date?: string
+          amount: number
+          units_allotted?: number | null
+          nav_at_execution?: number | null
+          status?: string
+          transaction_id?: string | null
+          idempotency_key?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sip_id?: string
+          user_id?: string
+          scheduled_date?: string
+          processed_date?: string
+          amount?: number
+          units_allotted?: number | null
+          nav_at_execution?: number | null
+          status?: string
+          transaction_id?: string | null
+          idempotency_key?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_installments_sip_id_fkey"
+            columns: ["sip_id"]
+            isOneToOne: false
+            referencedRelation: "sip_schedules"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

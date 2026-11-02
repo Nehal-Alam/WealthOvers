@@ -26,15 +26,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tables } from "@/types/database";
 import { createLoanSchema, CreateLoanInput, loanTypeValues } from "@/lib/validations/loans";
 import { createLoanAction } from "@/app/(dashboard)/loans/actions";
 import { calculateLoanEMI } from "@/lib/calculations/financial";
 
 interface CreateLoanDialogProps {
+  accounts?: Tables<"accounts">[];
   trigger?: React.ReactNode;
 }
 
-export function CreateLoanDialog({ trigger }: CreateLoanDialogProps) {
+export function CreateLoanDialog({ accounts = [], trigger }: CreateLoanDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -52,6 +54,7 @@ export function CreateLoanDialog({ trigger }: CreateLoanDialogProps) {
   } = useForm<CreateLoanInput>({
     resolver: zodResolver(createLoanSchema),
     defaultValues: {
+      account_id: accounts[0]?.id || null,
       loan_type: "home",
       lender_or_borrower_name: "",
       principal_amount: "1000000.00",
@@ -144,6 +147,33 @@ export function CreateLoanDialog({ trigger }: CreateLoanDialogProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Associated Account for Disbursement */}
+          {accounts.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                {watch("loan_type") === "loan_given"
+                  ? "Disbursement Account (Debit balance when lent)"
+                  : "Deposit Account (Credit balance upon borrowing)"}
+              </Label>
+              <Select
+                value={watch("account_id") || "none"}
+                onValueChange={(val) => setValue("account_id", val === "none" ? null : val)}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder="Do not link to bank account" />
+                </SelectTrigger>
+                <SelectContent className="text-xs">
+                  <SelectItem value="none">Do not update bank account balance</SelectItem>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.institution_name || acc.account_type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Lender Name */}
           <div className="space-y-1.5">

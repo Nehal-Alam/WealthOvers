@@ -19,6 +19,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   recordLoanPaymentSchema,
   RecordLoanPaymentInput,
 } from "@/lib/validations/loans";
@@ -27,26 +34,36 @@ import { Tables } from "@/types/database";
 
 interface RecordLoanPaymentDialogProps {
   loan: Tables<"loans"> | null;
+  accounts?: Tables<"accounts">[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function RecordLoanPaymentDialog({
   loan,
+  accounts = [],
   open,
   onOpenChange,
 }: RecordLoanPaymentDialogProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const payingAccounts = React.useMemo(
+    () => accounts.filter((a) => !a.is_archived && a.account_type !== "credit_card"),
+    [accounts]
+  );
+
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<RecordLoanPaymentInput>({
     resolver: zodResolver(recordLoanPaymentSchema),
     defaultValues: {
       loan_id: loan?.id || "",
+      funding_account_id: payingAccounts[0]?.id || null,
       payment_date: format(new Date(), "yyyy-MM-dd"),
       emi_amount: loan?.monthly_emi?.toString() || "0.00",
       extra_prepayment: "0.00",
@@ -57,12 +74,13 @@ export function RecordLoanPaymentDialog({
     if (loan) {
       reset({
         loan_id: loan.id,
+        funding_account_id: payingAccounts[0]?.id || null,
         payment_date: format(new Date(), "yyyy-MM-dd"),
         emi_amount: loan.monthly_emi.toString(),
         extra_prepayment: "0.00",
       });
     }
-  }, [loan, reset]);
+  }, [loan, reset, payingAccounts]);
 
   const onSubmit = async (data: RecordLoanPaymentInput) => {
     setIsSubmitting(true);
@@ -100,6 +118,32 @@ export function RecordLoanPaymentDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+          {payingAccounts.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                {loan.loan_type === "loan_given"
+                  ? "Deposit Inflow Into Bank Account"
+                  : "Debit Payment From Bank Account"}
+              </Label>
+              <Select
+                value={watch("funding_account_id") || "none"}
+                onValueChange={(val) => setValue("funding_account_id", val === "none" ? null : val)}
+              >
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder="Do not update bank balance" />
+                </SelectTrigger>
+                <SelectContent className="text-xs">
+                  <SelectItem value="none">Do not update bank balance</SelectItem>
+                  {payingAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} (₹{parseFloat(String(acc.current_balance)).toLocaleString("en-IN")})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="pay-date">Payment Date</Label>
             <Input id="pay-date" type="date" {...register("payment_date")} />

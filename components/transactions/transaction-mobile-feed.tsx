@@ -8,6 +8,7 @@ interface TransactionMobileFeedProps {
   onEdit: (transaction: any) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  selectedAccountId?: string;
 }
 
 export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
@@ -15,6 +16,7 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
   onEdit,
   selectedIds,
   onToggleSelect,
+  selectedAccountId,
 }: TransactionMobileFeedProps) {
   return (
     <TransactionTimeline
@@ -22,6 +24,7 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
       onEdit={onEdit}
       selectedIds={selectedIds}
       onToggleSelect={onToggleSelect}
+      selectedAccountId={selectedAccountId}
     />
   );
 });

@@ -5,9 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import {
   createCreditCardSchema,
   createCreditCardStatementSchema,
+  recordCreditCardRepaymentSchema,
   CreateCreditCardInput,
   CreateCreditCardStatementInput,
+  RecordCreditCardRepaymentInput,
 } from "@/lib/validations/credit-cards";
+import { toDecimal } from "@/lib/calculations/financial";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -29,11 +32,37 @@ export async function createCreditCardAction(input: CreateCreditCardInput): Prom
     const limit = parseFloat(validated.credit_limit);
     const outstanding = parseFloat(validated.current_outstanding || "0");
 
+    let linkedAccountId = validated.account_id;
+
+    // If no existing credit account selected, auto-create underlying account
+    if (!linkedAccountId) {
+      const { data: newAcc, error: newAccErr } = await supabase
+        .from("accounts")
+        .insert({
+          user_id: user.id,
+          name: `${validated.issuer_name.trim()} ${validated.card_name.trim()} (..${validated.last_four_digits})`,
+          account_type: "credit_card",
+          current_balance: -outstanding,
+          initial_balance: 0,
+          currency: "INR",
+          institution_name: validated.issuer_name.trim(),
+          account_number_masked: `•••• ${validated.last_four_digits}`,
+          is_archived: false,
+        })
+        .select("id")
+        .single();
+
+      if (newAccErr || !newAcc) {
+        return { success: false, error: newAccErr?.message || "Failed to create underlying card account" };
+      }
+      linkedAccountId = newAcc.id;
+    }
+
     const { data, error } = await supabase
       .from("credit_cards")
       .insert({
         user_id: user.id,
-        account_id: validated.account_id,
+        account_id: linkedAccountId,
         card_name: validated.card_name.trim(),
         issuer_name: validated.issuer_name.trim(),
         last_four_digits: validated.last_four_digits,
@@ -128,6 +157,120 @@ export async function settleCreditCardStatementAction(
     return { success: true, message: isSettled ? "Statement marked settled" : "Statement unsettled" };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to update statement";
+    return { success: false, error: errorMsg };
+  }
+}
+
+export async function recordCreditCardRepaymentAction(
+  input: RecordCreditCardRepaymentInput
+): Promise<ActionResult> {
+  try {
+    const validated = recordCreditCardRepaymentSchema.parse(input);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized. Please log in." };
+    }
+
+    // 1. Fetch card
+    const { data: card, error: cardErr } = await supabase
+      .from("credit_cards")
+      .select("id, card_name, issuer_name, account_id, current_outstanding")
+      .eq("id", validated.credit_card_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (cardErr || !card) {
+      return { success: false, error: "Credit card not found" };
+    }
+
+    // 2. Fetch paying account
+    const { data: payingAccount, error: accErr } = await supabase
+      .from("accounts")
+      .select("id, name, current_balance, currency")
+      .eq("id", validated.paying_account_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (accErr || !payingAccount) {
+      return { success: false, error: "Paying account not found" };
+    }
+
+    const repayAmt = toDecimal(validated.amount);
+    const currentOutstanding = toDecimal(card.current_outstanding);
+    const newOutstanding = currentOutstanding.minus(repayAmt).clamp(0, Infinity);
+
+    // 3. Deduct from paying account
+    const newPayingBal = toDecimal(payingAccount.current_balance).minus(repayAmt);
+    await supabase
+      .from("accounts")
+      .update({
+        current_balance: newPayingBal.toNumber(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", payingAccount.id)
+      .eq("user_id", user.id);
+
+    // 4. Update credit card current_outstanding
+    await supabase
+      .from("credit_cards")
+      .update({
+        current_outstanding: newOutstanding.toNumber(),
+      })
+      .eq("id", card.id)
+      .eq("user_id", user.id);
+
+    // 5. Update linked card account if present (balance becomes less negative)
+    if (card.account_id) {
+      const { data: cardAcc } = await supabase
+        .from("accounts")
+        .select("current_balance")
+        .eq("id", card.account_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (cardAcc) {
+        const newCardBal = toDecimal(cardAcc.current_balance).plus(repayAmt);
+        await supabase
+          .from("accounts")
+          .update({
+            current_balance: newCardBal.toNumber(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", card.account_id)
+          .eq("user_id", user.id);
+      }
+    }
+
+    // 6. Record transfer transaction (zero double expense)
+    const idempotencyKey = `cc_repay_${user.id}_${card.id}_${Date.now()}`;
+    await supabase.from("transactions").insert({
+      user_id: user.id,
+      account_id: payingAccount.id,
+      destination_account_id: card.account_id || null,
+      amount: repayAmt.toNumber(),
+      currency: payingAccount.currency || "INR",
+      transaction_type: "transfer",
+      transaction_date: new Date(validated.payment_date).toISOString(),
+      description: `Credit Card Repayment: ${card.issuer_name} ${card.card_name}`,
+      notes: validated.notes?.trim() || null,
+      source: "manual",
+      idempotency_hash: idempotencyKey,
+      is_reviewed: true,
+    });
+
+    revalidatePath("/credit-cards");
+    revalidatePath("/accounts");
+    revalidatePath("/net-worth");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: `Repayment of ₹${repayAmt.toString()} recorded successfully`,
+    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to record card repayment";
     return { success: false, error: errorMsg };
   }
 }

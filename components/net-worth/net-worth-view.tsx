@@ -46,6 +46,7 @@ import { MoneyDisplay } from "@/components/financial/money-display";
 import {
   addMoney,
   subtractMoney,
+  calculateNetWorth,
   calculateBalanceSheetRatios,
   calculateFinancialHealthScore,
   calculateInvestmentReturns,
@@ -75,13 +76,15 @@ export function NetWorthView({
   monthlyOutflow = "0",
   savingsRate = "0",
 }: NetWorthViewProps) {
-  // 1. Balance Sheet Ratios & Segmented Net Worth
+  // 1. Centralized Authoritative Net Worth Calculation
   const {
     totalLiquid,
     totalInvestments,
     totalFixedAssets,
+    totalReceivables,
     totalCreditCards,
     totalLoans,
+    totalBorrowedMoney,
     totalOtherLiabilities,
     totalAssets,
     totalLiabilities,
@@ -92,62 +95,50 @@ export function NetWorthView({
     debtToAssetRatio,
     liquidityRatio,
   } = React.useMemo(() => {
-    const liquidBalances: string[] = [];
-    const ccDebtBalances: string[] = [];
-
-    for (const a of accounts.filter((acc) => !acc.is_archived)) {
-      if (a.account_type === "credit_card") {
-        ccDebtBalances.push(String(a.current_balance));
-      } else if (a.account_type === "loan_account") {
-        // handled in loans
-      } else {
-        liquidBalances.push(String(a.current_balance));
-      }
-    }
-
-    const investmentValuations: string[] = [];
-    for (const i of investments) {
-      const returns = calculateInvestmentReturns(
-        i.total_quantity,
-        i.average_buy_price,
-        i.current_nav_or_price,
-        i.currency,
-        DEFAULT_USD_INR_RATE
-      );
-      investmentValuations.push(returns.currentValuation);
-    }
-
-    const tangibleAssets = assets.map((a) => String(a.current_valuation || 0));
-    const loanLiabilities = loans.map((l) => String(l.outstanding_balance || 0));
-    const manualLiabilities = liabilities.map((l) => String(l.outstanding_amount || 0));
-
-    const ratios = calculateBalanceSheetRatios({
-      liquidBalances,
-      investmentValuations,
-      tangibleAssets,
-      creditLiabilities: ccDebtBalances,
-      loanLiabilities,
-      manualLiabilities,
-      monthlyExpenses: monthlyOutflow,
+    const nwData = calculateNetWorth({
+      accounts,
+      investments,
+      assets,
+      loans,
+      liabilities,
+      creditCards,
     });
 
-    let totalCc = "0.0000";
-    for (const c of ccDebtBalances) totalCc = addMoney(totalCc, c);
+    const exp = parseFloat(monthlyOutflow) || 0;
+    let liqRatio = "0.0";
+    if (exp > 0) {
+      liqRatio = (parseFloat(nwData.assetsBreakdown.liquidAccounts) / exp).toFixed(1);
+    }
 
-    let totalLn = "0.0000";
-    for (const l of loanLiabilities) totalLn = addMoney(totalLn, l);
-
-    let totalOther = "0.0000";
-    for (const m of manualLiabilities) totalOther = addMoney(totalOther, m);
+    const liquidNet = subtractMoney(
+      nwData.assetsBreakdown.liquidAccounts,
+      nwData.liabilitiesBreakdown.creditCards
+    );
+    const investedNet = nwData.assetsBreakdown.investments;
+    const tangibleNet = subtractMoney(
+      nwData.assetsBreakdown.tangibleAssets,
+      addMoney(nwData.liabilitiesBreakdown.loans, nwData.liabilitiesBreakdown.otherDebts)
+    );
 
     return {
-      ...ratios,
-      totalFixedAssets: ratios.totalTangible,
-      totalCreditCards: totalCc,
-      totalLoans: totalLn,
-      totalOtherLiabilities: totalOther,
+      totalLiquid: nwData.assetsBreakdown.liquidAccounts,
+      totalInvestments: nwData.assetsBreakdown.investments,
+      totalFixedAssets: nwData.assetsBreakdown.tangibleAssets,
+      totalReceivables: nwData.assetsBreakdown.receivables,
+      totalCreditCards: nwData.liabilitiesBreakdown.creditCards,
+      totalLoans: nwData.liabilitiesBreakdown.loans,
+      totalBorrowedMoney: nwData.liabilitiesBreakdown.borrowedMoney,
+      totalOtherLiabilities: nwData.liabilitiesBreakdown.otherDebts,
+      totalAssets: nwData.totalAssets,
+      totalLiabilities: nwData.totalLiabilities,
+      netWorth: nwData.netWorth,
+      liquidNetWorth: liquidNet,
+      investedNetWorth: investedNet,
+      tangibleNetWorth: tangibleNet,
+      debtToAssetRatio: nwData.debtToAssetRatio,
+      liquidityRatio: liqRatio,
     };
-  }, [accounts, investments, assets, loans, liabilities, monthlyOutflow]);
+  }, [accounts, investments, assets, loans, liabilities, creditCards, monthlyOutflow]);
 
   // 2. Financial Health Score (0 - 100)
   const healthScore = React.useMemo(() => {
@@ -508,6 +499,12 @@ export function NetWorthView({
                       <span className="text-muted-foreground">Fixed & Tangible Assets</span>
                       <MoneyDisplay amount={totalFixedAssets} className="font-semibold text-foreground font-mono" />
                     </div>
+                    {parseFloat(totalReceivables) > 0 && (
+                      <div className="flex justify-between py-1.5 border-b border-border/60">
+                        <span className="text-muted-foreground">Receivables (Money Lent)</span>
+                        <MoneyDisplay amount={totalReceivables} className="font-semibold text-foreground font-mono" />
+                      </div>
+                    )}
                     <div className="flex justify-between py-1.5 font-bold text-foreground">
                       <span>Gross Assets Total</span>
                       <MoneyDisplay amount={totalAssets} className="font-mono" />
@@ -529,6 +526,12 @@ export function NetWorthView({
                       <span className="text-muted-foreground">Loans & Mortgages</span>
                       <MoneyDisplay amount={totalLoans} className="font-semibold text-danger font-mono" />
                     </div>
+                    {parseFloat(totalBorrowedMoney) > 0 && (
+                      <div className="flex justify-between py-1.5 border-b border-border/60">
+                        <span className="text-muted-foreground">Borrowed Money</span>
+                        <MoneyDisplay amount={totalBorrowedMoney} className="font-semibold text-danger font-mono" />
+                      </div>
+                    )}
                     <div className="flex justify-between py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Other External Obligations</span>
                       <MoneyDisplay amount={totalOtherLiabilities} className="font-semibold text-danger font-mono" />

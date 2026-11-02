@@ -67,12 +67,17 @@ import { Switch } from "@/components/ui/switch";
 import {
   addMoney,
   subtractMoney,
+  calculateNetWorth,
   calculateSavingsRate,
   calculateBalanceSheetRatios,
   calculateInvestmentReturns,
   calculateSafeToSpend,
+  toDecimal,
   DEFAULT_USD_INR_RATE,
+  getTransactionDisplayInfo,
 } from "@/lib/calculations/financial";
+import Decimal from "decimal.js";
+import { HomeNetWorthHero } from "./net-worth-hero";
 
 interface DashboardClientProps {
   userName?: string;
@@ -87,6 +92,7 @@ interface DashboardClientProps {
   liabilities?: any[];
   goals?: any[];
   monthTransactions?: any[];
+  creditCards?: any[];
   precomputedSummary?: {
     totalLiquid?: string;
     totalCredit?: string;
@@ -110,6 +116,7 @@ export function DashboardClient({
   liabilities = [],
   goals = [],
   monthTransactions = [],
+  creditCards = [],
   precomputedSummary,
 }: DashboardClientProps) {
   const {
@@ -178,9 +185,10 @@ export function DashboardClient({
         monthTransactions.length > 0 ? monthTransactions : recentTransactions;
       for (const t of sourceTxns) {
         if (isThisMonth(new Date(t.transaction_date))) {
-          if (t.transaction_type === "income" || t.transaction_type === "refund") {
+          const info = getTransactionDisplayInfo(t);
+          if (info.direction === "inflow") {
             inflow = addMoney(inflow, t.amount);
-          } else if (t.transaction_type === "expense") {
+          } else if (info.direction === "outflow") {
             outflow = addMoney(outflow, t.amount);
           }
         }
@@ -221,6 +229,43 @@ export function DashboardClient({
     monthTransactions,
     recentTransactions,
   ]);
+
+  // 1.5. Centralized Authoritative Net Worth & Investment P&L
+  const netWorthSummary = React.useMemo(() => {
+    return calculateNetWorth({
+      accounts,
+      investments,
+      assets,
+      loans,
+      liabilities,
+      creditCards,
+    });
+  }, [accounts, investments, assets, loans, liabilities, creditCards]);
+
+  const investmentStats = React.useMemo(() => {
+    let invested = new Decimal(0);
+    for (const inv of investments) {
+      if (inv.total_invested_amount !== undefined && inv.total_invested_amount !== null) {
+        invested = invested.plus(toDecimal(inv.total_invested_amount));
+      } else {
+        const qty = toDecimal(inv.total_quantity || 0);
+        const buy = toDecimal(inv.average_buy_price || 0);
+        invested = invested.plus(qty.times(buy));
+      }
+    }
+    const currentVal = toDecimal(netWorthSummary.assetsBreakdown.investments);
+    const pnl = currentVal.minus(invested);
+    const pnlPercent = invested.greaterThan(0)
+      ? pnl.dividedBy(invested).times(100).toFixed(2)
+      : "0.00";
+
+    return {
+      totalInvested: invested.toFixed(4),
+      profitOrLoss: pnl.toFixed(4),
+      isProfit: pnl.greaterThanOrEqualTo(0),
+      pnlPercent,
+    };
+  }, [investments, netWorthSummary]);
 
   // 2. Leftovers "Safe to Spend Today" Calculation Engine
   const safeToSpend = React.useMemo(() => {
@@ -461,6 +506,21 @@ export function DashboardClient({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
+          SECTION 10: PROMINENT TOTAL NET WORTH HERO & KEY METRICS
+      ────────────────────────────────────────────────────────────── */}
+      <HomeNetWorthHero
+        netWorthData={netWorthSummary}
+        totalInvested={investmentStats.totalInvested}
+        investmentPnl={investmentStats}
+        monthlyInflow={balanceSheet.monthlyInflow}
+        monthlyOutflow={balanceSheet.monthlyOutflow}
+        netSavings={balanceSheet.netSavings}
+        savingsRate={balanceSheet.savingsRate}
+        activeAccountCount={activeAccounts.length}
+        hasFinancialData={accounts.length > 0 || investments.length > 0 || assets.length > 0}
+      />
+
+      {/* ─────────────────────────────────────────────────────────────
           PRIMARY SECTION: SAFE TO SPEND TODAY (THE LEFTOVERS HERO)
       ────────────────────────────────────────────────────────────── */}
       {dashboardWidgets.safeToSpend !== false && (
@@ -623,9 +683,7 @@ export function DashboardClient({
                 ) : (
                   <div className="divide-y divide-border/60">
                     {filteredTransactions.map((tx) => {
-                      const isIncome = tx.transaction_type === "income";
-                      const isTransfer = tx.transaction_type === "transfer";
-                      const isExpense = tx.transaction_type === "expense";
+                      const info = getTransactionDisplayInfo(tx);
 
                       return (
                         <div
@@ -635,17 +693,21 @@ export function DashboardClient({
                           <div className="flex items-center gap-3 min-w-0">
                             <div
                               className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                isIncome
+                                info.direction === "inflow"
                                   ? "bg-success/10 text-success"
-                                  : isTransfer
+                                  : info.isTransfer
+                                  ? "bg-primary/10 text-primary"
+                                  : info.badgeVariant === "investment_buy"
                                   ? "bg-primary/10 text-primary"
                                   : "bg-surface-secondary text-muted-foreground"
                               }`}
                             >
-                              {isIncome ? (
+                              {info.direction === "inflow" ? (
                                 <TrendingUp className="h-4 w-4" />
-                              ) : isTransfer ? (
+                              ) : info.isTransfer ? (
                                 <ArrowLeftRight className="h-4 w-4" />
+                              ) : info.badgeVariant === "investment_buy" ? (
+                                <Coins className="h-4 w-4" />
                               ) : (
                                 <Receipt className="h-4 w-4" />
                               )}
@@ -663,22 +725,16 @@ export function DashboardClient({
 
                           <div className="text-right shrink-0 font-mono">
                             <p
-                              className={`text-xs font-bold ${
-                                isIncome
-                                  ? "text-success"
-                                  : isExpense
-                                  ? "text-danger"
-                                  : "text-foreground"
-                              }`}
+                              className={`text-xs font-bold ${info.textColorClass}`}
                             >
-                              {isIncome ? "+" : isExpense ? "-" : ""}
+                              {info.displaySign}
                               <MoneyDisplay
                                 amount={tx.amount}
                                 currency={tx.currency}
                               />
                             </p>
                             <span className="text-[9px] text-muted-foreground capitalize">
-                              {tx.transaction_type}
+                              {info.badgeLabel || tx.transaction_type}
                             </span>
                           </div>
                         </div>

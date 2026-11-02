@@ -288,7 +288,9 @@ export function LoanAmortizationModal({
                   <TableRow key={row.month} className="text-xs hover:bg-muted/30">
                     <TableCell className="font-mono font-medium">{row.month}</TableCell>
                     <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
-                      {format(new Date(row.paymentDate), "dd MMM yyyy")}
+                      {row.paymentDate && !isNaN(new Date(row.paymentDate).getTime())
+                        ? format(new Date(row.paymentDate), "dd MMM yyyy")
+                        : "N/A"}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold">
                       <MoneyDisplay amount={row.emi} />

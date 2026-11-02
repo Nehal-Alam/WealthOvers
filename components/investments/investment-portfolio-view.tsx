@@ -14,6 +14,10 @@ import {
   Clock,
   Sparkles,
   ShieldCheck,
+  Repeat,
+  Play,
+  Pause,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -50,6 +54,15 @@ const CSVImportHoldingsDialog = dynamic(
     ),
   { ssr: false }
 );
+
+const CreateSipDialog = dynamic(
+  () =>
+    import("@/components/investments/create-sip-dialog").then(
+      (m) => m.CreateSipDialog
+    ),
+  { ssr: false }
+);
+
 import {
   calculateInvestmentReturns,
   addMoney,
@@ -57,18 +70,26 @@ import {
   calculateXIRR,
   DEFAULT_USD_INR_RATE,
 } from "@/lib/calculations/financial";
-import { deleteInvestmentAction } from "@/app/(dashboard)/investments/actions";
+import {
+  deleteInvestmentAction,
+  processDueSipAction,
+  toggleSipStatusAction,
+  deleteSipAction,
+} from "@/app/(dashboard)/investments/actions";
 
 interface InvestmentPortfolioViewProps {
   investments: Tables<"investments">[];
   accounts: Tables<"accounts">[];
+  sipSchedules?: Tables<"sip_schedules">[];
 }
 
 export function InvestmentPortfolioView({
   investments,
   accounts,
+  sipSchedules = [],
 }: InvestmentPortfolioViewProps) {
   const [activeTab, setActiveTab] = React.useState<string>("all");
+  const [processingSipId, setProcessingSipId] = React.useState<string | null>(null);
   const [updatingInvestment, setUpdatingInvestment] = React.useState<Tables<"investments"> | null>(null);
 
   // Group assets
@@ -222,6 +243,41 @@ export function InvestmentPortfolioView({
     }
   };
 
+  const handleProcessSip = async (sipId: string, sipName: string) => {
+    setProcessingSipId(sipId);
+    try {
+      const res = await processDueSipAction(sipId);
+      if (res.success) {
+        toast.success(res.message || `Processed SIP for ${sipName}`);
+      } else {
+        toast.error(res.error || "Failed to process SIP");
+      }
+    } catch {
+      toast.error("An error occurred while processing SIP");
+    } finally {
+      setProcessingSipId(null);
+    }
+  };
+
+  const handleToggleSip = async (sipId: string, currentActive: boolean) => {
+    const res = await toggleSipStatusAction(sipId, !currentActive);
+    if (res.success) {
+      toast.success(res.message || "SIP status updated");
+    } else {
+      toast.error(res.error || "Failed to update SIP status");
+    }
+  };
+
+  const handleDeleteSip = async (sipId: string, sipName: string) => {
+    if (!confirm(`Cancel and remove SIP schedule "${sipName}"?`)) return;
+    const res = await deleteSipAction(sipId);
+    if (res.success) {
+      toast.success(res.message || "SIP schedule deleted");
+    } else {
+      toast.error(res.error || "Failed to delete SIP");
+    }
+  };
+
   const getAssetTypeLabel = (type: string) => {
     switch (type) {
       case "stock_in":
@@ -266,8 +322,9 @@ export function InvestmentPortfolioView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CSVImportHoldingsDialog />
+          <CreateSipDialog investments={investments} accounts={accounts} />
           <CreateInvestmentDialog accounts={accounts} />
         </div>
       </div>
@@ -383,6 +440,113 @@ export function InvestmentPortfolioView({
           </div>
         </Card>
       )}
+
+      {/* Automated Systematic Investment Plans (SIP) Section */}
+      <Card className="border border-border/80 bg-surface rounded-2xl p-4 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Repeat className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">
+              Automated SIP Schedules
+            </h3>
+            <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/10">
+              {sipSchedules.filter((s) => s.is_active).length} Active
+            </Badge>
+          </div>
+          <CreateSipDialog investments={investments} accounts={accounts} />
+        </div>
+
+        {sipSchedules.length === 0 ? (
+          <div className="py-4 text-center text-xs text-muted-foreground border border-dashed border-border/70 rounded-xl bg-surface-secondary/20">
+            No active SIP schedules. Click &ldquo;Schedule SIP&rdquo; to automate your recurring investments.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-surface-secondary/50 text-muted-foreground border-y border-border">
+                <tr>
+                  <th className="py-2 px-3 text-left font-semibold">SIP Name</th>
+                  <th className="py-2 px-3 text-left font-semibold">Frequency</th>
+                  <th className="py-2 px-3 text-right font-semibold">Amount</th>
+                  <th className="py-2 px-3 text-left font-semibold">Next Due</th>
+                  <th className="py-2 px-3 text-center font-semibold">Status</th>
+                  <th className="py-2 px-3 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {sipSchedules.map((sip) => (
+                  <tr key={sip.id} className="hover:bg-surface-secondary/30 transition-colors">
+                    <td className="py-2.5 px-3 font-medium text-foreground">
+                      {sip.sip_name}
+                    </td>
+                    <td className="py-2.5 px-3 text-muted-foreground capitalize">
+                      {sip.frequency} (Day {sip.deduction_day})
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-bold text-foreground">
+                      ₹{parseFloat(String(sip.amount)).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-muted-foreground">
+                      {sip.next_due_date}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          sip.is_active
+                            ? "border-success text-success bg-success/10"
+                            : "border-muted-foreground text-muted-foreground"
+                        }`}
+                      >
+                        {sip.is_active ? "Active" : "Paused"}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={processingSipId === sip.id || !sip.is_active}
+                          onClick={() => handleProcessSip(sip.id, sip.sip_name)}
+                          className="h-7 text-[11px] border-primary/30 text-primary hover:bg-primary/10 gap-1 rounded-lg"
+                        >
+                          {processingSipId === sip.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Play className="h-3 w-3" />
+                          )}
+                          <span>Run Now</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleSip(sip.id, sip.is_active)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          title={sip.is_active ? "Pause SIP" : "Resume SIP"}
+                        >
+                          {sip.is_active ? (
+                            <Pause className="h-3.5 w-3.5" />
+                          ) : (
+                            <Play className="h-3.5 w-3.5 text-success" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteSip(sip.id, sip.sip_name)}
+                          className="h-7 w-7 p-0 text-danger hover:text-danger hover:bg-danger/10"
+                          title="Delete SIP"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {/* Portfolio Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

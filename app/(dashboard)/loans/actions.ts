@@ -56,7 +56,51 @@ export async function createLoanAction(input: CreateLoanInput): Promise<ActionRe
       return { success: false, error: error.message };
     }
 
+    // Double-entry account balance update & transaction logging
+    if (validated.account_id && data) {
+      const { data: acc } = await supabase
+        .from("accounts")
+        .select("id, current_balance, currency, name")
+        .eq("id", validated.account_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (acc) {
+        const curBal = toDecimal(acc.current_balance);
+        const isLending = validated.loan_type === "loan_given";
+        // If lending money: deduct from bank balance. If borrowing: add to bank balance.
+        const newBal = isLending ? curBal.minus(principal) : curBal.plus(principal);
+
+        await supabase
+          .from("accounts")
+          .update({
+            current_balance: newBal.toNumber(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", acc.id)
+          .eq("user_id", user.id);
+
+        const idempotencyKey = `loan_disb_${user.id}_${data.id}_${Date.now()}`;
+        await supabase.from("transactions").insert({
+          user_id: user.id,
+          account_id: acc.id,
+          amount: principal.toNumber(),
+          currency: acc.currency || "INR",
+          transaction_type: "loan_disbursement",
+          transaction_date: new Date(validated.start_date).toISOString(),
+          description: isLending
+            ? `Money Lent to ${validated.lender_or_borrower_name.trim()}`
+            : `Loan Disbursement: ${validated.lender_or_borrower_name.trim()}`,
+          notes: validated.notes?.trim() || null,
+          source: "manual",
+          idempotency_hash: idempotencyKey,
+          is_reviewed: true,
+        });
+      }
+    }
+
     revalidatePath("/loans");
+    revalidatePath("/accounts");
     revalidatePath("/net-worth");
     revalidatePath("/dashboard");
     return { success: true, message: "Loan account registered", data };
@@ -79,7 +123,7 @@ export async function recordLoanPaymentAction(input: RecordLoanPaymentInput): Pr
     // Fetch loan
     const { data: loan, error: loanErr } = await supabase
       .from("loans")
-      .select("outstanding_balance, annual_interest_rate")
+      .select("id, outstanding_balance, annual_interest_rate, loan_type, lender_or_borrower_name")
       .eq("id", validated.loan_id)
       .eq("user_id", user.id)
       .single();
@@ -90,6 +134,7 @@ export async function recordLoanPaymentAction(input: RecordLoanPaymentInput): Pr
 
     const emi = toDecimal(validated.emi_amount);
     const extra = toDecimal(validated.extra_prepayment);
+    const totalPayment = emi.plus(extra);
     const currentBalance = toDecimal(loan.outstanding_balance);
     const monthlyRate = toDecimal(loan.annual_interest_rate).dividedBy(1200);
 
@@ -124,9 +169,54 @@ export async function recordLoanPaymentAction(input: RecordLoanPaymentInput): Pr
       .eq("id", validated.loan_id)
       .eq("user_id", user.id);
 
+    // 3. Atomically update funding account if provided
+    if (validated.funding_account_id) {
+      const { data: fundingAccount } = await supabase
+        .from("accounts")
+        .select("id, current_balance, currency")
+        .eq("id", validated.funding_account_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (fundingAccount) {
+        const curBal = toDecimal(fundingAccount.current_balance);
+        const isLending = loan.loan_type === "loan_given";
+        // If receiving repayment on lent money: credit bank. If paying loan: debit bank.
+        const newBal = isLending ? curBal.plus(totalPayment) : curBal.minus(totalPayment);
+
+        await supabase
+          .from("accounts")
+          .update({
+            current_balance: newBal.toNumber(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", fundingAccount.id)
+          .eq("user_id", user.id);
+
+        const idempotencyKey = `loan_pay_${user.id}_${loan.id}_${Date.now()}`;
+        await supabase.from("transactions").insert({
+          user_id: user.id,
+          account_id: fundingAccount.id,
+          amount: totalPayment.toNumber(),
+          currency: fundingAccount.currency || "INR",
+          transaction_type: "loan_repayment",
+          transaction_date: new Date(validated.payment_date).toISOString(),
+          description: isLending
+            ? `Loan Repayment Received: ${loan.lender_or_borrower_name}`
+            : `Loan EMI Payment: ${loan.lender_or_borrower_name}`,
+          notes: `Principal: ₹${principalComponent.toFixed(2)}, Interest: ₹${interestComponent.toFixed(2)}`,
+          source: "manual",
+          idempotency_hash: idempotencyKey,
+          is_reviewed: true,
+        });
+      }
+    }
+
     revalidatePath("/loans");
+    revalidatePath("/accounts");
     revalidatePath("/net-worth");
-    return { success: true, message: "EMI payment recorded" };
+    revalidatePath("/dashboard");
+    return { success: true, message: "Payment recorded successfully" };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to record payment";
     return { success: false, error: errorMsg };

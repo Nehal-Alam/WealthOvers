@@ -35,7 +35,7 @@ export default async function NetWorthPage() {
   ] = await Promise.all([
     supabase
       .from("accounts")
-      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
+      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, created_at, updated_at")
       .eq("user_id", user.id),
     supabase
       .from("investments")
@@ -47,11 +47,11 @@ export default async function NetWorthPage() {
       .eq("user_id", user.id),
     supabase
       .from("loans")
-      .select("id, user_id, account_id, lender_or_borrower_name, loan_type, principal_amount, outstanding_balance, annual_interest_rate, tenure_months, monthly_emi, start_date, maturity_date, is_active, notes, created_at, updated_at")
+      .select("id, user_id, account_id, lender_or_borrower_name, loan_type, principal_amount, outstanding_balance, annual_interest_rate, tenure_months, monthly_emi, start_date, maturity_date, notes, created_at, updated_at")
       .eq("user_id", user.id),
     supabase
       .from("liabilities")
-      .select("id, user_id, name, category, total_amount, outstanding_amount, due_date, interest_rate, notes, created_at, updated_at")
+      .select("id, user_id, name, category, total_amount, outstanding_amount, due_date, notes, created_at, updated_at")
       .eq("user_id", user.id),
     supabase
       .from("credit_cards")

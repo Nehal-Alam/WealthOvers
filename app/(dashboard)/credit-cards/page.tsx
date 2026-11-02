@@ -23,7 +23,7 @@ export default async function CreditCardsPage() {
       .from("credit_cards")
       .select(
         `
-        id, card_name, bank_name, last_four_digits, credit_limit, current_balance, available_credit, billing_cycle_day, payment_due_day, interest_rate_apr, account_id, is_active, created_at,
+        id, card_name, issuer_name, last_four_digits, credit_limit, current_outstanding, statement_date_day, payment_due_day, apr_percentage, account_id, created_at, updated_at,
         account:accounts!credit_cards_account_id_fkey(id, name, color, current_balance, currency),
         statements:credit_card_statements(id, credit_card_id, statement_period_start, statement_period_end, total_due, minimum_due, due_date, is_settled)
       `

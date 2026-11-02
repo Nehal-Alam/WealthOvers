@@ -50,6 +50,7 @@ interface AccountGridProps {
 }
 
 export function AccountGrid({ accounts }: AccountGridProps) {
+  const [tab, setTab] = React.useState<"active" | "archived">("active");
   const [editingAccount, setEditingAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [transferSourceAccount, setTransferSourceAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [isTransferOpen, setIsTransferOpen] = React.useState(false);
@@ -151,6 +152,35 @@ export function AccountGrid({ accounts }: AccountGridProps) {
         />
       </div>
 
+      {/* Tab Filter for Active vs Archived Accounts */}
+      {archivedAccounts.length > 0 && (
+        <div className="flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70 w-fit">
+          <button
+            type="button"
+            onClick={() => setTab("active")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              tab === "active"
+                ? "bg-primary text-surface shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            <span>Active Accounts ({activeAccounts.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("archived")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              tab === "archived"
+                ? "bg-primary text-surface shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            <span>Archived ({archivedAccounts.length})</span>
+          </button>
+        </div>
+      )}
+
       {/* Empty State with Onboarding Guidance */}
       {accounts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface">
@@ -162,6 +192,30 @@ export function AccountGrid({ accounts }: AccountGridProps) {
             Connect your bank accounts, credit cards, or cash wallets to track balances and power your Safe-to-Spend calculations.
           </p>
           <CreateAccountDialog />
+        </div>
+      ) : tab === "archived" ? (
+        /* Archived Accounts Tab View */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              <span>Archived Accounts ({archivedAccounts.length})</span>
+            </h3>
+            <p className="text-xs text-text-secondary">
+              Archived accounts are excluded from active net worth calculations.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {archivedAccounts.map((acc) => (
+              <AccountCard
+                key={acc.id}
+                account={acc}
+                allAccounts={accounts}
+                onEdit={setEditingAccount}
+                onTransfer={handleOpenTransfer}
+              />
+            ))}
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -245,29 +299,6 @@ export function AccountGrid({ accounts }: AccountGridProps) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {investmentsAndDeposits.map((acc) => (
-                  <AccountCard
-                    key={acc.id}
-                    account={acc}
-                    allAccounts={accounts}
-                    onEdit={setEditingAccount}
-                    onTransfer={handleOpenTransfer}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Archived Accounts */}
-          {archivedAccounts.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-border/60">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
-                  <Archive className="h-4 w-4" />
-                  <span>Archived Accounts ({archivedAccounts.length})</span>
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {archivedAccounts.map((acc) => (
                   <AccountCard
                     key={acc.id}
                     account={acc}

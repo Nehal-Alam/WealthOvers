@@ -115,27 +115,27 @@ export function CreateCreditCardDialog({
           {/* Linked Account */}
           <div className="space-y-1.5">
             <Label>Linked Account</Label>
-            {creditCardAccounts.length > 0 ? (
-              <Select
-                value={watch("account_id")}
-                onValueChange={(val) => setValue("account_id", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select linked account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {creditCardAccounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name} ({acc.institution_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="text-xs text-amber-600">
-                Tip: Create an account with type &quot;Credit Card&quot; in Accounts first to link here.
-              </p>
-            )}
+            <Select
+              value={watch("account_id") || "auto"}
+              onValueChange={(val) => setValue("account_id", val === "auto" ? "" : val)}
+            >
+              <SelectTrigger className="text-xs">
+                <SelectValue placeholder="Auto-create card account" />
+              </SelectTrigger>
+              <SelectContent className="text-xs">
+                <SelectItem value="auto">
+                  ✨ Auto-create linked card account
+                </SelectItem>
+                {creditCardAccounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.institution_name})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-text-secondary">
+              WealthOvers will automatically link or create an underlying double-entry account.
+            </p>
             {errors.account_id && (
               <p className="text-xs text-destructive">{errors.account_id.message}</p>
             )}

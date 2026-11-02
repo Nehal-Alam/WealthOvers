@@ -25,7 +25,7 @@ export default async function BudgetsPage() {
       .from("budgets")
       .select(
         `
-        id, name, total_amount, start_date, end_date, rollover_unused, created_at,
+        id, name, total_amount, start_date, end_date, rollover_enabled, period_type, alert_threshold_percent, created_at,
         budget_categories:budget_categories(
           id,
           category_id,

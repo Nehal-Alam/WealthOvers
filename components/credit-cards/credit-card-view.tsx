@@ -47,6 +47,14 @@ const TransferFundsDialog = dynamic(
   { ssr: false }
 );
 
+const RecordCardRepaymentDialog = dynamic(
+  () =>
+    import("@/components/credit-cards/record-repayment-dialog").then(
+      (m) => m.RecordCardRepaymentDialog
+    ),
+  { ssr: false }
+);
+
 import { settleCreditCardStatementAction } from "@/app/(dashboard)/credit-cards/actions";
 import { addMoney, subtractMoney } from "@/lib/calculations/financial";
 
@@ -63,6 +71,7 @@ interface CreditCardViewProps {
 export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
   const [statementCard, setStatementCard] = React.useState<Tables<"credit_cards"> | null>(null);
   const [billPayTargetAccount, setBillPayTargetAccount] = React.useState<string | null>(null);
+  const [repayingCard, setRepayingCard] = React.useState<Tables<"credit_cards"> | null>(null);
 
   // Aggregate Metrics
   const { totalLimit, totalOutstanding, totalAvailable, overallUtilization } =
@@ -72,9 +81,10 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
 
       for (const card of creditCards) {
         limit = addMoney(limit, card.credit_limit);
-        // Current outstanding from the linked account or card model
-        const currentBal = card.account?.current_balance ?? card.current_outstanding;
-        outstanding = addMoney(outstanding, currentBal);
+        const cardOutstanding = card.current_outstanding != null
+          ? Math.abs(parseFloat(String(card.current_outstanding)))
+          : Math.abs(parseFloat(String(card.account?.current_balance || 0)));
+        outstanding = addMoney(outstanding, cardOutstanding);
       }
 
       const available = subtractMoney(limit, outstanding);
@@ -309,11 +319,11 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
 
                     <Button
                       size="sm"
-                      className="flex-1 gap-1.5 h-8 text-xs bg-primary hover:bg-primary-hover text-primary-foreground"
-                      onClick={() => setBillPayTargetAccount(card.account_id)}
+                      className="flex-1 gap-1.5 h-8 text-xs bg-primary hover:bg-primary-hover text-surface font-semibold"
+                      onClick={() => setRepayingCard(card)}
                     >
                       <ArrowLeftRight className="h-3.5 w-3.5" />
-                      <span>Pay Bill (Transfer)</span>
+                      <span>Repay Dues</span>
                     </Button>
                   </div>
 
@@ -388,6 +398,14 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
         card={statementCard}
         open={!!statementCard}
         onOpenChange={(open) => !open && setStatementCard(null)}
+      />
+
+      {/* Credit Card Bill Repayment Dialog */}
+      <RecordCardRepaymentDialog
+        creditCard={repayingCard}
+        accounts={accounts}
+        open={!!repayingCard}
+        onOpenChange={(open) => !open && setRepayingCard(null)}
       />
 
       {/* Inter-Account Bill Payment Modal */}

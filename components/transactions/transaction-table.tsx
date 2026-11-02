@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ import {
   deleteTransactionAction,
   markTransactionsReviewedAction,
 } from "@/app/(dashboard)/transactions/actions";
+import { getTransactionDisplayInfo } from "@/lib/calculations/financial";
 
 interface TransactionTableProps {
   transactions: any[];
@@ -41,6 +43,7 @@ interface TransactionTableProps {
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: () => void;
   allSelected?: boolean;
+  selectedAccountId?: string;
 }
 
 export const TransactionTable = React.memo(function TransactionTable({
@@ -50,6 +53,7 @@ export const TransactionTable = React.memo(function TransactionTable({
   onToggleSelect,
   onToggleSelectAll,
   allSelected = false,
+  selectedAccountId,
 }: TransactionTableProps) {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this transaction? Account balance will be restored.")) {
@@ -102,6 +106,34 @@ export const TransactionTable = React.memo(function TransactionTable({
             <span>Transfer</span>
           </Badge>
         );
+      case "investment_buy":
+        return (
+          <Badge className="bg-primary/15 text-primary hover:bg-primary/20 border-primary/30 gap-1 font-medium">
+            <Coins className="h-3 w-3" />
+            <span>Investment Buy</span>
+          </Badge>
+        );
+      case "investment_sell":
+        return (
+          <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/30 gap-1 font-medium">
+            <Coins className="h-3 w-3" />
+            <span>Investment Sell</span>
+          </Badge>
+        );
+      case "loan_repayment":
+        return (
+          <Badge className="bg-amber-600/15 text-amber-700 dark:text-amber-400 border-amber-600/30 gap-1 font-medium">
+            <TrendingDown className="h-3 w-3" />
+            <span>Loan EMI</span>
+          </Badge>
+        );
+      case "loan_disbursement":
+        return (
+          <Badge className="bg-primary/15 text-primary border-primary/30 gap-1 font-medium">
+            <ArrowLeftRight className="h-3 w-3" />
+            <span>Loan Disbursed</span>
+          </Badge>
+        );
       default:
         return <Badge variant="outline" className="border-border text-text-secondary">{type}</Badge>;
     }
@@ -134,8 +166,7 @@ export const TransactionTable = React.memo(function TransactionTable({
         </TableHeader>
         <TableBody className="divide-y divide-border/60">
           {transactions.map((txn) => {
-            const isNegative = txn.transaction_type === "expense";
-            const isPositive = txn.transaction_type === "income" || txn.transaction_type === "refund";
+            const info = getTransactionDisplayInfo(txn, selectedAccountId);
             const isSelected = selectedIds.has(txn.id);
             const needsReview = txn.is_reviewed === false || !txn.category_id;
 
@@ -238,11 +269,9 @@ export const TransactionTable = React.memo(function TransactionTable({
                 {/* Amount */}
                 <TableCell className="text-right">
                   <span
-                    className={`font-bold text-sm tabular-nums tracking-tight ${
-                      isNegative ? "text-danger" : isPositive ? "text-success" : "text-primary"
-                    }`}
+                    className={`font-bold text-sm tabular-nums tracking-tight ${info.textColorClass}`}
                   >
-                    {isNegative ? "- " : isPositive ? "+ " : "⇄ "}
+                    {info.displaySign}
                     ₹{parseFloat(txn.amount).toLocaleString("en-IN", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,

@@ -31,7 +31,7 @@ import {
   Briefcase,
   Tag,
 } from "lucide-react";
-import { addMoney, subtractMoney } from "@/lib/calculations/financial";
+import { addMoney, subtractMoney, getTransactionDisplayInfo } from "@/lib/calculations/financial";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -88,11 +88,12 @@ export function DailySpendingScrubber({ transactions }: DailySpendingScrubberPro
       const tDate = t.transaction_date.slice(0, 10);
       if (dailyMap[tDate]) {
         const amt = parseFloat(t.amount);
-        if (t.transaction_type === "expense") {
+        const info = getTransactionDisplayInfo(t);
+        if (info.direction === "outflow") {
           dailyMap[tDate].total += amt;
           dailyMap[tDate].transactions.push(t);
           totalSpentNum += amt;
-        } else if (t.transaction_type === "income" || t.transaction_type === "refund") {
+        } else if (info.direction === "inflow") {
           totalIncomeNum += amt;
         }
       }

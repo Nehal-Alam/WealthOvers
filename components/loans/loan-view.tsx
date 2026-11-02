@@ -57,9 +57,10 @@ interface LoanWithPayments extends Tables<"loans"> {
 
 interface LoanViewProps {
   loans: LoanWithPayments[];
+  accounts?: Tables<"accounts">[];
 }
 
-export function LoanView({ loans }: LoanViewProps) {
+export function LoanView({ loans, accounts = [] }: LoanViewProps) {
   const [amortizationLoan, setAmortizationLoan] = React.useState<Tables<"loans"> | null>(null);
   const [paymentLoan, setPaymentLoan] = React.useState<Tables<"loans"> | null>(null);
 
@@ -70,9 +71,9 @@ export function LoanView({ loans }: LoanViewProps) {
     let emi = "0.0000";
 
     for (const loan of loans) {
-      p = addMoney(p, loan.principal_amount);
-      o = addMoney(o, loan.outstanding_balance);
-      emi = addMoney(emi, loan.monthly_emi);
+      p = addMoney(p, loan.principal_amount || 0);
+      o = addMoney(o, loan.outstanding_balance || 0);
+      emi = addMoney(emi, loan.monthly_emi || 0);
     }
 
     return {
@@ -111,7 +112,7 @@ export function LoanView({ loans }: LoanViewProps) {
           </p>
         </div>
 
-        <CreateLoanDialog />
+        <CreateLoanDialog accounts={accounts} />
       </div>
 
       {/* KPI Cards */}
@@ -157,14 +158,14 @@ export function LoanView({ loans }: LoanViewProps) {
             SBI Home Loan with 8.5% interest and ₹35,000 monthly EMI commitment.
           </div>
           <div className="flex justify-center gap-2 mt-5">
-            <CreateLoanDialog />
+            <CreateLoanDialog accounts={accounts} />
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {loans.map((loan) => {
-            const principalNum = parseFloat(loan.principal_amount.toString());
-            const outstandingNum = parseFloat(loan.outstanding_balance.toString());
+            const principalNum = parseFloat((loan.principal_amount || 0).toString());
+            const outstandingNum = parseFloat((loan.outstanding_balance || 0).toString());
             const repaidNum = Math.max(0, principalNum - outstandingNum);
             const progress =
               principalNum > 0
@@ -241,7 +242,9 @@ export function LoanView({ loans }: LoanViewProps) {
                     <div>
                       <span className="text-muted-foreground block text-[11px]">Maturity Date</span>
                       <span className="font-mono font-semibold text-foreground">
-                        {format(new Date(loan.maturity_date), "dd MMM yyyy")}
+                        {loan.maturity_date && !isNaN(new Date(loan.maturity_date).getTime())
+                          ? format(new Date(loan.maturity_date), "dd MMM yyyy")
+                          : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -284,6 +287,7 @@ export function LoanView({ loans }: LoanViewProps) {
       {/* Record Payment Dialog */}
       <RecordLoanPaymentDialog
         loan={paymentLoan}
+        accounts={accounts}
         open={!!paymentLoan}
         onOpenChange={(open) => !open && setPaymentLoan(null)}
       />
