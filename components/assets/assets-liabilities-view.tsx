@@ -87,18 +87,18 @@ export function AssetsLiabilitiesView({
   const getCategoryBadgeClass = (category: string) => {
     const c = category.toLowerCase();
     if (c.includes("real estate") || c.includes("property") || c.includes("home")) {
-      return "border-blue-500/30 text-blue-500 bg-blue-500/10";
+      return "border-primary/30 text-primary dark:text-[#9BB99D] bg-primary/10";
     }
     if (c.includes("vehicle") || c.includes("car") || c.includes("bike")) {
-      return "border-amber-500/30 text-amber-500 bg-amber-500/10";
+      return "border-warning/30 text-warning dark:text-[#D6B16C] bg-warning/10";
     }
     if (c.includes("gold") || c.includes("jewelry") || c.includes("silver")) {
-      return "border-yellow-500/30 text-yellow-500 bg-yellow-500/10";
+      return "border-warning/30 text-warning dark:text-[#D6B16C] bg-warning/10";
     }
     if (c.includes("electronic") || c.includes("gadget") || c.includes("tech")) {
-      return "border-purple-500/30 text-purple-500 bg-purple-500/10";
+      return "border-accent/30 text-accent bg-accent/10";
     }
-    return "border-border text-muted-foreground bg-muted/40";
+    return "border-border/80 text-muted-foreground bg-surface-secondary/40";
   };
 
   const handleDeleteAsset = async (id: string, name: string) => {
@@ -126,8 +126,8 @@ export function AssetsLiabilitiesView({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Fixed Assets & Liabilities</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Fixed Assets & Liabilities</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Track real estate properties, vehicles, jewelry, and non-bank liabilities.
           </p>
         </div>
@@ -145,14 +145,14 @@ export function AssetsLiabilitiesView({
           amount={totalAssetValuation}
           subtitle={`${assets.length} registered properties / assets`}
           icon={Home}
-          iconColor="#3B82F6"
+          iconColor="#244B3C"
         />
         <MetricCard
           title="External Liabilities"
           amount={totalLiabilitiesAmount}
           subtitle={`${liabilities.length} registered external debts`}
           icon={AlertCircle}
-          iconColor="#EF4444"
+          iconColor="#C77A65"
           coloredAmount={false}
         />
         <MetricCard
@@ -160,38 +160,38 @@ export function AssetsLiabilitiesView({
           amount={netTangible}
           subtitle="Fixed assets minus liabilities"
           icon={TrendingUp}
-          iconColor="#10B981"
+          iconColor="#39805B"
           coloredAmount
         />
       </div>
 
       {/* Tangible Equity & Leverage Health */}
       {(parseFloat(totalAssetValuation) > 0 || parseFloat(totalLiabilitiesAmount) > 0) && (
-        <Card className="p-4 border bg-card/60 backdrop-blur-sm">
+        <Card className="p-4 border border-border/80 bg-card rounded-xl shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">
               <Scale className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold">Tangible Asset Solvency & Equity Ratio</span>
+              <span className="text-sm font-semibold text-foreground">Tangible Asset Solvency & Equity Ratio</span>
             </div>
             <div className="flex items-center gap-4 text-xs font-mono font-medium">
-              <span className="flex items-center gap-1.5 text-emerald-500">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="flex items-center gap-1.5 text-success">
+                <span className="h-2 w-2 rounded-full bg-success" />
                 Unencumbered Equity: {equityPercent}%
               </span>
-              <span className="flex items-center gap-1.5 text-destructive">
-                <span className="h-2 w-2 rounded-full bg-destructive" />
+              <span className="flex items-center gap-1.5 text-danger">
+                <span className="h-2 w-2 rounded-full bg-danger" />
                 Debt Leverage: {debtToAssetRatio}%
               </span>
             </div>
           </div>
-          <div className="w-full bg-secondary/50 rounded-full h-2 overflow-hidden flex">
+          <div className="w-full bg-surface-secondary/80 rounded-full h-2 overflow-hidden flex">
             <div
-              className="bg-emerald-500 transition-all duration-300"
+              className="bg-success transition-all duration-300"
               style={{ width: `${equityPercent}%` }}
               title={`Equity: ${equityPercent}%`}
             />
             <div
-              className="bg-destructive transition-all duration-300"
+              className="bg-danger transition-all duration-300"
               style={{ width: `${debtToAssetRatio}%` }}
               title={`Debt: ${debtToAssetRatio}%`}
             />
@@ -201,9 +201,9 @@ export function AssetsLiabilitiesView({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-sm">
-          <TabsTrigger value="assets">Fixed Assets ({assets.length})</TabsTrigger>
-          <TabsTrigger value="liabilities">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm bg-surface-secondary/60">
+          <TabsTrigger value="assets" className="text-xs py-1.5">Fixed Assets ({assets.length})</TabsTrigger>
+          <TabsTrigger value="liabilities" className="text-xs py-1.5">
             Liabilities ({liabilities.length})
           </TabsTrigger>
         </TabsList>
@@ -211,13 +211,22 @@ export function AssetsLiabilitiesView({
         {/* Fixed Assets Tab */}
         <TabsContent value="assets" className="mt-6">
           {assets.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-              <Home className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-              <h3 className="text-base font-semibold">No fixed assets registered</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Record apartments, vehicles, jewelry, or gold to track physical net worth.
+            /* Section 11 Onboarding Empty State */
+            <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+                <Home className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-bold text-foreground">No Fixed Assets Registered</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+                Add properties, vehicles, or physical assets to track tangible net worth.
               </p>
-              <CreateAssetDialog />
+              <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Example: </span>
+                2BHK Apartment in Bangalore valued at ₹75,00,000 or Honda City at ₹8,50,000.
+              </div>
+              <div className="flex justify-center gap-2 mt-5">
+                <CreateAssetDialog />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -229,14 +238,14 @@ export function AssetsLiabilitiesView({
                 const isGain = pnl >= 0;
 
                 return (
-                  <Card key={ast.id} className="overflow-hidden border shadow-sm">
+                  <Card key={ast.id} className="overflow-hidden border border-border/80 bg-card rounded-xl shadow-xs hover:border-primary/40 transition-colors">
                     <CardHeader className="p-4 pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <Badge variant="outline" className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getCategoryBadgeClass(ast.category)}`}>
                             {ast.category}
                           </Badge>
-                          <CardTitle className="text-base font-semibold mt-1">
+                          <CardTitle className="text-base font-bold mt-1 text-foreground">
                             {ast.name}
                           </CardTitle>
                         </div>
@@ -244,7 +253,7 @@ export function AssetsLiabilitiesView({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:text-danger"
                           onClick={() => handleDeleteAsset(ast.id, ast.name)}
                           aria-label="Delete asset"
                         >
@@ -254,14 +263,14 @@ export function AssetsLiabilitiesView({
                     </CardHeader>
 
                     <CardContent className="p-4 pt-2">
-                      <div className="flex items-baseline justify-between py-2 border-t">
+                      <div className="flex items-baseline justify-between py-2 border-t border-border/60">
                         <div>
                           <span className="text-xs text-muted-foreground block">
                             Current Valuation
                           </span>
                           <MoneyDisplay
                             amount={ast.current_valuation}
-                            className="text-base font-bold text-foreground"
+                            className="text-base font-bold text-foreground font-mono"
                           />
                         </div>
 
@@ -271,16 +280,16 @@ export function AssetsLiabilitiesView({
                           </span>
                           <MoneyDisplay
                             amount={ast.purchase_price}
-                            className="text-xs font-semibold text-muted-foreground"
+                            className="text-xs font-semibold text-muted-foreground font-mono"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs pt-2 border-t">
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
                         <span className="text-muted-foreground">Appreciation</span>
                         <span
                           className={`font-mono font-bold flex items-center gap-1 ${
-                            isGain ? "text-emerald-500" : "text-destructive"
+                            isGain ? "text-success" : "text-danger"
                           }`}
                         >
                           {isGain ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -298,34 +307,48 @@ export function AssetsLiabilitiesView({
         {/* Liabilities Tab */}
         <TabsContent value="liabilities" className="mt-6">
           {liabilities.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-              <h3 className="text-base font-semibold">No external liabilities registered</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Record private debts or informal borrowing obligations.
+            /* Section 11 Onboarding Empty State */
+            <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+              <div className="mx-auto h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center text-danger mb-3">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-bold text-foreground">No External Liabilities Registered</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+                Record non-bank liabilities such as family loans, promissory notes, or debts.
               </p>
-              <CreateLiabilityDialog />
+              <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Example: </span>
+                Hand loan of ₹2,00,000 from relative for home renovation.
+              </div>
+              <div className="flex justify-center gap-2 mt-5">
+                <CreateLiabilityDialog />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {liabilities.map((lia) => (
-                <Card key={lia.id} className="overflow-hidden border shadow-sm">
+              {liabilities.map((liab) => (
+                <Card key={liab.id} className="overflow-hidden border border-border/80 bg-card rounded-xl shadow-xs hover:border-danger/40 transition-colors">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <Badge variant="outline" className={`text-[10px] py-0 px-2 h-4.5 font-medium ${getCategoryBadgeClass(lia.category)}`}>
-                          {lia.category}
+                        <Badge variant="outline" className="text-[10px] py-0 px-2 h-4.5 font-medium border-danger/30 text-danger bg-danger/10">
+                          {liab.category.replace(/_/g, " ")}
                         </Badge>
-                        <CardTitle className="text-base font-semibold mt-1">
-                          {lia.name}
+                        <CardTitle className="text-base font-bold mt-1 text-foreground">
+                          {liab.name}
                         </CardTitle>
+                        {liab.notes && (
+                          <p className="text-xs text-muted-foreground">
+                            {liab.notes}
+                          </p>
+                        )}
                       </div>
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDeleteLiability(lia.id, lia.name)}
+                        className="h-8 w-8 text-muted-foreground hover:text-danger"
+                        onClick={() => handleDeleteLiability(liab.id, liab.name)}
                         aria-label="Delete liability"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -334,32 +357,32 @@ export function AssetsLiabilitiesView({
                   </CardHeader>
 
                   <CardContent className="p-4 pt-2">
-                    <div className="flex items-baseline justify-between py-2 border-t">
+                    <div className="flex items-baseline justify-between py-2 border-t border-border/60">
                       <div>
                         <span className="text-xs text-muted-foreground block">
                           Outstanding Amount
                         </span>
                         <MoneyDisplay
-                          amount={lia.outstanding_amount}
-                          className="text-base font-bold text-destructive"
+                          amount={liab.outstanding_amount}
+                          className="text-base font-bold text-danger font-mono"
                         />
                       </div>
 
                       <div className="text-right">
-                        <span className="text-xs text-muted-foreground block">
-                          Total Borrowed
-                        </span>
+                        <span className="text-xs text-muted-foreground block">Total Borrowed</span>
                         <MoneyDisplay
-                          amount={lia.total_amount}
-                          className="text-xs font-semibold text-muted-foreground"
+                          amount={liab.total_amount}
+                          className="font-mono font-semibold text-xs text-muted-foreground"
                         />
                       </div>
                     </div>
 
-                    {lia.due_date && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t">
-                        <Calendar className="h-3 w-3" />
-                        <span>Due: {format(new Date(lia.due_date), "dd MMM yyyy")}</span>
+                    {liab.due_date && (
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60 text-muted-foreground">
+                        <span>Due Date</span>
+                        <span className="font-mono text-foreground font-medium">
+                          {format(new Date(liab.due_date), "dd MMM yyyy")}
+                        </span>
                       </div>
                     )}
                   </CardContent>
@@ -372,4 +395,3 @@ export function AssetsLiabilitiesView({
     </div>
   );
 }
-

@@ -158,27 +158,27 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
   };
 
   return (
-    <Card className="border-muted">
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+    <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
           <Terminal className="h-4 w-4 text-primary" />
           Companion Sync Simulator & Verification Console
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Verify the end-to-end sync pipeline, offline batch catch-up, idempotency deduplication, and zero-trust OTP defense.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sim-device">Active Companion Device</Label>
+            <Label htmlFor="sim-device" className="text-xs font-semibold text-foreground">Active Companion Device</Label>
             <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-              <SelectTrigger>
+              <SelectTrigger className="border-border/80 text-xs h-9">
                 <SelectValue placeholder="Select device" />
               </SelectTrigger>
               <SelectContent>
                 {activeDevices.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
+                  <SelectItem key={d.id} value={d.id} className="text-xs">
                     {d.device_name} ({d.device_model || "Android"})
                   </SelectItem>
                 ))}
@@ -187,14 +187,14 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sim-token">Device Token (wov_dev_...)</Label>
+            <Label htmlFor="sim-token" className="text-xs font-semibold text-foreground">Device Token (wov_dev_...)</Label>
             <Input
               id="sim-token"
               placeholder="Paste paired token"
               type="password"
               value={deviceToken}
               onChange={(e) => setDeviceToken(e.target.value)}
-              className="font-mono text-xs"
+              className="font-mono text-xs border-border/80 h-9"
             />
           </div>
         </div>
@@ -206,9 +206,9 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             variant="outline"
             disabled={isSimulating}
             onClick={() => runSimulation("online")}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs border-border/80 h-8"
           >
-            <Play className="h-3 w-3 text-emerald-500" />
+            <Play className="h-3 w-3 text-success" />
             1. Test Real-Time Sync (Swiggy ₹450)
           </Button>
 
@@ -217,7 +217,7 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             variant="outline"
             disabled={isSimulating}
             onClick={() => runSimulation("offline_batch")}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs border-border/80 h-8"
           >
             <WifiOff className="h-3 w-3 text-primary" />
             2. Test Offline Recovery Batch (3 txns)
@@ -228,9 +228,9 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             variant="outline"
             disabled={isSimulating}
             onClick={() => runSimulation("duplicate")}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs border-border/80 h-8"
           >
-            <RefreshCw className="h-3 w-3 text-amber-500" />
+            <RefreshCw className="h-3 w-3 text-warning" />
             3. Test Duplicate Deduplication
           </Button>
 
@@ -239,16 +239,16 @@ export function SyncSimulatorCard({ devices }: SyncSimulatorCardProps) {
             variant="outline"
             disabled={isSimulating}
             onClick={() => runSimulation("malicious_otp")}
-            className="gap-1.5 text-xs text-destructive border-destructive/30"
+            className="gap-1.5 text-xs text-danger border-danger/30 hover:bg-danger/10 h-8"
           >
-            <ShieldAlert className="h-3 w-3 text-destructive" />
+            <ShieldAlert className="h-3 w-3 text-danger" />
             4. Test OTP Defense Rejection
           </Button>
         </div>
 
         {/* Terminal Result Display */}
         {resultLog && (
-          <div className="rounded-md bg-zinc-950 p-3 font-mono text-xs text-zinc-200 overflow-x-auto max-h-48 border border-zinc-800">
+          <div className="rounded-xl bg-zinc-950 p-3 font-mono text-xs text-zinc-200 overflow-x-auto max-h-48 border border-zinc-800">
             <pre>{resultLog}</pre>
           </div>
         )}

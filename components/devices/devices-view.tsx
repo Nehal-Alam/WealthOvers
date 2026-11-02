@@ -25,14 +25,24 @@ import { MetricCard } from "@/components/financial/metric-card";
 import { PairDeviceDialog } from "./pair-device-dialog";
 import { SyncHistoryTable } from "./sync-history-table";
 import { SyncSimulatorCard } from "./sync-simulator-card";
+import { DetectedTransactionsCard } from "./detected-transactions-card";
 import { revokeDeviceAction, deleteDeviceAction } from "@/app/(dashboard)/devices/actions";
 
 interface DevicesViewProps {
   devices: Tables<"devices">[];
   syncLogs: Tables<"sync_logs">[];
+  transactions?: Tables<"transactions">[];
+  accounts?: Tables<"accounts">[];
+  categories?: Tables<"categories">[];
 }
 
-export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
+export function DevicesView({
+  devices,
+  syncLogs,
+  transactions = [],
+  accounts = [],
+  categories = [],
+}: DevicesViewProps) {
   const handleRevoke = async (deviceId: string, name: string) => {
     if (!confirm(`Are you sure you want to revoke "${name}"? It will be immediately blocked from syncing transactions.`)) {
       return;
@@ -84,8 +94,10 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Android Companion Synchronization</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Android Companion Synchronization
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Pair and manage Android companion devices for automatic, on-device financial transaction capture.
           </p>
         </div>
@@ -100,7 +112,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
           formatType="count"
           subtitle={`${devices.length} total paired hardware`}
           icon={Smartphone}
-          iconColor="#3B82F6"
+          iconColor="#244B3C"
         />
         <MetricCard
           title="Synced Transactions"
@@ -108,7 +120,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
           formatType="count"
           subtitle="Processed via companion channel"
           icon={Zap}
-          iconColor="#8B5CF6"
+          iconColor="#8BA58C"
         />
         <MetricCard
           title="Ingestion Success Rate"
@@ -116,42 +128,53 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
           formatType="percent"
           subtitle="On-device SMS parser reliability"
           icon={CheckCircle2}
-          iconColor="#10B981"
+          iconColor="#39805B"
         />
       </div>
 
-      {/* Security & Privacy Banner */}
-      <div className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-5 space-y-2">
-        <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-300 font-semibold text-sm">
-          <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          Zero-Trust Privacy & Data Integrity Architecture
+      {/* Security & Privacy Banner - Leftovers Sage Theme */}
+      <div className="rounded-2xl border border-primary/20 bg-surface-secondary/70 dark:bg-surface-secondary/30 p-5 space-y-2">
+        <div className="flex items-center gap-2 text-primary font-bold text-sm">
+          <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
+          <span>Zero-Trust Privacy & On-Device Security Architecture</span>
         </div>
-        <p className="text-xs text-indigo-800/80 dark:text-indigo-300/80 leading-relaxed">
+        <p className="text-xs text-text-secondary leading-relaxed">
           The WealthOvers Android companion app parses financial SMS notifications locally on your device. 
           Raw SMS messages, personal communications, contacts, and authentication OTPs are <strong>never uploaded or stored</strong>. 
           Only sanitized financial transaction metadata (amount, merchant, timestamp, UPI reference) is transmitted with device token authentication.
+          All automated capture remains opt-in and requires your explicit review.
         </p>
       </div>
 
+      {/* Section 10: Automatic Transaction Detection & Review Section */}
+      <DetectedTransactionsCard
+        transactions={transactions}
+        accounts={accounts}
+        categories={categories}
+      />
+
       {/* Devices List */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Paired Devices ({devices.length})</h3>
+        <h3 className="font-bold text-base text-foreground">Paired Devices ({devices.length})</h3>
 
         {devices.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center space-y-3">
-              <Smartphone className="mx-auto h-10 w-10 text-muted-foreground/50" />
-              <div>
-                <p className="font-semibold text-sm">No Companion Devices Paired</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Pair your Android phone to automatically capture UPI, debit card, and banking transactions in real-time.
-                </p>
-              </div>
-              <div className="pt-2">
-                <PairDeviceDialog />
-              </div>
-            </CardContent>
-          </Card>
+          /* Section 11 Onboarding Empty State */
+          <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+              <Smartphone className="h-6 w-6" />
+            </div>
+            <h4 className="text-base font-bold text-foreground">No Companion Devices Paired</h4>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+              Pair your Android phone to automatically capture UPI, debit card, and banking transactions in real-time.
+            </p>
+            <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Example: </span>
+              Samsung Galaxy or Google Pixel running the WealthOvers companion service.
+            </div>
+            <div className="pt-5">
+              <PairDeviceDialog />
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {devices.map((device) => {
@@ -160,14 +183,14 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
               return (
                 <Card
                   key={device.id}
-                  className={`border transition-colors ${
-                    isActive ? "hover:border-primary/50" : "opacity-75 bg-muted/20 border-destructive/20"
+                  className={`border border-border/80 rounded-2xl bg-card shadow-xs transition-colors ${
+                    isActive ? "hover:border-primary/50" : "opacity-75 bg-surface-secondary/30 border-danger/20"
                   }`}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
-                        <CardTitle className="text-base flex items-center gap-2">
+                        <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
                           <Smartphone className="h-4 w-4 text-primary" />
                           {device.device_name}
                         </CardTitle>
@@ -176,11 +199,11 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
                         </CardDescription>
                       </div>
                       {isActive ? (
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-300 dark:border-emerald-800 text-[10px] gap-1">
+                        <Badge variant="outline" className="text-success border-success/30 bg-success/10 text-[10px] gap-1 font-medium">
                           <Wifi className="h-3 w-3" /> Active
                         </Badge>
                       ) : (
-                        <Badge variant="destructive" className="text-[10px] gap-1">
+                        <Badge variant="outline" className="text-danger border-danger/30 bg-danger/10 text-[10px] gap-1 font-medium">
                           <Lock className="h-3 w-3" /> Revoked
                         </Badge>
                       )}
@@ -188,7 +211,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
                   </CardHeader>
 
                   <CardContent className="space-y-3 pt-0">
-                    <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                    <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/60">
                       <div className="flex justify-between">
                         <span>Last Synchronized:</span>
                         <span className="font-medium text-foreground">
@@ -199,16 +222,16 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
                       </div>
                       <div className="flex justify-between">
                         <span>Paired On:</span>
-                        <span>{format(new Date(device.created_at), "dd MMM yyyy")}</span>
+                        <span className="text-foreground">{format(new Date(device.created_at), "dd MMM yyyy")}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/60">
                       {isActive && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full text-xs text-amber-600 border-amber-300 dark:border-amber-900 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                          className="w-full text-xs text-warning border-warning/30 hover:bg-warning/10"
                           onClick={() => handleRevoke(device.id, device.device_name)}
                         >
                           <Lock className="h-3.5 w-3.5 mr-1" />
@@ -218,7 +241,7 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                        className="h-8 w-8 text-muted-foreground hover:text-danger hover:bg-danger/10 shrink-0"
                         onClick={() => handleDelete(device.id)}
                         aria-label="Delete companion device"
                       >
@@ -241,4 +264,3 @@ export function DevicesView({ devices, syncLogs }: DevicesViewProps) {
     </div>
   );
 }
-

@@ -94,7 +94,7 @@ export function LoanView({ loans }: LoanViewProps) {
 
   const getLoanTypeBadge = (type: string) => {
     return (
-      <Badge variant="outline" className="text-[10px] capitalize">
+      <Badge variant="outline" className="text-[10px] capitalize border-border/80">
         {type.replace(/_/g, " ")}
       </Badge>
     );
@@ -105,8 +105,8 @@ export function LoanView({ loans }: LoanViewProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Loan & Debt Management</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Loan & Debt Management</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Track mortgage amortization schedules, interest rates, and loan repayments.
           </p>
         </div>
@@ -119,9 +119,9 @@ export function LoanView({ loans }: LoanViewProps) {
         <MetricCard
           title="Total Outstanding Debt"
           amount={totalOutstanding}
-          subtitle={`Borrowed: ₹${parseFloat(totalPrincipal).toLocaleString()}`}
+          subtitle={`Borrowed: ₹${parseFloat(totalPrincipal).toLocaleString("en-IN")}`}
           icon={Scale}
-          iconColor="#EF4444"
+          iconColor="#C77A65"
           coloredAmount={false}
         />
         <MetricCard
@@ -129,7 +129,7 @@ export function LoanView({ loans }: LoanViewProps) {
           amount={totalMonthlyEMI}
           subtitle="Fixed monthly debt service"
           icon={TrendingDown}
-          iconColor="#F59E0B"
+          iconColor="#C39148"
           coloredAmount={false}
         />
         <MetricCard
@@ -138,18 +138,27 @@ export function LoanView({ loans }: LoanViewProps) {
           formatType="count"
           subtitle="Registered debt accounts"
           icon={Clock}
-          iconColor="#3B82F6"
+          iconColor="#244B3C"
         />
       </div>
 
       {loans.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-          <Scale className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-base font-semibold">No active loans or debts</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Record home loans, personal loans, or vehicle financing to monitor your amortization.
+        /* Section 11 Onboarding Empty State */
+        <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+            <Scale className="h-6 w-6" />
+          </div>
+          <h3 className="text-base font-bold text-foreground">Track Your Loans & Debt Service</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+            Record home loans, personal loans, or vehicle financing to monitor your amortization schedule and payoff timelines.
           </p>
-          <CreateLoanDialog />
+          <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Example: </span>
+            SBI Home Loan with 8.5% interest and ₹35,000 monthly EMI commitment.
+          </div>
+          <div className="flex justify-center gap-2 mt-5">
+            <CreateLoanDialog />
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -163,17 +172,17 @@ export function LoanView({ loans }: LoanViewProps) {
                 : 0;
 
             return (
-              <Card key={loan.id} className="overflow-hidden border shadow-sm">
-                <CardHeader className="p-4 pb-2">
+              <Card key={loan.id} className="overflow-hidden border border-border/80 bg-card rounded-2xl shadow-xs hover:border-primary/40 transition-colors">
+                <CardHeader className="p-5 pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
                         {getLoanTypeBadge(loan.loan_type)}
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground font-mono">
                           {loan.annual_interest_rate}% p.a.
                         </span>
                       </div>
-                      <CardTitle className="text-base font-semibold mt-1">
+                      <CardTitle className="text-base font-bold mt-1 text-foreground">
                         {loan.lender_or_borrower_name}
                       </CardTitle>
                     </div>
@@ -181,7 +190,7 @@ export function LoanView({ loans }: LoanViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 text-muted-foreground hover:text-danger"
                       onClick={() => handleDelete(loan.id, loan.lender_or_borrower_name)}
                       aria-label="Delete loan"
                     >
@@ -190,19 +199,19 @@ export function LoanView({ loans }: LoanViewProps) {
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-4 pt-2 space-y-4">
+                <CardContent className="p-5 pt-2 space-y-4">
                   {/* Balance & Repaid Progress */}
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-baseline">
                       <span className="text-xs text-muted-foreground">Principal Repaid</span>
-                      <span className="text-xs font-mono font-bold text-emerald-600">
+                      <span className="text-xs font-mono font-bold text-success">
                         {progress}% paid
                       </span>
                     </div>
 
                     <Progress
                       value={progress}
-                      indicatorClassName="bg-emerald-500"
+                      indicatorClassName="bg-success"
                       className="h-2"
                     />
 
@@ -211,47 +220,47 @@ export function LoanView({ loans }: LoanViewProps) {
                         Outstanding:{" "}
                         <MoneyDisplay
                           amount={loan.outstanding_balance}
-                          className="font-semibold text-foreground"
+                          className="font-mono font-semibold text-foreground"
                         />
                       </span>
                       <span>
                         Principal:{" "}
-                        <MoneyDisplay amount={loan.principal_amount} />
+                        <MoneyDisplay amount={loan.principal_amount} className="font-mono" />
                       </span>
                     </div>
                   </div>
 
                   {/* Loan Details Grid */}
-                  <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y">
+                  <div className="grid grid-cols-2 gap-2 text-xs py-2.5 px-3 border border-border/60 rounded-lg bg-surface-secondary/30 my-2">
                     <div>
-                      <span className="text-muted-foreground block">Monthly EMI</span>
+                      <span className="text-muted-foreground block text-[11px]">Monthly EMI</span>
                       <span className="font-mono font-bold text-sm text-primary">
                         <MoneyDisplay amount={loan.monthly_emi} />
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Maturity Date</span>
-                      <span className="font-mono font-semibold">
+                      <span className="text-muted-foreground block text-[11px]">Maturity Date</span>
+                      <span className="font-mono font-semibold text-foreground">
                         {format(new Date(loan.maturity_date), "dd MMM yyyy")}
                       </span>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/60">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 gap-1.5 h-8 text-xs"
+                      className="flex-1 gap-1.5 h-8 text-xs border-border/80"
                       onClick={() => setAmortizationLoan(loan)}
                     >
-                      <TableIcon className="h-3.5 w-3.5" />
+                      <TableIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Amortization</span>
                     </Button>
 
                     <Button
                       size="sm"
-                      className="flex-1 gap-1.5 h-8 text-xs"
+                      className="flex-1 gap-1.5 h-8 text-xs bg-primary hover:bg-primary-hover text-primary-foreground"
                       onClick={() => setPaymentLoan(loan)}
                     >
                       <DollarSign className="h-3.5 w-3.5" />
@@ -281,4 +290,3 @@ export function LoanView({ loans }: LoanViewProps) {
     </div>
   );
 }
-

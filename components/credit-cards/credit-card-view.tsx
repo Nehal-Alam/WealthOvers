@@ -108,8 +108,8 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Credit Card Management</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Credit Card Management</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Monitor credit limits, utilization ratio, billing cycles, and settle statement dues.
           </p>
         </div>
@@ -124,14 +124,14 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
           amount={totalLimit}
           subtitle="Combined credit line"
           icon={CreditCardIcon}
-          iconColor="#3B82F6"
+          iconColor="#244B3C"
         />
         <MetricCard
           title="Current Outstanding"
           amount={totalOutstanding}
           subtitle="Total unbilled & billed liability"
           icon={AlertCircle}
-          iconColor="#EF4444"
+          iconColor="#C77A65"
           coloredAmount={false}
         />
         <MetricCard
@@ -139,7 +139,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
           amount={totalAvailable}
           subtitle="Remaining usable limit"
           icon={ShieldCheck}
-          iconColor="#10B981"
+          iconColor="#39805B"
         />
         <MetricCard
           title="Credit Utilization"
@@ -155,22 +155,31 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
           icon={CreditCardIcon}
           iconColor={
             overallUtilization <= 30
-              ? "#10B981"
+              ? "#39805B"
               : overallUtilization <= 50
-              ? "#F59E0B"
-              : "#EF4444"
+              ? "#C39148"
+              : "#C77A65"
           }
         />
       </div>
 
       {creditCards.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-          <CreditCardIcon className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-base font-semibold">No credit cards added</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Link your credit cards to track statement billing cycles and utilization.
+        /* Section 11 Onboarding Empty State */
+        <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+            <CreditCardIcon className="h-6 w-6" />
+          </div>
+          <h3 className="text-base font-bold text-foreground">Manage Your Credit Cards</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+            Add your credit cards to track billing cycles, statement balances, and utilization limits.
           </p>
-          <CreateCreditCardDialog accounts={accounts} />
+          <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Example: </span>
+            HDFC Regalia or ICICI Sapphiro with ₹3,00,000 credit limit and statement on 15th.
+          </div>
+          <div className="flex justify-center gap-2 mt-5">
+            <CreateCreditCardDialog accounts={accounts} />
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,12 +198,12 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
             }
 
             return (
-              <Card key={card.id} className="overflow-hidden border shadow-sm">
-                {/* Physical Card Representation */}
-                <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white dark:from-slate-800 dark:to-slate-950 relative">
+              <Card key={card.id} className="overflow-hidden border border-border/80 bg-card rounded-2xl shadow-xs">
+                {/* Physical Card Representation - Leftovers Forest Green Aesthetic */}
+                <div className="p-5 bg-gradient-to-br from-[#1B3B2F] via-[#244B3C] to-[#152720] text-[#EFF3EA] relative">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">
+                      <span className="text-[10px] uppercase tracking-widest text-[#9BB99D] font-bold">
                         {card.issuer_name}
                       </span>
                       <h3 className="text-lg font-bold tracking-tight text-white mt-0.5">
@@ -202,41 +211,41 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                       </h3>
                     </div>
 
-                    <div className="h-7 w-11 rounded border border-white/20 bg-white/10 flex items-center justify-center">
-                      <span className="text-[10px] font-mono tracking-wider font-semibold text-white/80">
+                    <div className="h-7 w-11 rounded border border-[#C39148]/40 bg-[#C39148]/20 flex items-center justify-center">
+                      <span className="text-[9px] font-mono tracking-wider font-bold text-[#D6B16C]">
                         CHIP
                       </span>
                     </div>
                   </div>
 
                   <div className="my-6">
-                    <span className="font-mono text-base tracking-widest text-slate-200">
+                    <span className="font-mono text-base tracking-widest text-[#EFF3EA]/90">
                       •••• •••• •••• {card.last_four_digits}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-end text-xs">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">
+                      <span className="text-[#9BB99D] block text-[10px] uppercase font-medium">
                         STATEMENT / DUE DAY
                       </span>
-                      <span className="font-mono font-medium text-slate-200">
+                      <span className="font-mono font-medium text-white">
                         Day {card.statement_date_day} / Day {card.payment_due_day}
                       </span>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-slate-400 block text-[10px]">
+                      <span className="text-[#9BB99D] block text-[10px] uppercase font-medium">
                         CREDIT LIMIT
                       </span>
                       <span className="font-mono font-bold text-white text-sm">
-                        ₹{parseFloat(card.credit_limit.toString()).toLocaleString()}
+                        ₹{parseFloat(card.credit_limit.toString()).toLocaleString("en-IN")}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <CardContent className="p-4 space-y-4">
+                <CardContent className="p-5 space-y-4">
                   {/* Utilization Progress */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
@@ -246,10 +255,10 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                           variant="outline"
                           className={`text-[10px] px-1.5 py-0 font-medium ${
                             util > 50
-                              ? "bg-destructive/10 text-destructive border-destructive/30"
+                              ? "bg-danger/10 text-danger border-danger/30"
                               : util > 30
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              ? "bg-warning/10 text-warning border-warning/30"
+                              : "bg-success/10 text-success border-success/30"
                           }`}
                         >
                           {util <= 30 ? "Optimal (<30%)" : util <= 50 ? "Moderate" : "High Risk (>50%)"}
@@ -258,10 +267,10 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                       <span
                         className={`font-mono font-bold ${
                           util > 50
-                            ? "text-destructive"
+                            ? "text-danger"
                             : util > 30
-                            ? "text-amber-600 dark:text-amber-400"
-                            : "text-emerald-600 dark:text-emerald-400"
+                            ? "text-warning"
+                            : "text-success"
                         }`}
                       >
                         {util}%
@@ -272,35 +281,35 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                       value={util}
                       indicatorClassName={
                         util > 50
-                          ? "bg-destructive"
+                          ? "bg-danger"
                           : util > 30
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
+                          ? "bg-warning"
+                          : "bg-success"
                       }
                       className="h-2"
                     />
 
                     <div className="flex justify-between text-xs text-muted-foreground pt-0.5">
-                      <span>Outstanding: <MoneyDisplay amount={currentBal} /></span>
-                      <span>Available: <MoneyDisplay amount={available} /></span>
+                      <span>Outstanding: <MoneyDisplay amount={currentBal} className="font-mono font-semibold text-foreground" /></span>
+                      <span>Available: <MoneyDisplay amount={available} className="font-mono font-semibold text-foreground" /></span>
                     </div>
                   </div>
 
                   {/* Actions Toolbar */}
-                  <div className="flex items-center gap-2 pt-2 border-t">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/60">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 gap-1.5 h-8 text-xs"
+                      className="flex-1 gap-1.5 h-8 text-xs border-border/80"
                       onClick={() => setStatementCard(card)}
                     >
-                      <Receipt className="h-3.5 w-3.5" />
+                      <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Record Statement</span>
                     </Button>
 
                     <Button
                       size="sm"
-                      className="flex-1 gap-1.5 h-8 text-xs"
+                      className="flex-1 gap-1.5 h-8 text-xs bg-primary hover:bg-primary-hover text-primary-foreground"
                       onClick={() => setBillPayTargetAccount(card.account_id)}
                     >
                       <ArrowLeftRight className="h-3.5 w-3.5" />
@@ -310,7 +319,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
 
                   {/* Statement History */}
                   {card.statements && card.statements.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t">
+                    <div className="space-y-2 pt-2 border-t border-border/60">
                       <span className="text-xs font-semibold text-muted-foreground block">
                         Recent Statements
                       </span>
@@ -320,33 +329,33 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                           return (
                             <div
                               key={stmt.id}
-                              className="flex items-center justify-between p-2 rounded-md bg-muted/40 text-xs"
+                              className="flex items-center justify-between p-2.5 rounded-lg bg-surface-secondary/40 border border-border/50 text-xs"
                             >
                               <div>
                                 <div className="flex items-center gap-1.5">
-                                  <span className="font-semibold block">
+                                  <span className="font-semibold text-foreground block">
                                     Due: {format(new Date(stmt.due_date), "dd MMM yyyy")}
                                   </span>
                                   {!stmt.is_settled && (
                                     daysUntilDue <= 3 ? (
-                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive border-destructive/30 animate-pulse">
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-danger/10 text-danger border-danger/30 animate-pulse">
                                         {daysUntilDue <= 0 ? "Due today!" : `Due in ${daysUntilDue}d!`}
                                       </Badge>
                                     ) : daysUntilDue <= 7 ? (
-                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
-                                        Due in {daysUntilDue}d
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-warning/10 text-warning border-warning/30">
+                                        Due in ${daysUntilDue}d
                                       </Badge>
                                     ) : null
                                   )}
                                 </div>
                                 <span className="text-[11px] text-muted-foreground">
-                                  Total Due: <MoneyDisplay amount={stmt.total_due} />
+                                  Total Due: <MoneyDisplay amount={stmt.total_due} className="font-mono font-medium text-foreground" />
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2">
                                 {stmt.is_settled ? (
-                                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 gap-1">
+                                  <Badge className="bg-success/10 text-success border-success/30 text-[10px] h-5 gap-1 font-medium">
                                     <CheckCircle2 className="h-3 w-3" />
                                     Settled
                                   </Badge>
@@ -354,7 +363,7 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 text-[11px] px-2 text-primary"
+                                    className="h-6 text-[11px] px-2 text-primary hover:bg-primary-soft/50 font-medium"
                                     onClick={() => handleToggleSettle(stmt.id, stmt.is_settled)}
                                   >
                                     Mark Settled
@@ -392,4 +401,3 @@ export function CreditCardView({ creditCards, accounts }: CreditCardViewProps) {
     </div>
   );
 }
-

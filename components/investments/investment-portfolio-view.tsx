@@ -259,7 +259,7 @@ export function InvestmentPortfolioView({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Investment Portfolio</h2>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Investment Portfolio</h2>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
             <span>Stocks, Mutual Funds, ETFs, SGBs, Gold & Fixed Deposits</span>
             <span className="text-xs text-muted-foreground/60">• USD @ ₹{DEFAULT_USD_INR_RATE}</span>
@@ -272,28 +272,28 @@ export function InvestmentPortfolioView({
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards using Leftovers palette */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Portfolio Valuation"
           amount={totalValuationINR}
           subtitle="Consolidated real-time valuation"
           icon={Coins}
-          iconColor="#3B82F6"
+          iconColor="#244B3C"
         />
         <MetricCard
           title="Total Invested Capital"
           amount={totalInvestedINR}
           subtitle="Net purchase cost basis"
           icon={Layers}
-          iconColor="#6366F1"
+          iconColor="#8BA58C"
         />
         <MetricCard
           title="Unrealized Profit / Loss"
           amount={totalPnLINR}
           subtitle={isNetProfit ? "Net Capital Gains" : "Net Capital Loss"}
           icon={isNetProfit ? TrendingUp : TrendingDown}
-          iconColor={isNetProfit ? "#10B981" : "#EF4444"}
+          iconColor={isNetProfit ? "#39805B" : "#C77A65"}
           coloredAmount
         />
         <MetricCard
@@ -308,14 +308,14 @@ export function InvestmentPortfolioView({
               : "Negative return"
           }
           icon={Sparkles}
-          iconColor={isNetProfit ? "#10B981" : "#EF4444"}
+          iconColor={isNetProfit ? "#39805B" : "#C77A65"}
           coloredAmount
         />
       </div>
 
       {/* Asset Allocation Breakdown Banner */}
       {assetAllocation.total > 0 && (
-        <Card className="border bg-card shadow-sm p-4 space-y-3">
+        <Card className="border border-border/80 bg-card rounded-xl shadow-xs p-4 space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-foreground flex items-center gap-1.5">
               <Layers className="h-4 w-4 text-primary" />
@@ -327,32 +327,32 @@ export function InvestmentPortfolioView({
           </div>
 
           {/* Segmented Stacked Progress Bar */}
-          <div className="h-2.5 w-full rounded-full bg-muted/40 overflow-hidden flex">
+          <div className="h-2.5 w-full rounded-full bg-surface-secondary/80 overflow-hidden flex">
             {parseFloat(assetAllocation.equitiesPct) > 0 && (
               <div
                 style={{ width: `${assetAllocation.equitiesPct}%` }}
-                className="bg-indigo-600 h-full transition-all"
+                className="bg-[#244B3C] h-full transition-all"
                 title={`Equities: ${assetAllocation.equitiesPct}%`}
               />
             )}
             {parseFloat(assetAllocation.mutualFundsPct) > 0 && (
               <div
                 style={{ width: `${assetAllocation.mutualFundsPct}%` }}
-                className="bg-emerald-500 h-full transition-all"
+                className="bg-[#8BA58C] h-full transition-all"
                 title={`Mutual Funds: ${assetAllocation.mutualFundsPct}%`}
               />
             )}
             {parseFloat(assetAllocation.goldEtfPct) > 0 && (
               <div
                 style={{ width: `${assetAllocation.goldEtfPct}%` }}
-                className="bg-amber-500 h-full transition-all"
+                className="bg-[#C39148] h-full transition-all"
                 title={`Gold & SGBs: ${assetAllocation.goldEtfPct}%`}
               />
             )}
             {parseFloat(assetAllocation.fixedIncomePct) > 0 && (
               <div
                 style={{ width: `${assetAllocation.fixedIncomePct}%` }}
-                className="bg-violet-500 h-full transition-all"
+                className="bg-[#737C73] h-full transition-all"
                 title={`Deposits & PPF: ${assetAllocation.fixedIncomePct}%`}
               />
             )}
@@ -361,24 +361,24 @@ export function InvestmentPortfolioView({
           {/* Legend */}
           <div className="flex items-center gap-4 flex-wrap text-xs pt-0.5">
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 shrink-0" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#244B3C] shrink-0" />
               <span className="text-muted-foreground">Equities:</span>
-              <span className="font-semibold">{assetAllocation.equitiesPct}%</span>
+              <span className="font-semibold text-foreground">{assetAllocation.equitiesPct}%</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#8BA58C] shrink-0" />
               <span className="text-muted-foreground">Mutual Funds:</span>
-              <span className="font-semibold">{assetAllocation.mutualFundsPct}%</span>
+              <span className="font-semibold text-foreground">{assetAllocation.mutualFundsPct}%</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#C39148] shrink-0" />
               <span className="text-muted-foreground">Gold & SGBs:</span>
-              <span className="font-semibold">{assetAllocation.goldEtfPct}%</span>
+              <span className="font-semibold text-foreground">{assetAllocation.goldEtfPct}%</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-violet-500 shrink-0" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#737C73] shrink-0" />
               <span className="text-muted-foreground">Deposits & PPF:</span>
-              <span className="font-semibold">{assetAllocation.fixedIncomePct}%</span>
+              <span className="font-semibold text-foreground">{assetAllocation.fixedIncomePct}%</span>
             </div>
           </div>
         </Card>
@@ -386,7 +386,7 @@ export function InvestmentPortfolioView({
 
       {/* Portfolio Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 h-auto p-1 gap-1">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 h-auto p-1 gap-1 bg-surface-secondary/60">
           <TabsTrigger value="all" className="text-xs py-1.5">
             All ({investments.length})
           </TabsTrigger>
@@ -409,13 +409,20 @@ export function InvestmentPortfolioView({
 
         <TabsContent value={activeTab} className="mt-6">
           {filteredInvestments.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-              <Coins className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-              <h3 className="text-base font-semibold">No assets in this category</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Add your holdings or paste a spreadsheet export to track performance.
+            /* Section 11 Onboarding Empty State */
+            <div className="rounded-2xl border border-dashed border-border p-8 sm:p-12 text-center bg-card">
+              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+                <Coins className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-bold text-foreground">Track Your Investment Portfolio</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+                Add your stocks, mutual funds or deposits to track your portfolio.
               </p>
-              <div className="flex justify-center gap-2">
+              <div className="mt-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 max-w-sm mx-auto text-left text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Example: </span>
+                50 units of Nifty 50 ETF at ₹240 or ₹5,000/month SIP in flexi-cap fund.
+              </div>
+              <div className="flex justify-center gap-2 mt-5">
                 <CSVImportHoldingsDialog />
                 <CreateInvestmentDialog accounts={accounts} />
               </div>
@@ -432,22 +439,22 @@ export function InvestmentPortfolioView({
                 );
 
                 return (
-                  <Card key={inv.id} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
+                  <Card key={inv.id} className="overflow-hidden border border-border/80 bg-card rounded-xl shadow-xs hover:border-primary/40 transition-colors">
                     <CardHeader className="p-4 pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 capitalize">
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 capitalize border-border/80">
                               {getAssetTypeLabel(inv.asset_type)}
                             </Badge>
                             {inv.currency === "USD" && (
-                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 gap-1">
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 gap-1 bg-surface-secondary text-text-secondary">
                                 <Globe className="h-2.5 w-2.5" />
                                 USD ($)
                               </Badge>
                             )}
                           </div>
-                          <CardTitle className="text-base font-semibold mt-1">
+                          <CardTitle className="text-base font-bold mt-1 text-foreground">
                             {inv.name}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground">
@@ -469,7 +476,7 @@ export function InvestmentPortfolioView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 text-muted-foreground hover:text-danger"
                             onClick={() => handleDelete(inv.id, inv.name)}
                             aria-label="Delete holding"
                           >
@@ -481,18 +488,18 @@ export function InvestmentPortfolioView({
 
                     <CardContent className="p-4 pt-2">
                       {/* Holding Details */}
-                      <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y my-2">
+                      <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-border/60 my-2 bg-surface-secondary/20 px-2 rounded-md">
                         <div>
                           <span className="text-muted-foreground block">Quantity</span>
-                          <span className="font-mono font-semibold">
+                          <span className="font-mono font-semibold text-foreground">
                             {parseFloat(inv.total_quantity.toString())} units
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block">Avg Buy Price</span>
-                          <span className="font-mono font-semibold">
+                          <span className="font-mono font-semibold text-foreground">
                             {inv.currency === "USD" ? "$" : "₹"}
-                            {parseFloat(inv.average_buy_price.toString()).toLocaleString()}
+                            {parseFloat(inv.average_buy_price.toString()).toLocaleString("en-IN")}
                           </span>
                         </div>
                       </div>
@@ -505,7 +512,7 @@ export function InvestmentPortfolioView({
                           </span>
                           <MoneyDisplay
                             amount={metrics.currentValuation}
-                            className="text-base font-bold"
+                            className="text-base font-bold text-foreground font-mono"
                           />
                         </div>
 
@@ -515,7 +522,7 @@ export function InvestmentPortfolioView({
                           </span>
                           <div
                             className={`font-mono text-sm font-bold flex items-center justify-end gap-1 ${
-                              metrics.isProfit ? "text-emerald-500" : "text-destructive"
+                              metrics.isProfit ? "text-success" : "text-danger"
                             }`}
                           >
                             {metrics.isProfit ? (
@@ -532,7 +539,7 @@ export function InvestmentPortfolioView({
                       </div>
 
                       {/* Manual / Delayed Price Indicator */}
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 mt-3 pt-2 border-t">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 mt-3 pt-2 border-t border-border/60">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {inv.last_price_update_at ? (
@@ -567,4 +574,3 @@ export function InvestmentPortfolioView({
     </div>
   );
 }
-

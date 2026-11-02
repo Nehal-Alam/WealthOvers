@@ -160,3 +160,111 @@ export async function simulateSyncAction(
   }
 }
 
+export async function approveDetectedTransactionAction(transactionId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
+
+    if (authErr || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { error } = await supabase
+      .from("transactions")
+      .update({ is_reviewed: true })
+      .eq("id", transactionId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/devices");
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true, message: "Transaction approved and confirmed into ledger" };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function dismissDetectedTransactionAction(transactionId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
+
+    if (authErr || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("id", transactionId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/devices");
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true, message: "Detected suggestion dismissed" };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function editDetectedTransactionAction(input: {
+  id: string;
+  amount: number;
+  description: string;
+  categoryId?: string | null;
+  accountId?: string;
+}): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
+
+    if (authErr || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const updatePayload: Record<string, any> = {
+      amount: input.amount,
+      description: input.description,
+      is_reviewed: true,
+    };
+    if (input.categoryId !== undefined) updatePayload.category_id = input.categoryId;
+    if (input.accountId) updatePayload.account_id = input.accountId;
+
+    const { error } = await supabase
+      .from("transactions")
+      .update(updatePayload)
+      .eq("id", input.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/devices");
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true, message: "Transaction updated and saved" };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+
