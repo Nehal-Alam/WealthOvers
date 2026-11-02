@@ -45,3 +45,20 @@
 2. Never disable or weaken Supabase Row Level Security (RLS).
 3. Strictly adhere to Decimal.js 28-digit precision for all financial computations.
 4. Run tests and verify production build after each phase.
+
+---
+
+## 4. Leftovers-Inspired Complete UI/UX Redesign Roadmap
+
+| Phase | Description | Status | Scope & Deliverables |
+| :--- | :--- | :---: | :--- |
+| **Audit & Plan** | Leftovers Design Audit & Implementation Plan | **COMPLETED** | `docs/LEFTOVERS_DESIGN_ANALYSIS.md`, `docs/WEALTHOVERS_DESIGN_SYSTEM.md`, `docs/UI_REDESIGN_PLAN.md`, `docs/PERFORMANCE_BASELINE.md` |
+| **Phase 1** | Design Tokens & Theme System | **READY TO PROCEED** | Warm ivory (`#F7F7F0`), forest green (`#244B3C`), soft sage (`#E9EEE5`), dark pine (`#151C18`), CSS variables in `globals.css` |
+| **Phase 2** | Shared App Layout & Navigation | **PENDING** | Compact desktop sidebar (13 sections), mobile 4-tab bar (Home, Activity, Insights, Plan) + FAB quick-add, More menu drawer |
+| **Phase 3** | Home Dashboard Redesign | **PENDING** | "Safe to Spend Today" hero calculation & meter, liquid account balances, recent activity feed, upcoming bills, financial overview |
+| **Phase 4** | Transactions & Accounts Experience | **PENDING** | Keypad-first quick transaction dialog, date-grouped ledger timeline with daily sums, clean sage account cards |
+| **Phase 5** | Insights & Planning Hub | **PENDING** | Interactive month day-scrubber chart, category distribution, SVG goal progress rings, monthly budget envelopes |
+| **Phase 6** | Wealth-Management Modules | **PENDING** | Harmonize Net Worth, Investments, Credit Cards, Loans, Assets, and Reports with warm aesthetics & decimal precision |
+| **Phase 7** | Mobile Responsiveness & Touch Optimization | **PENDING** | Responsive validation at 360px, 390px, 430px, tablet, laptop, desktop; touch targets $\ge$ 44px, safe area padding |
+| **Phase 8** | Performance & Accessibility Verification | **PENDING** | Core Web Vitals (LCP $\le$ 2.0s, INP $\le$ 150ms, CLS $\le$ 0.02), WCAG 2.1 AA contrast audit, 100% green test suite |
+
