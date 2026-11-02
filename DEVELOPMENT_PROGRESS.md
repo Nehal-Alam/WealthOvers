@@ -14,8 +14,8 @@
 | :--- | :--- | :--- |
 | **Complete Application Audit** | **100% COMPLETE** | `docs/PRODUCT_AUDIT.md`, `docs/UI_UX_AUDIT.md`, `docs/PERFORMANCE_AUDIT.md`, `docs/TECHNICAL_DEBT.md` |
 | **Design System & Financial Logic Specs** | **100% COMPLETE** | `docs/DESIGN_SYSTEM.md`, `docs/FINANCIAL_LOGIC.md` |
-| **Automated Tests** | **132 Passed (100%)** | 18 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory, Deterministic Insights, Indian FY, WCAG 2.1 AA/AAA Contrast, Leftovers Design Tokens, Shared Layout & Navigation, Zero Drift |
-| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 11.2s on Node 22 LTS |
+| **Automated Tests** | **144 Passed (100%)** | 19 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory, Deterministic Insights, Indian FY, WCAG 2.1 AA/AAA Contrast, Leftovers Design Tokens, Shared Layout & Navigation, Safe to Spend Engine, Zero Drift |
+| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 9.7s on Node 22 LTS |
 | **Accessibility (a11y)** | **WCAG 2.1 AA Compliant** | 100% color contrast ratios verified, explicit `aria-label`s on all icon buttons |
 | **Final QA Report** | **100% COMPLETE** | Full signoff in `docs/FINAL_QA_REPORT.md` |
 | **Vercel Production Deployment** | **Live** | Synced to `main` at `Nehal-Alam/WealthOvers` |
@@ -55,8 +55,8 @@
 | **Audit & Plan** | Leftovers Design Audit & Implementation Plan | **COMPLETED** | `docs/LEFTOVERS_DESIGN_ANALYSIS.md`, `docs/WEALTHOVERS_DESIGN_SYSTEM.md`, `docs/UI_REDESIGN_PLAN.md`, `docs/PERFORMANCE_BASELINE.md` |
 | **Phase 1** | Design Tokens & Theme System | **COMPLETED** | Warm ivory (`#F7F7F0`), forest green (`#244B3C`), soft sage (`#E9EEE5`), dark pine (`#151C18`), pale sage (`#9BB99D`), CSS variables in `globals.css`, Tailwind semantic tokens, ThemePreferenceCard in `/settings`, 3-way dropdown ThemeToggle, `tests/phase1-design-tokens-theme.test.ts` (120 tests green) |
 | **Phase 2** | Shared App Layout & Navigation | **COMPLETED** | Compact desktop sidebar (13 sections: Home, Net Worth, Activity, Accounts, Insights, Plan, Investments, Credit Cards, Loans, Assets, Reports, Automation, Settings), collapsible toggle, profile menu, global search, mobile 4-destination nav (Home, Activity, Insights, Plan) + center elevated FAB, slide-out More menu drawer, `tests/phase2-shared-layout-navigation.test.ts` (132 tests green) |
-| **Phase 3** | Home Dashboard Redesign | **READY TO PROCEED** | "Safe to Spend Today" hero calculation & meter, liquid account balances, recent activity feed, upcoming bills, financial overview |
-| **Phase 4** | Transactions & Accounts Experience | **PENDING** | Keypad-first quick transaction dialog, date-grouped ledger timeline with daily sums, clean sage account cards |
+| **Phase 3** | Home Dashboard Redesign | **COMPLETED** | "Safe to Spend Today" hero calculation & meter, liquid account balances strip, recent activity feed with transaction filters, upcoming payments (bills, EMIs, liabilities), financial overview (Net Worth, Assets, Liabilities, Savings Rate, 6-Month trajectory), `tests/phase3-dashboard-redesign.test.ts` (144 tests green) |
+| **Phase 4** | Transactions & Accounts Experience | **READY TO PROCEED** | Keypad-first quick transaction dialog, date-grouped ledger timeline with daily sums, clean sage account cards |
 | **Phase 5** | Insights & Planning Hub | **PENDING** | Interactive month day-scrubber chart, category distribution, SVG goal progress rings, monthly budget envelopes |
 | **Phase 6** | Wealth-Management Modules | **PENDING** | Harmonize Net Worth, Investments, Credit Cards, Loans, Assets, and Reports with warm aesthetics & decimal precision |
 | **Phase 7** | Mobile Responsiveness & Touch Optimization | **PENDING** | Responsive validation at 360px, 390px, 430px, tablet, laptop, desktop; touch targets $\ge$ 44px, safe area padding |

@@ -1327,3 +1327,139 @@ export function generateDeterministicInsights(
   };
 }
 
+export interface SafeToSpendParams {
+  liquidBalances: (string | number | Decimal)[];
+  creditLiabilities?: (string | number | Decimal)[];
+  monthlySpent: string | number | Decimal;
+  activeBudgetLimit?: string | number | Decimal | null;
+  upcomingBills?: (string | number | Decimal)[];
+  reservedSavings?: (string | number | Decimal)[];
+  daysRemainingInMonth?: number;
+}
+
+export interface SafeToSpendResult {
+  safeToSpendToday: string;
+  safeRemainingPool: string;
+  totalLiquidAvailable: string;
+  remainingBudget: string;
+  amountSpentThisMonth: string;
+  upcomingCommitments: string;
+  daysRemaining: number;
+  paceStatus: "ahead" | "on_track" | "caution" | "depleted";
+  healthScore: number;
+  pacingPercentage: number;
+}
+
+/**
+ * Calculates Leftovers-inspired "Safe to Spend Today" with strict Decimal precision.
+ * Considers available liquid net cash, active budget remaining, upcoming bills/EMIs,
+ * and remaining days in the cycle.
+ */
+export function calculateSafeToSpend(params: SafeToSpendParams): SafeToSpendResult {
+  // 1. Total liquid assets
+  let liquidTotal = new Decimal(0);
+  for (const b of params.liquidBalances) {
+    liquidTotal = liquidTotal.plus(toDecimal(b));
+  }
+
+  // 2. Subtract credit liabilities (short term)
+  let creditTotal = new Decimal(0);
+  if (params.creditLiabilities) {
+    for (const c of params.creditLiabilities) {
+      creditTotal = creditTotal.plus(toDecimal(c));
+    }
+  }
+  const netLiquid = Decimal.max(0, liquidTotal.minus(creditTotal));
+
+  // 3. Upcoming commitments before month end
+  let commitments = new Decimal(0);
+  if (params.upcomingBills) {
+    for (const bill of params.upcomingBills) {
+      commitments = commitments.plus(toDecimal(bill));
+    }
+  }
+
+  // 4. Reserved savings
+  let reserved = new Decimal(0);
+  if (params.reservedSavings) {
+    for (const res of params.reservedSavings) {
+      reserved = reserved.plus(toDecimal(res));
+    }
+  }
+
+  // 5. Amount spent this month
+  const spentThisMonth = toDecimal(params.monthlySpent);
+
+  // 6. Remaining budget calculation
+  let remainingBudget = new Decimal(0);
+  let safePool = new Decimal(0);
+  const budgetLimit = params.activeBudgetLimit ? toDecimal(params.activeBudgetLimit) : null;
+
+  if (budgetLimit && budgetLimit.greaterThan(0)) {
+    remainingBudget = Decimal.max(0, budgetLimit.minus(spentThisMonth));
+    // Safe pool is capped by both remaining budget and actual liquid cash
+    safePool = Decimal.max(
+      0,
+      Decimal.min(remainingBudget.minus(commitments), netLiquid.minus(commitments))
+    );
+  } else {
+    // If no explicit budget set, use liquid capital buffer
+    remainingBudget = Decimal.max(0, netLiquid.minus(commitments).minus(reserved));
+    safePool = remainingBudget;
+  }
+
+  // 7. Days remaining
+  const days = Math.max(1, params.daysRemainingInMonth ?? 1);
+  const safeToday = safePool.dividedBy(days);
+
+  // 8. Pacing status & health score
+  let paceStatus: "ahead" | "on_track" | "caution" | "depleted" = "on_track";
+  let healthScore = 75;
+
+  if (safePool.lessThanOrEqualTo(0)) {
+    paceStatus = "depleted";
+    healthScore = 20;
+  } else if (budgetLimit && budgetLimit.greaterThan(0)) {
+    const budgetNum = budgetLimit.toNumber();
+    const spentNum = spentThisMonth.toNumber();
+    const ratio = budgetNum > 0 ? spentNum / budgetNum : 0;
+    if (ratio >= 0.9) {
+      paceStatus = "caution";
+      healthScore = 45;
+    } else if (ratio <= 0.6) {
+      paceStatus = "ahead";
+      healthScore = 95;
+    } else {
+      paceStatus = "on_track";
+      healthScore = 80;
+    }
+  } else {
+    if (safeToday.toNumber() > 1000) {
+      paceStatus = "ahead";
+      healthScore = 90;
+    } else if (safeToday.toNumber() < 300) {
+      paceStatus = "caution";
+      healthScore = 50;
+    }
+  }
+
+  const budgetNum = budgetLimit && budgetLimit.greaterThan(0) ? budgetLimit.toNumber() : netLiquid.toNumber();
+  const pacingPercentage = budgetNum > 0
+    ? Math.min(100, Math.round((spentThisMonth.toNumber() / budgetNum) * 100))
+    : 0;
+
+  return {
+    safeToSpendToday: safeToday.toFixed(2),
+    safeRemainingPool: safePool.toFixed(2),
+    totalLiquidAvailable: netLiquid.toFixed(2),
+    remainingBudget: remainingBudget.toFixed(2),
+    amountSpentThisMonth: spentThisMonth.toFixed(2),
+    upcomingCommitments: commitments.toFixed(2),
+    daysRemaining: days,
+    paceStatus,
+    healthScore,
+    pacingPercentage,
+  };
+}
+
+

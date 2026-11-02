@@ -145,3 +145,4 @@ describe("Phase 2: Shared Application Layout & Navigation Redesign", () => {
     });
   });
 });
+
