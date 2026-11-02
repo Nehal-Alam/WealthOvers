@@ -51,3 +51,4 @@ describe("Phase 7: Mobile Responsiveness & Touch Optimization", () => {
     expect(cards).toContain("grid-cols-1 md:grid-cols-2");
   });
 });
+

@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Target,
   Sparkles,
+  Repeat,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -123,6 +124,14 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
             <Target className="h-3.5 w-3.5" />
             <span>Financial Goals</span>
           </Link>
+
+          <Link
+            href="/recurring"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
+          >
+            <Repeat className="h-3.5 w-3.5" />
+            <span>Recurring & Bills</span>
+          </Link>
         </div>
 
         {/* Leftovers Onboarding Empty State */}
@@ -210,6 +219,14 @@ export function BudgetView({ budgets, categories }: BudgetViewProps) {
         >
           <Target className="h-3.5 w-3.5" />
           <span>Financial Goals</span>
+        </Link>
+
+        <Link
+          href="/recurring"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
+        >
+          <Repeat className="h-3.5 w-3.5" />
+          <span>Recurring & Bills</span>
         </Link>
       </div>
 

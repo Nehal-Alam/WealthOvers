@@ -415,3 +415,4 @@ export function DailySpendingScrubber({ transactions }: DailySpendingScrubberPro
     </div>
   );
 }
+

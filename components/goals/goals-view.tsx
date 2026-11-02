@@ -13,6 +13,7 @@ import {
   Sparkles,
   Layers,
   Calculator,
+  Repeat,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -167,6 +168,14 @@ export function GoalsView({ goals }: GoalsViewProps) {
           <Target className="h-3.5 w-3.5" />
           <span>Financial Goals</span>
         </div>
+
+        <Link
+          href="/recurring"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
+        >
+          <Repeat className="h-3.5 w-3.5" />
+          <span>Recurring & Bills</span>
+        </Link>
       </div>
 
       {/* Goal Calculator (Collapsible / Active) */}
@@ -216,7 +225,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
           <Target className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
           <h3 className="text-base font-semibold text-text-primary">No financial goals set</h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4 max-w-md mx-auto">
-            Create long-term targets like retirement, a home purchase, or emergency reserves to start tracking your progress.
+            Add your first milestone like an emergency fund, home deposit, or retirement corpus to track capital accumulation and target pacing.
           </p>
           <CreateGoalDialog />
         </div>

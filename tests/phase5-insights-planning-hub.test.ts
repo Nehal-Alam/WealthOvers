@@ -161,6 +161,8 @@ describe("Phase 5: Insights & Planning Hub (Leftovers-Inspired)", () => {
       expect(content).toContain("GoalCalculator");
       expect(content).toContain("Monthly Budgets");
       expect(content).toContain("Financial Goals");
+      expect(content).toContain("Recurring & Bills");
+      expect(content).toContain('href="/recurring"');
       expect(content).toContain("Corpus Gap");
     });
 
@@ -172,7 +174,21 @@ describe("Phase 5: Insights & Planning Hub (Leftovers-Inspired)", () => {
       expect(content).toContain("Daily Safe Velocity");
       expect(content).toContain("Monthly Budgets");
       expect(content).toContain("Financial Goals");
+      expect(content).toContain("Recurring & Bills");
+      expect(content).toContain('href="/recurring"');
       expect(content).toContain("Create a monthly spending plan to understand how much you can spend");
+    });
+
+    it("RecurringList implements Leftovers design language, normalized monthly pacing, and unified Plan tabs", () => {
+      const compPath = path.resolve(process.cwd(), "components/recurring/recurring-list.tsx");
+      const content = fs.readFileSync(compPath, "utf-8");
+
+      expect(content).toContain("Monthly Budgets");
+      expect(content).toContain("Financial Goals");
+      expect(content).toContain("Recurring & Bills");
+      expect(content).toContain("Monthly Recurring Commitments");
+      expect(content).toContain("Monthly Inflow");
+      expect(content).toContain("No recurring rules configured");
     });
   });
 });
