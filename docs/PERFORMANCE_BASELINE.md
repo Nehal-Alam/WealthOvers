@@ -86,3 +86,4 @@ Route (app)                                 Size  First Load JS
 1. The redesign must **not** re-introduce heavy client-side imports or full-page blocking loaders.
 2. The redesign must **not** compromise the sub-150ms client navigation experience.
 3. Every step of the 8-phase redesign must run through `npm run typecheck && npm run lint && npm test && npm run build` before acceptance.
+

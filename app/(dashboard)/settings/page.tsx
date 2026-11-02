@@ -4,6 +4,7 @@ import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Globe, Shield, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ThemePreferenceCard } from "@/components/settings/theme-preference-card";
 import type { Tables } from "@/types/database";
 
 export default async function SettingsPage() {
@@ -29,11 +30,14 @@ export default async function SettingsPage() {
           Financial Preferences
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Configure currency standards, fiscal calendars, and application behavior
+          Configure visual appearance, currency standards, fiscal calendars, and application behavior
         </p>
       </div>
 
       <div className="space-y-6">
+        {/* Appearance & Theme System */}
+        <ThemePreferenceCard initialTheme={settings?.theme_preference || "system"} />
+
         {/* Currency & Localization */}
         <Card className="shadow-sm">
           <CardHeader>

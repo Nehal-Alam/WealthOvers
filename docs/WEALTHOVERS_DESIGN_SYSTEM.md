@@ -138,3 +138,4 @@ Transactions are displayed as a clean timeline:
   - Light mode primary text on warm ivory: **$11.8:1$** (WCAG AAA).
   - Forest green on warm ivory: **$7.4:1$** (WCAG AAA).
   - Dark mode off-white on pine night: **$14.2:1$** (WCAG AAA).
+

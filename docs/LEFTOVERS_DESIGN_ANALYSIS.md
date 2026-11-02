@@ -143,3 +143,4 @@ $$\text{Estimated Safe Spend} = \frac{\text{Total Liquid Available} - \text{Tota
 2. **Preserve Advanced Logic**: Retain 100% of WealthOvers' Decimal.js 28-digit precision, Indian FY tax intervals, XIRR investment math, loan amortization formulas, and composite indexes.
 3. **Instant Navigation**: Leverage the sub-150ms Next.js 15 App Router architecture, request-memoized authentication, and dynamic modal imports established in previous phases.
 4. **Responsive Integrity**: Ensure clean touch targets and zero horizontal scroll across 360px mobile, tablets, laptops, and wide desktop screens.
+

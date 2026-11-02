@@ -4,87 +4,135 @@
 
 @layer base {
   :root {
-    /* WealthOvers Light Theme (PREMIUM INDIGO + EMERALD + SLATE) */
-    --background: 216 47% 97%;         /* #F4F7FB Canvas */
-    --foreground: 221 38% 15%;         /* #172033 Primary Text */
+    /* WealthOvers Light Theme (LEFTOVERS-INSPIRED: WARM IVORY + FOREST GREEN + SAGE) */
+    --background: 60 30% 95.5%;         /* #F7F7F0 Warm Ivory Paper Canvas */
+    --foreground: 140 7% 17.3%;         /* #292F2B Deep Charcoal Text */
 
-    --card: 0 0% 100%;                 /* #FFFFFF Card Surface */
-    --card-foreground: 221 38% 15%;    /* #172033 Primary Text */
-    --card-elevated: 210 40% 98%;      /* #F8FAFC Elevated Surface */
-    --card-sunken: 214 32% 94%;        /* Form inputs / sunken surface */
+    --card: 0 0% 100%;                 /* #FFFFFF Clean Card Surface */
+    --card-foreground: 140 7% 17.3%;    /* #292F2B */
+    --card-elevated: 0 0% 100%;        /* #FFFFFF */
+    --card-secondary: 93 21% 91.6%;    /* #E9EEE5 Soft Sage Green Surface */
+    --card-sunken: 93 21% 91.6%;       /* #E9EEE5 Inset / Form Input */
+
+    --surface: 0 0% 100%;              /* #FFFFFF */
+    --surface-secondary: 93 21% 91.6%; /* #E9EEE5 */
+    --surface-elevated: 0 0% 100%;     /* #FFFFFF */
 
     --popover: 0 0% 100%;              /* #FFFFFF Popover Surface */
-    --popover-foreground: 221 38% 15%;
+    --popover-foreground: 140 7% 17.3%;
 
-    --primary: 243 75% 59%;            /* #4F46E5 Primary Brand Indigo */
-    --primary-foreground: 0 0% 100%;
+    --primary: 157 35% 21.8%;          /* #244B3C Deep Forest Green Brand */
+    --primary-foreground: 0 0% 100%;   /* #FFFFFF */
+    --primary-hover: 158 37% 16.9%;    /* #1B3B2F Deep Hunter Green */
+    --primary-soft: 105 19% 87.5%;     /* #DCE5D9 Light Sage Tint */
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 221 38% 15%;
+    --secondary: 93 21% 91.6%;         /* #E9EEE5 Soft Sage */
+    --secondary-foreground: 140 7% 17.3%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;   /* #64748B Secondary Text */
+    --muted: 93 21% 91.6%;             /* #E9EEE5 Soft Sage */
+    --muted-foreground: 120 4% 46.9%;  /* #737C73 Charcoal Muted Text */
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 221 38% 15%;
+    --accent: 122 13% 59.6%;           /* #8BA58C Sage Accent */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 91% 71%;          /* #F87171 Coral / Expenses & Losses */
+    --destructive: 13 47% 58.8%;       /* #C77A65 Terracotta / Expense Outflow */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;             /* #E2E8F0 Structural Borders */
-    --border-interactive: 214 25% 82%; /* Hover / Focus Borders */
-    --input: 214 32% 91%;
-    --ring: 243 75% 59%;               /* #4F46E5 Focus Ring */
+    --border: 80 16% 88.8%;            /* #E4E7DE Warm Hairline Border */
+    --border-interactive: 85 14% 82%;  /* #D1D8C8 Focus / Hover Border */
+    --input: 80 16% 88.8%;             /* #E4E7DE Input Border */
+    --ring: 157 35% 21.8%;             /* #244B3C Forest Green Focus Ring */
 
-    /* Semantic Brand Tokens (Available via CSS variables) */
-    --brand-indigo: 243 75% 59%;       /* #4F46E5 Primary Actions */
-    --brand-emerald: 160 84% 39%;      /* #10B981 Income & Gains */
-    --brand-coral: 0 91% 71%;          /* #F87171 Expenses & Losses */
-    --brand-violet: 258 90% 66%;       /* #8B5CF6 Analytics */
-    --brand-amber: 38 92% 50%;         /* #F59E0B Pending & Warnings */
+    /* Semantic Financial Tokens */
+    --success: 149 38% 36.3%;          /* #39805B Forest Emerald / Income & Gains */
+    --success-foreground: 0 0% 100%;
+    --danger: 13 47% 58.8%;            /* #C77A65 Terracotta / Expenses & Losses */
+    --danger-foreground: 0 0% 100%;
+    --warning: 36 51% 52.4%;           /* #C39148 Warm Amber / Alerts & Pending */
+    --warning-foreground: 0 0% 100%;
 
-    --radius: 0.75rem;                 /* 12px Card Radius */
+    /* Hex Tokens for Inline Style & SVG Chart References */
+    --color-background: #F7F7F0;
+    --color-surface: #FFFFFF;
+    --color-surface-secondary: #E9EEE5;
+    --color-surface-elevated: #FFFFFF;
+    --color-primary: #244B3C;
+    --color-primary-hover: #1B3B2F;
+    --color-primary-soft: #DCE5D9;
+    --color-accent: #8BA58C;
+    --color-text-primary: #292F2B;
+    --color-text-secondary: #737C73;
+    --color-border: #E4E7DE;
+    --color-success: #39805B;
+    --color-danger: #C77A65;
+    --color-warning: #C39148;
+
+    --radius: 0.875rem;                /* 14px Modern Restrained Radius */
   }
 
   .dark {
-    /* WealthOvers Dark Theme (PREMIUM INDIGO + EMERALD + SLATE) */
-    --background: 220 49% 8.4%;        /* #0B1220 Canvas */
-    --foreground: 221 47% 93%;         /* #E5EAF5 Primary Text */
+    /* WealthOvers Dark Theme (LEFTOVERS-INSPIRED: PINE NIGHT + PALE SAGE + MOSS) */
+    --background: 146 14% 9.6%;        /* #151C18 Deep Pine Night Canvas */
+    --foreground: 87 27% 93.5%;        /* #EFF3EA Warm Off-White Primary Text */
 
-    --card: 218 47% 12.5%;             /* #111C2F Card Surface */
-    --card-foreground: 221 47% 93%;    /* #E5EAF5 Primary Text */
-    --card-elevated: 216 42% 18%;      /* #1A2940 Elevated Surface */
-    --card-sunken: 220 52% 6%;         /* Inset / Form Input */
+    --card: 142 16% 13.5%;             /* #1D2821 Deep Moss Card Surface */
+    --card-foreground: 87 27% 93.5%;   /* #EFF3EA */
+    --card-elevated: 139 16% 20%;      /* #2B3B30 Elevated Pine Surface */
+    --card-secondary: 139 18% 17.6%;   /* #25352A Soft Dark Sage Surface */
+    --card-sunken: 146 14% 7%;         /* Inset / Form Input */
 
-    --popover: 218 47% 12.5%;          /* #111C2F Popover Surface */
-    --popover-foreground: 221 47% 93%;
+    --surface: 142 16% 13.5%;          /* #1D2821 */
+    --surface-secondary: 139 18% 17.6%;/* #25352A */
+    --surface-elevated: 139 16% 20%;   /* #2B3B30 */
 
-    --primary: 243 75% 59%;            /* #4F46E5 Primary Brand Indigo */
-    --primary-foreground: 0 0% 100%;
+    --popover: 142 16% 13.5%;          /* #1D2821 Popover Surface */
+    --popover-foreground: 87 27% 93.5%;
 
-    --secondary: 216 42% 18%;
-    --secondary-foreground: 221 47% 93%;
+    --primary: 124 18% 66.7%;          /* #9BB99D Pale Sage Primary Brand */
+    --primary-foreground: 146 14% 9.6%;/* #151C18 Pine Night Text on Sage */
+    --primary-hover: 125 18% 61.4%;    /* #8BAE8E Medium Sage Hover */
+    --primary-soft: 140 18% 23.3%;     /* #314638 Deep Pine Pill Tint */
 
-    --muted: 216 42% 18%;
-    --muted-foreground: 215 20% 65%;   /* #94A3B8 Secondary Text */
+    --secondary: 139 18% 17.6%;        /* #25352A Soft Dark Sage */
+    --secondary-foreground: 87 27% 93.5%;
 
-    --accent: 216 42% 18%;
-    --accent-foreground: 221 47% 93%;
+    --muted: 139 18% 17.6%;            /* #25352A */
+    --muted-foreground: 115 8% 68.4%;  /* #A9B5A8 Mist Green Secondary Text */
 
-    --destructive: 0 91% 71%;          /* #F87171 Coral / Expenses & Losses */
-    --destructive-foreground: 0 0% 100%;
+    --accent: 123 14% 48.8%;           /* #6B8E6D Sage Green Accent */
+    --accent-foreground: 87 27% 93.5%;
 
-    --border: 215 34% 23%;             /* #26364D Structural Borders */
-    --border-interactive: 215 28% 32%; /* Hover / Focus Borders */
-    --input: 215 34% 23%;
-    --ring: 243 75% 59%;               /* #4F46E5 Focus Ring */
+    --destructive: 12 62% 67.6%;       /* #E08D79 Soft Coral Terracotta */
+    --destructive-foreground: 146 14% 9.6%;
 
-    /* Semantic Brand Tokens (Available via CSS variables) */
-    --brand-indigo: 243 75% 59%;       /* #4F46E5 Primary Actions */
-    --brand-emerald: 160 84% 39%;      /* #10B981 Income & Gains */
-    --brand-coral: 0 91% 71%;          /* #F87171 Expenses & Losses */
-    --brand-violet: 258 90% 66%;       /* #8B5CF6 Analytics */
-    --brand-amber: 38 92% 50%;         /* #F59E0B Pending & Warnings */
+    --border: 139 13% 23.5%;           /* #344439 Hairline Pine Border */
+    --border-interactive: 139 14% 30%; /* #3D4F42 */
+    --input: 139 13% 23.5%;
+    --ring: 124 18% 66.7%;             /* #9BB99D Pale Sage Focus Ring */
+
+    /* Semantic Financial Tokens */
+    --success: 133 30% 63.1%;          /* #85BD91 Pale Forest Emerald */
+    --success-foreground: 146 14% 9.6%;
+    --danger: 12 62% 67.6%;            /* #E08D79 Soft Terracotta Outflow */
+    --danger-foreground: 146 14% 9.6%;
+    --warning: 39 56% 63.1%;           /* #D6B16C Warm Amber */
+    --warning-foreground: 146 14% 9.6%;
+
+    /* Hex Tokens for Inline Style & SVG Chart References */
+    --color-background: #151C18;
+    --color-surface: #1D2821;
+    --color-surface-secondary: #25352A;
+    --color-surface-elevated: #2B3B30;
+    --color-primary: #9BB99D;
+    --color-primary-hover: #8BAE8E;
+    --color-primary-soft: #314638;
+    --color-accent: #6B8E6D;
+    --color-text-primary: #EFF3EA;
+    --color-text-secondary: #A9B5A8;
+    --color-border: #344439;
+    --color-success: #85BD91;
+    --color-danger: #E08D79;
+    --color-warning: #D6B16C;
   }
 }
 

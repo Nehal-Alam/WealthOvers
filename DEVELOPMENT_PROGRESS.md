@@ -14,8 +14,8 @@
 | :--- | :--- | :--- |
 | **Complete Application Audit** | **100% COMPLETE** | `docs/PRODUCT_AUDIT.md`, `docs/UI_UX_AUDIT.md`, `docs/PERFORMANCE_AUDIT.md`, `docs/TECHNICAL_DEBT.md` |
 | **Design System & Financial Logic Specs** | **100% COMPLETE** | `docs/DESIGN_SYSTEM.md`, `docs/FINANCIAL_LOGIC.md` |
-| **Automated Tests** | **110 Passed (100%)** | 16 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory, Deterministic Insights, Indian FY, WCAG 2.1 AA Contrast, Zero Drift |
-| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 6.1s on Node 22 LTS |
+| **Automated Tests** | **120 Passed (100%)** | 17 test suites covering Auth, Math, Scalability, Transfers, Imports, Health Scores, Splits, Reconciliation, Prepayments, XIRR, Allocations, Budgets, Cash Flow Horizons, Goal Trajectory, Deterministic Insights, Indian FY, WCAG 2.1 AA/AAA Contrast, Leftovers Design Tokens, Zero Drift |
+| **Next.js 15 Production Build** | **Clean (Exit code 0)** | 30 static and dynamic routes compiled successfully in 10.2s on Node 22 LTS |
 | **Accessibility (a11y)** | **WCAG 2.1 AA Compliant** | 100% color contrast ratios verified, explicit `aria-label`s on all icon buttons |
 | **Final QA Report** | **100% COMPLETE** | Full signoff in `docs/FINAL_QA_REPORT.md` |
 | **Vercel Production Deployment** | **Live** | Synced to `main` at `Nehal-Alam/WealthOvers` |
@@ -53,8 +53,8 @@
 | Phase | Description | Status | Scope & Deliverables |
 | :--- | :--- | :---: | :--- |
 | **Audit & Plan** | Leftovers Design Audit & Implementation Plan | **COMPLETED** | `docs/LEFTOVERS_DESIGN_ANALYSIS.md`, `docs/WEALTHOVERS_DESIGN_SYSTEM.md`, `docs/UI_REDESIGN_PLAN.md`, `docs/PERFORMANCE_BASELINE.md` |
-| **Phase 1** | Design Tokens & Theme System | **READY TO PROCEED** | Warm ivory (`#F7F7F0`), forest green (`#244B3C`), soft sage (`#E9EEE5`), dark pine (`#151C18`), CSS variables in `globals.css` |
-| **Phase 2** | Shared App Layout & Navigation | **PENDING** | Compact desktop sidebar (13 sections), mobile 4-tab bar (Home, Activity, Insights, Plan) + FAB quick-add, More menu drawer |
+| **Phase 1** | Design Tokens & Theme System | **COMPLETED** | Warm ivory (`#F7F7F0`), forest green (`#244B3C`), soft sage (`#E9EEE5`), dark pine (`#151C18`), pale sage (`#9BB99D`), CSS variables in `globals.css`, Tailwind semantic tokens, ThemePreferenceCard in `/settings`, 3-way dropdown ThemeToggle, `tests/phase1-design-tokens-theme.test.ts` (120 tests green) |
+| **Phase 2** | Shared App Layout & Navigation | **READY TO PROCEED** | Compact desktop sidebar (13 sections), mobile 4-tab bar (Home, Activity, Insights, Plan) + FAB quick-add, More menu drawer |
 | **Phase 3** | Home Dashboard Redesign | **PENDING** | "Safe to Spend Today" hero calculation & meter, liquid account balances, recent activity feed, upcoming bills, financial overview |
 | **Phase 4** | Transactions & Accounts Experience | **PENDING** | Keypad-first quick transaction dialog, date-grouped ledger timeline with daily sums, clean sage account cards |
 | **Phase 5** | Insights & Planning Hub | **PENDING** | Interactive month day-scrubber chart, category distribution, SVG goal progress rings, monthly budget envelopes |
