@@ -28,19 +28,18 @@ import {
 import {
   createAccountSchema,
   CreateAccountInput,
-  accountTypeValues,
 } from "@/lib/validations/accounts";
 import { createAccountAction } from "@/app/(dashboard)/accounts/actions";
 
 const COLOR_PRESETS = [
-  "#3B82F6", // Blue
-  "#10B981", // Emerald
+  "#244B3C", // Leftovers Forest Green
+  "#8BA58C", // Leftovers Sage
+  "#39805B", // Leftovers Success Green
+  "#C77A65", // Leftovers Terracotta
+  "#C39148", // Leftovers Amber
+  "#3B82F6", // Classic Blue
   "#6366F1", // Indigo
-  "#F59E0B", // Amber
-  "#EF4444", // Rose
   "#8B5CF6", // Purple
-  "#06B6D4", // Cyan
-  "#14B8A6", // Teal
 ];
 
 interface CreateAccountDialogProps {
@@ -67,7 +66,7 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
       account_number_masked: "",
       currency: "INR",
       initial_balance: "0.00",
-      color: "#3B82F6",
+      color: "#244B3C",
       icon: "Landmark",
     },
   });
@@ -97,16 +96,18 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="gap-2">
+          <Button className="gap-2 bg-primary hover:bg-primary-hover text-surface rounded-xl shadow-xs transition-colors">
             <PlusCircle className="h-4 w-4" />
             <span>Add Account</span>
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Add New Account</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[480px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-bold tracking-tight text-text-primary">
+            Add New Account
+          </DialogTitle>
+          <DialogDescription className="text-xs text-text-secondary">
             Register a bank account, cash wallet, or credit card.
           </DialogDescription>
         </DialogHeader>
@@ -114,29 +115,34 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {/* Account Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="acc-name">Account Nickname</Label>
+            <Label htmlFor="acc-name" className="text-xs font-medium text-text-secondary">
+              Account Nickname
+            </Label>
             <Input
               id="acc-name"
               placeholder="e.g. HDFC Salary, Emergency Cash"
               {...register("name")}
+              className="h-9 text-xs bg-surface border-border text-text-primary"
             />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p className="text-xs text-danger">{errors.name.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Account Type */}
             <div className="space-y-1.5">
-              <Label htmlFor="acc-type">Account Type</Label>
+              <Label htmlFor="acc-type" className="text-xs font-medium text-text-secondary">
+                Account Type
+              </Label>
               <Select
                 value={selectedType}
                 onValueChange={(val: any) => setValue("account_type", val)}
               >
-                <SelectTrigger id="acc-type">
+                <SelectTrigger id="acc-type" className="h-9 text-xs bg-surface border-border">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-surface text-text-primary border-border">
                   <SelectItem value="savings">Savings Account</SelectItem>
                   <SelectItem value="salary">Salary Account</SelectItem>
                   <SelectItem value="current">Current Account</SelectItem>
@@ -151,7 +157,7 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
                 </SelectContent>
               </Select>
               {errors.account_type && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.account_type.message}
                 </p>
               )}
@@ -159,14 +165,17 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
 
             {/* Institution Name */}
             <div className="space-y-1.5">
-              <Label htmlFor="acc-inst">Institution / Bank</Label>
+              <Label htmlFor="acc-inst" className="text-xs font-medium text-text-secondary">
+                Institution / Bank
+              </Label>
               <Input
                 id="acc-inst"
                 placeholder="e.g. HDFC Bank, SBI, Cash"
                 {...register("institution_name")}
+                className="h-9 text-xs bg-surface border-border text-text-primary"
               />
               {errors.institution_name && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.institution_name.message}
                 </p>
               )}
@@ -176,14 +185,17 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
           <div className="grid grid-cols-2 gap-3">
             {/* Masked Account Number */}
             <div className="space-y-1.5">
-              <Label htmlFor="acc-num">Masked No. (Optional)</Label>
+              <Label htmlFor="acc-num" className="text-xs font-medium text-text-secondary">
+                Masked No. (Optional)
+              </Label>
               <Input
                 id="acc-num"
                 placeholder="e.g. •••• 4892"
                 {...register("account_number_masked")}
+                className="h-9 text-xs bg-surface border-border text-text-primary font-mono"
               />
               {errors.account_number_masked && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.account_number_masked.message}
                 </p>
               )}
@@ -191,16 +203,19 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
 
             {/* Initial Balance */}
             <div className="space-y-1.5">
-              <Label htmlFor="acc-bal">Opening Balance (INR)</Label>
+              <Label htmlFor="acc-bal" className="text-xs font-medium text-text-secondary">
+                Opening Balance (INR)
+              </Label>
               <Input
                 id="acc-bal"
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 {...register("initial_balance")}
+                className="h-9 text-xs bg-surface border-border text-text-primary font-semibold tabular-nums"
               />
               {errors.initial_balance && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.initial_balance.message}
                 </p>
               )}
@@ -209,7 +224,7 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
 
           {/* Color Preset */}
           <div className="space-y-1.5">
-            <Label>Accent Color</Label>
+            <Label className="text-xs font-medium text-text-secondary">Accent Color</Label>
             <div className="flex items-center gap-2 flex-wrap pt-1">
               {COLOR_PRESETS.map((color) => (
                 <button
@@ -228,16 +243,21 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
             </div>
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>
@@ -247,4 +267,3 @@ export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
     </Dialog>
   );
 }
-

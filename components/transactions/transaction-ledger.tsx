@@ -17,6 +17,8 @@ import {
   AlertCircle,
   X,
   FileSpreadsheet,
+  ListFilter,
+  Layers,
 } from "lucide-react";
 import {
   isThisMonth,
@@ -58,6 +60,8 @@ const EditTransactionDialog = dynamic(
     ),
   { ssr: false }
 );
+
+import { TransactionTimeline } from "@/components/transactions/transaction-timeline";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { TransactionMobileFeed } from "@/components/transactions/transaction-mobile-feed";
 import { MetricCard } from "@/components/financial/metric-card";
@@ -81,6 +85,9 @@ export function TransactionLedger({
 }: TransactionLedgerProps) {
   const [editingTransaction, setEditingTransaction] = React.useState<any | null>(null);
 
+  // View Mode: Timeline (Leftovers default) vs Table
+  const [viewMode, setViewMode] = React.useState<"timeline" | "table">("timeline");
+
   // Quick View Tab Filter: "all" | "needs_review" | "expense" | "income" | "transfer" | "refund"
   const [viewTab, setViewTab] = React.useState<string>("all");
 
@@ -101,7 +108,7 @@ export function TransactionLedger({
 
   // Pagination state (prevents DOM bloat and maintains 60 FPS interactions)
   const [currentPage, setCurrentPage] = React.useState(1);
-  const pageSize = 25;
+  const pageSize = 30;
 
   // Counts for Quick View Tabs
   const needsReviewCount = React.useMemo(() => {
@@ -377,7 +384,6 @@ export function TransactionLedger({
       } else if (txn.transaction_type === "expense") {
         outflow = addMoney(outflow, txn.amount);
       }
-      // Note: transfers are excluded from net cashflow (net zero)
     }
 
     const net = subtractMoney(inflow, outflow);
@@ -389,22 +395,53 @@ export function TransactionLedger({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Transaction Ledger</h2>
-          <p className="text-sm text-muted-foreground">
-            Complete real-time double-entry ledger with automatic account synchronization.
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary">
+            Activity & Transactions
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+            Keypad-first entry, date-grouped timeline, and multi-account ledger.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Toggle: Timeline vs Table */}
+          <div className="hidden md:flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70">
+            <button
+              type="button"
+              onClick={() => setViewMode("timeline")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === "timeline"
+                  ? "bg-primary text-surface shadow-2xs"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Timeline</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === "table"
+                  ? "bg-primary text-surface shadow-2xs"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>Table</span>
+            </button>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="gap-1.5 h-9"
+            className="gap-1.5 h-9 rounded-xl border-border text-text-secondary hover:text-text-primary bg-surface"
           >
             <Download className="h-4 w-4" />
-            <span>Export CSV</span>
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
+
           <CreateTransactionDialog accounts={accounts} categories={categories} />
         </div>
       </div>
@@ -437,107 +474,119 @@ export function TransactionLedger({
         />
       </div>
 
-      {/* Quick View Tabs (Monarch / Copilot Inspired) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b">
-        <Button
-          variant={viewTab === "all" ? "default" : "ghost"}
-          size="sm"
+      {/* Quick View Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border/60">
+        <button
+          type="button"
           onClick={() => setViewTab("all")}
-          className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "all"
+              ? "bg-primary text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
         >
           <span>All Transactions</span>
-          <Badge
-            variant={viewTab === "all" ? "outline" : "secondary"}
-            className="text-[10px] px-1.5 py-0 h-4 rounded-full"
-          >
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+            viewTab === "all" ? "bg-surface/20 text-surface" : "bg-border text-text-secondary"
+          }`}>
             {transactions.length}
-          </Badge>
-        </Button>
+          </span>
+        </button>
 
-        <Button
-          variant={viewTab === "needs_review" ? "default" : "ghost"}
-          size="sm"
+        <button
+          type="button"
           onClick={() => setViewTab("needs_review")}
-          className={`h-8 text-xs gap-1.5 rounded-lg shrink-0 ${
-            needsReviewCount > 0 && viewTab !== "needs_review"
-              ? "text-amber-600 dark:text-amber-400 font-semibold"
-              : ""
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "needs_review"
+              ? "bg-warning text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
           }`}
         >
           <span className="flex items-center gap-1.5">
             {needsReviewCount > 0 && (
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
             )}
             Needs Review
           </span>
           {needsReviewCount > 0 && (
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-amber-500/10 text-amber-600 border-amber-500/30"
-            >
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              viewTab === "needs_review" ? "bg-surface/20 text-surface" : "bg-warning/20 text-warning"
+            }`}>
               {needsReviewCount}
-            </Badge>
+            </span>
           )}
-        </Button>
+        </button>
 
-        <Button
-          variant={viewTab === "expense" ? "default" : "ghost"}
-          size="sm"
+        <button
+          type="button"
           onClick={() => setViewTab("expense")}
-          className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "expense"
+              ? "bg-danger text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
         >
-          <TrendingDown className="h-3 w-3 text-destructive" />
+          <TrendingDown className="h-3 w-3" />
           <span>Expenses</span>
-        </Button>
+        </button>
 
-        <Button
-          variant={viewTab === "income" ? "default" : "ghost"}
-          size="sm"
+        <button
+          type="button"
           onClick={() => setViewTab("income")}
-          className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "income"
+              ? "bg-success text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
         >
-          <TrendingUp className="h-3 w-3 text-emerald-500" />
+          <TrendingUp className="h-3 w-3" />
           <span>Income</span>
-        </Button>
+        </button>
 
-        <Button
-          variant={viewTab === "transfer" ? "default" : "ghost"}
-          size="sm"
+        <button
+          type="button"
           onClick={() => setViewTab("transfer")}
-          className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "transfer"
+              ? "bg-primary text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
         >
-          <ArrowLeftRight className="h-3 w-3 text-blue-500" />
+          <ArrowLeftRight className="h-3 w-3" />
           <span>Transfers</span>
-        </Button>
+        </button>
 
-        <Button
-          variant={viewTab === "refund" ? "default" : "ghost"}
-          size="sm"
+        <button
+          type="button"
           onClick={() => setViewTab("refund")}
-          className="h-8 text-xs gap-1.5 rounded-lg shrink-0"
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "refund"
+              ? "bg-success text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
         >
           <span>Refunds</span>
-        </Button>
+        </button>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="space-y-3 p-4 rounded-xl border bg-card shadow-sm">
+      <div className="space-y-3 p-4 rounded-2xl border border-border/80 bg-surface shadow-2xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Multi-Field Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
             <Input
               placeholder="Search description, ref, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 text-sm"
+              className="pl-8 h-9 text-xs sm:text-sm bg-surface-secondary/40 border-border text-text-primary rounded-xl"
             />
             {searchQuery && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-1 top-1 h-7 w-7 text-muted-foreground"
+                className="absolute right-1 top-1 h-7 w-7 text-text-secondary"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -546,10 +595,10 @@ export function TransactionLedger({
 
           {/* Type Filter */}
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-xs bg-surface-secondary/40 border-border rounded-xl">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-surface text-text-primary border-border">
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="expense">Expense</SelectItem>
               <SelectItem value="income">Income</SelectItem>
@@ -560,10 +609,10 @@ export function TransactionLedger({
 
           {/* Account Filter */}
           <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-xs bg-surface-secondary/40 border-border rounded-xl">
               <SelectValue placeholder="All Accounts" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-surface text-text-primary border-border">
               <SelectItem value="all">All Accounts</SelectItem>
               {accounts.map((acc) => (
                 <SelectItem key={acc.id} value={acc.id}>
@@ -575,10 +624,10 @@ export function TransactionLedger({
 
           {/* Category Filter */}
           <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-xs bg-surface-secondary/40 border-border rounded-xl">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-surface text-text-primary border-border">
               <SelectItem value="all">All Categories</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
@@ -590,10 +639,10 @@ export function TransactionLedger({
 
           {/* Date Filter */}
           <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-xs bg-surface-secondary/40 border-border rounded-xl">
               <SelectValue placeholder="Period" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-surface text-text-primary border-border">
               <SelectItem value="all">All Time</SelectItem>
               <SelectItem value="this_month">This Month</SelectItem>
               <SelectItem value="last_month">Last Month</SelectItem>
@@ -604,10 +653,10 @@ export function TransactionLedger({
           </Select>
         </div>
 
-        {/* Custom Date Range Row (Shown when dateFilter === 'custom') */}
+        {/* Custom Date Range Row */}
         {dateFilter === "custom" && (
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t">
-            <span className="text-xs text-muted-foreground font-medium shrink-0">
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-border/60">
+            <span className="text-xs text-text-secondary font-medium shrink-0">
               Custom Range:
             </span>
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -615,14 +664,14 @@ export function TransactionLedger({
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-xs bg-surface border-border rounded-lg"
               />
-              <span className="text-xs text-muted-foreground">to</span>
+              <span className="text-xs text-text-secondary">to</span>
               <Input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-xs bg-surface border-border rounded-lg"
               />
             </div>
             {(customStartDate || customEndDate) && (
@@ -633,7 +682,7 @@ export function TransactionLedger({
                   setCustomStartDate("");
                   setCustomEndDate("");
                 }}
-                className="h-8 text-xs text-muted-foreground"
+                className="h-8 text-xs text-text-secondary hover:text-text-primary"
               >
                 Clear Dates
               </Button>
@@ -644,10 +693,10 @@ export function TransactionLedger({
 
       {/* Floating Bulk Operations Toolbar */}
       {selectedIds.size > 0 && (
-        <div className="sticky bottom-6 z-20 flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border bg-card/95 backdrop-blur-md shadow-xl border-primary/40 animate-in fade-in slide-in-from-bottom-2">
+        <div className="sticky bottom-6 z-20 flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/40 bg-surface/95 backdrop-blur-md shadow-xl animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">
+            <span className="text-xs sm:text-sm font-semibold text-text-primary">
               {selectedIds.size} transaction{selectedIds.size > 1 ? "s" : ""} selected
             </span>
           </div>
@@ -655,10 +704,10 @@ export function TransactionLedger({
           <div className="flex items-center gap-2 flex-wrap">
             {/* Bulk Category Selector */}
             <Select value={bulkCategory} onValueChange={handleBulkCategoryChange} disabled={isBulkOperating}>
-              <SelectTrigger className="h-8 text-xs w-[160px]">
+              <SelectTrigger className="h-8 text-xs w-[150px] bg-surface border-border">
                 <SelectValue placeholder="Assign Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-surface border-border">
                 <SelectItem value="none">Uncategorized</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -674,9 +723,9 @@ export function TransactionLedger({
               size="sm"
               onClick={handleBulkMarkReviewed}
               disabled={isBulkOperating}
-              className="h-8 text-xs gap-1"
+              className="h-8 text-xs gap-1 border-border bg-surface text-text-primary hover:bg-surface-secondary"
             >
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
               <span>Mark Reviewed</span>
             </Button>
 
@@ -686,7 +735,7 @@ export function TransactionLedger({
               size="sm"
               onClick={handleBulkDelete}
               disabled={isBulkOperating}
-              className="h-8 text-xs gap-1"
+              className="h-8 text-xs gap-1 bg-danger hover:bg-danger/90 text-surface"
             >
               <Trash2 className="h-3.5 w-3.5" />
               <span>Delete ({selectedIds.size})</span>
@@ -698,7 +747,7 @@ export function TransactionLedger({
               size="sm"
               onClick={() => setSelectedIds(new Set())}
               disabled={isBulkOperating}
-              className="h-8 text-xs text-muted-foreground"
+              className="h-8 text-xs text-text-secondary hover:text-text-primary"
             >
               Deselect All
             </Button>
@@ -708,26 +757,35 @@ export function TransactionLedger({
 
       {/* Transaction Records */}
       {filteredTransactions.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center bg-card">
-          <Receipt className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-base font-semibold">No transactions match your criteria</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
+        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface">
+          <Receipt className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
+          <h3 className="text-base font-semibold text-text-primary">No transactions match your criteria</h3>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4">
             Try adjusting your filters, selecting a different date range, or record a new transaction.
           </p>
           <CreateTransactionDialog accounts={accounts} categories={categories} />
         </div>
       ) : (
         <>
-          {/* Desktop Table View */}
+          {/* Desktop View (Timeline or Table based on user toggle) */}
           <div className="hidden md:block">
-            <TransactionTable
-              transactions={paginatedTransactions}
-              onEdit={setEditingTransaction}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={handleToggleSelectAll}
-              allSelected={allSelectedInPage}
-            />
+            {viewMode === "timeline" ? (
+              <TransactionTimeline
+                transactions={paginatedTransactions}
+                onEdit={setEditingTransaction}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+              />
+            ) : (
+              <TransactionTable
+                transactions={paginatedTransactions}
+                onEdit={setEditingTransaction}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleSelectAll={handleToggleSelectAll}
+                allSelected={allSelectedInPage}
+              />
+            )}
           </div>
 
           {/* Mobile Feed View */}
@@ -735,23 +793,25 @@ export function TransactionLedger({
             <TransactionMobileFeed
               transactions={paginatedTransactions}
               onEdit={setEditingTransaction}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
             />
           </div>
 
           {/* Pagination Controls */}
           {filteredTransactions.length > pageSize && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs sm:text-sm text-text-secondary">
               <p>
                 Showing{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-text-primary">
                   {(currentPage - 1) * pageSize + 1}
                 </span>{" "}
                 to{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-text-primary">
                   {Math.min(currentPage * pageSize, filteredTransactions.length)}
                 </span>{" "}
                 of{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-text-primary">
                   {filteredTransactions.length}
                 </span>{" "}
                 transactions
@@ -762,11 +822,11 @@ export function TransactionLedger({
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="h-8 px-3 text-xs"
+                  className="h-8 px-3 text-xs rounded-lg border-border text-text-secondary hover:text-text-primary bg-surface"
                 >
                   Previous
                 </Button>
-                <span className="text-xs font-medium px-2">
+                <span className="text-xs font-medium px-2 text-text-primary">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -774,7 +834,7 @@ export function TransactionLedger({
                   size="sm"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="h-8 px-3 text-xs"
+                  className="h-8 px-3 text-xs rounded-lg border-border text-text-secondary hover:text-text-primary bg-surface"
                 >
                   Next
                 </Button>

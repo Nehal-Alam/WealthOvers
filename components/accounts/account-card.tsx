@@ -17,7 +17,7 @@ import {
   Trash2,
   Scale,
   Receipt,
-  Clock,
+  CreditCard as CardIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,17 +58,17 @@ export function AccountCard({
   const getAccountTypeIcon = (type: string) => {
     switch (type) {
       case "credit_card":
-        return <CreditCard className="h-5 w-5" />;
+        return <CreditCard className="h-4 w-4" />;
       case "cash":
       case "upi_wallet":
-        return <Wallet className="h-5 w-5" />;
+        return <Wallet className="h-4 w-4" />;
       case "fixed_deposit":
       case "recurring_deposit":
-        return <PiggyBank className="h-5 w-5" />;
+        return <PiggyBank className="h-4 w-4" />;
       case "investment_demat":
-        return <TrendingUp className="h-5 w-5" />;
+        return <TrendingUp className="h-4 w-4" />;
       default:
-        return <Landmark className="h-5 w-5" />;
+        return <Landmark className="h-4 w-4" />;
     }
   };
 
@@ -100,39 +100,42 @@ export function AccountCard({
       .join(" ");
   };
 
+  const isDebt = account.account_type === "credit_card" || account.account_type === "loan_account";
+
   return (
     <Card
-      className={`relative overflow-hidden transition-all hover:shadow-md border ${
-        account.is_archived ? "opacity-60 bg-muted/40" : ""
+      className={`relative overflow-hidden transition-all duration-200 hover:shadow-xs border border-border/80 bg-surface rounded-2xl ${
+        account.is_archived ? "opacity-60 bg-surface-secondary/40" : ""
       }`}
     >
       {/* Top Accent Strip */}
       <div
-        className="h-1.5 w-full"
-        style={{ backgroundColor: account.color || "#3B82F6" }}
+        className="h-1 w-full"
+        style={{ backgroundColor: account.color || "var(--primary)" }}
       />
 
-      <CardContent className="p-4 pt-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
+      <CardContent className="p-4 pt-3.5 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center space-x-3 min-w-0">
+            {/* Account Icon */}
             <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+              className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-border/60"
               style={{
-                backgroundColor: `${account.color || "#3B82F6"}20`,
-                color: account.color || "#3B82F6",
+                backgroundColor: account.color ? `${account.color}15` : "var(--primary-soft)",
+                color: account.color || "var(--primary)",
               }}
             >
               {getAccountTypeIcon(account.account_type)}
             </div>
 
-            <div>
-              <h3 className="font-semibold text-base leading-tight">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base leading-tight text-text-primary truncate">
                 {account.name}
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-text-secondary mt-0.5 truncate">
                 {account.institution_name}
                 {account.account_number_masked && (
-                  <span className="ml-1.5 font-mono">
+                  <span className="ml-1.5 font-mono opacity-80">
                     {account.account_number_masked}
                   </span>
                 )}
@@ -145,13 +148,13 @@ export function AccountCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground"
+                className="h-8 w-8 text-text-secondary hover:text-text-primary shrink-0"
                 aria-label="Account options"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuContent align="end" className="w-52 bg-surface text-text-primary border-border">
               {!account.is_archived && (
                 <>
                   <DropdownMenuItem onClick={() => onTransfer(account)}>
@@ -188,7 +191,7 @@ export function AccountCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleDelete}
-                className="text-destructive focus:text-destructive"
+                className="text-danger focus:text-danger"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 <span>Delete Account</span>
@@ -198,23 +201,32 @@ export function AccountCard({
         </div>
 
         {/* Balance Section */}
-        <div className="mt-4 pt-3 border-t flex items-baseline justify-between">
-          <Badge variant="outline" className="text-xs font-normal capitalize">
+        <div className="pt-2.5 border-t border-border/60 flex items-baseline justify-between gap-2">
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium bg-surface-secondary text-text-secondary border-border/80 px-2 py-0.5 rounded-lg"
+          >
             {formatAccountType(account.account_type)}
           </Badge>
 
           <div className="text-right">
-            <span className="text-xs text-muted-foreground block">
+            <span className="text-[11px] text-text-secondary block font-medium">
               {account.account_type === "credit_card"
                 ? "Outstanding Balance"
-                : "Current Balance"}
+                : account.account_type === "loan_account"
+                ? "Remaining Debt"
+                : "Available Balance"}
             </span>
-            <MoneyDisplay
-              amount={account.current_balance}
-              currency={account.currency}
-              className="text-lg font-bold"
-              colored={account.account_type === "credit_card"}
-            />
+            <span
+              className={`text-lg font-bold tabular-nums tracking-tight ${
+                isDebt ? "text-danger" : "text-text-primary"
+              }`}
+            >
+              ₹{parseFloat(account.current_balance as any).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
           </div>
         </div>
       </CardContent>
@@ -228,4 +240,3 @@ export function AccountCard({
     </Card>
   );
 }
-

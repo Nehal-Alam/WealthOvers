@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Archive,
   Layers,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Tables } from "@/types/database";
@@ -42,7 +43,7 @@ const TransferFundsDialog = dynamic(
 
 import { AccountCard } from "@/components/accounts/account-card";
 import { MetricCard } from "@/components/financial/metric-card";
-import { toDecimal, subtractMoney, addMoney } from "@/lib/calculations/financial";
+import { subtractMoney, addMoney } from "@/lib/calculations/financial";
 
 interface AccountGridProps {
   accounts: Tables<"accounts">[];
@@ -57,7 +58,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
   const activeAccounts = accounts.filter((a) => !a.is_archived);
   const archivedAccounts = accounts.filter((a) => a.is_archived);
 
-  // Financial calculations
+  // Financial calculations using exact Decimal arithmetic
   const { totalLiquid, totalCredit, netPosition } = React.useMemo(() => {
     let liquid = "0.0000";
     let credit = "0.0000";
@@ -100,21 +101,23 @@ export function AccountGrid({ accounts }: AccountGridProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Accounts & Balances</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage your bank accounts, wallets, credit cards, and transfer funds.
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary">
+            Accounts & Balances
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
+            Total available liquid capital, credit card debt, and multi-account balances.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeAccounts.length >= 2 && (
             <Button
               variant="outline"
               onClick={() => handleOpenTransfer()}
-              className="gap-1.5"
+              className="gap-1.5 h-9 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary"
             >
               <ArrowLeftRight className="h-4 w-4" />
-              <span>Transfer</span>
+              <span>Transfer Funds</span>
             </Button>
           )}
           <CreateAccountDialog />
@@ -128,14 +131,14 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           amount={totalLiquid}
           subtitle="Savings, current & cash reserves"
           icon={Landmark}
-          iconColor="#3B82F6"
+          iconColor="emerald"
         />
         <MetricCard
           title="Credit & Liabilities"
           amount={totalCredit}
-          subtitle="Credit cards & active loans"
+          subtitle="Credit cards & active loan debt"
           icon={CreditCard}
-          iconColor="#EF4444"
+          iconColor="coral"
           coloredAmount={false}
         />
         <MetricCard
@@ -143,18 +146,20 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           amount={netPosition}
           subtitle="Liquid assets minus credit obligations"
           icon={Wallet}
-          iconColor="#10B981"
+          iconColor="forest"
           coloredAmount
         />
       </div>
 
-      {/* Empty State */}
+      {/* Empty State with Onboarding Guidance */}
       {accounts.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center">
-          <Landmark className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-base font-semibold">No accounts found</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Add your bank accounts, credit cards, or cash wallets to start tracking your balances.
+        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface">
+          <Landmark className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
+          <h3 className="text-base font-semibold text-text-primary">
+            Add your first account to see your total available balance
+          </h3>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4 max-w-md mx-auto">
+            Connect your bank accounts, credit cards, or cash wallets to track balances and power your Safe-to-Spend calculations.
           </p>
           <CreateAccountDialog />
         </div>
@@ -163,10 +168,12 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           {/* Bank Accounts */}
           {bankAccounts.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Landmark className="h-4 w-4" />
-                Bank Accounts ({bankAccounts.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <Landmark className="h-4 w-4 text-primary" />
+                  <span>Bank Accounts ({bankAccounts.length})</span>
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {bankAccounts.map((acc) => (
                   <AccountCard
@@ -184,10 +191,12 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           {/* Cash & Digital Wallets */}
           {cashAndWallets.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Cash & Wallets ({cashAndWallets.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  <span>Cash & Wallets ({cashAndWallets.length})</span>
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {cashAndWallets.map((acc) => (
                   <AccountCard
@@ -205,10 +214,12 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           {/* Credit Cards & Loans */}
           {creditCardsAndLoans.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Credit Cards & Debt ({creditCardsAndLoans.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-danger" />
+                  <span>Credit Cards & Debt ({creditCardsAndLoans.length})</span>
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {creditCardsAndLoans.map((acc) => (
                   <AccountCard
@@ -226,10 +237,12 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           {/* Investments & Deposits */}
           {investmentsAndDeposits.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Deposits & Investments ({investmentsAndDeposits.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-success" />
+                  <span>Deposits & Investments ({investmentsAndDeposits.length})</span>
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {investmentsAndDeposits.map((acc) => (
                   <AccountCard
@@ -246,11 +259,13 @@ export function AccountGrid({ accounts }: AccountGridProps) {
 
           {/* Archived Accounts */}
           {archivedAccounts.length > 0 && (
-            <div className="space-y-3 pt-4 border-t">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Archive className="h-4 w-4" />
-                Archived Accounts ({archivedAccounts.length})
-              </h3>
+            <div className="space-y-3 pt-4 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-2">
+                  <Archive className="h-4 w-4" />
+                  <span>Archived Accounts ({archivedAccounts.length})</span>
+                </h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {archivedAccounts.map((acc) => (
                   <AccountCard
@@ -285,4 +300,3 @@ export function AccountGrid({ accounts }: AccountGridProps) {
     </div>
   );
 }
-

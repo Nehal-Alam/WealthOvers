@@ -26,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import {
   transferFundsSchema,
   TransferFundsInput,
@@ -137,20 +136,20 @@ export function TransferFundsDialog({
       {trigger !== null && (
         <DialogTrigger asChild>
           {trigger || (
-            <Button variant="outline" className="gap-2">
-              <ArrowLeftRight className="h-4 w-4" />
+            <Button variant="outline" className="gap-2 rounded-xl border-border bg-surface text-text-primary hover:bg-surface-secondary">
+              <ArrowLeftRight className="h-4 w-4 text-primary" />
               <span>Transfer Funds</span>
             </Button>
           )}
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="sm:max-w-[480px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-text-primary">
             <ArrowLeftRight className="h-5 w-5 text-primary" />
             <span>Inter-Account Transfer</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-text-secondary">
             Move money seamlessly between two accounts with atomic balance updates.
           </DialogDescription>
         </DialogHeader>
@@ -159,9 +158,11 @@ export function TransferFundsDialog({
           {/* Source Account */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <Label htmlFor="source-acc">From Account</Label>
+              <Label htmlFor="source-acc" className="text-xs font-medium text-text-secondary">
+                From Account
+              </Label>
               {sourceAccount && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="text-xs text-text-secondary flex items-center gap-1">
                   Balance: <MoneyDisplay amount={sourceAccount.current_balance} />
                 </span>
               )}
@@ -176,10 +177,10 @@ export function TransferFundsDialog({
                 }
               }}
             >
-              <SelectTrigger id="source-acc">
+              <SelectTrigger id="source-acc" className="h-9 text-xs bg-surface border-border">
                 <SelectValue placeholder="Select source account" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-surface text-text-primary border-border">
                 {activeAccounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} ({acc.institution_name})
@@ -188,7 +189,7 @@ export function TransferFundsDialog({
               </SelectContent>
             </Select>
             {errors.source_account_id && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-danger">
                 {errors.source_account_id.message}
               </p>
             )}
@@ -197,9 +198,11 @@ export function TransferFundsDialog({
           {/* Destination Account */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <Label htmlFor="dest-acc">To Account</Label>
+              <Label htmlFor="dest-acc" className="text-xs font-medium text-text-secondary">
+                To Account
+              </Label>
               {destAccount && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="text-xs text-text-secondary flex items-center gap-1">
                   Balance: <MoneyDisplay amount={destAccount.current_balance} />
                 </span>
               )}
@@ -208,10 +211,10 @@ export function TransferFundsDialog({
               value={selectedDestId}
               onValueChange={(val) => setValue("destination_account_id", val)}
             >
-              <SelectTrigger id="dest-acc">
+              <SelectTrigger id="dest-acc" className="h-9 text-xs bg-surface border-border">
                 <SelectValue placeholder="Select destination account" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-surface text-text-primary border-border">
                 {activeAccounts
                   .filter((acc) => acc.id !== selectedSourceId)
                   .map((acc) => (
@@ -222,7 +225,7 @@ export function TransferFundsDialog({
               </SelectContent>
             </Select>
             {errors.destination_account_id && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-danger">
                 {errors.destination_account_id.message}
               </p>
             )}
@@ -231,29 +234,35 @@ export function TransferFundsDialog({
           <div className="grid grid-cols-2 gap-3">
             {/* Transfer Amount */}
             <div className="space-y-1.5">
-              <Label htmlFor="transfer-amt">Transfer Amount (INR)</Label>
+              <Label htmlFor="transfer-amt" className="text-xs font-medium text-text-secondary">
+                Transfer Amount (INR)
+              </Label>
               <Input
                 id="transfer-amt"
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 {...register("amount")}
+                className="h-9 text-xs font-semibold tabular-nums bg-surface border-border"
               />
               {errors.amount && (
-                <p className="text-xs text-destructive">{errors.amount.message}</p>
+                <p className="text-xs text-danger">{errors.amount.message}</p>
               )}
             </div>
 
             {/* Date */}
             <div className="space-y-1.5">
-              <Label htmlFor="transfer-date">Date</Label>
+              <Label htmlFor="transfer-date" className="text-xs font-medium text-text-secondary">
+                Date
+              </Label>
               <Input
                 id="transfer-date"
                 type="date"
                 {...register("transaction_date")}
+                className="h-9 text-xs bg-surface border-border"
               />
               {errors.transaction_date && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-danger">
                   {errors.transaction_date.message}
                 </p>
               )}
@@ -262,24 +271,32 @@ export function TransferFundsDialog({
 
           {/* Optional Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="transfer-desc">Description (Optional)</Label>
+            <Label htmlFor="transfer-desc" className="text-xs font-medium text-text-secondary">
+              Description (Optional)
+            </Label>
             <Input
               id="transfer-desc"
               placeholder="e.g. Monthly Savings, Credit card bill"
               {...register("description")}
+              className="h-9 text-xs bg-surface border-border"
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Transfer Now
             </Button>
@@ -289,4 +306,3 @@ export function TransferFundsDialog({
     </Dialog>
   );
 }
-

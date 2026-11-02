@@ -98,7 +98,7 @@ export function EditTransactionDialog({
   const selectedType = watch("transaction_type");
   const selectedCategoryId = watch("category_id");
 
-  const relevantCategories = categories.filter((c) => c.type === selectedType);
+  const relevantCategories = categories.filter((c) => (c as any).type === selectedType || !(c as any).type);
   const selectedCategoryObj = categories.find((c) => c.id === selectedCategoryId);
   const availableSubcategories = selectedCategoryObj?.subcategories || [];
 
@@ -123,10 +123,12 @@ export function EditTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Edit Transaction</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[480px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-lg font-bold tracking-tight text-text-primary">
+            Edit Transaction
+          </DialogTitle>
+          <DialogDescription className="text-xs text-text-secondary">
             Update transaction details or reassess category mapping.
           </DialogDescription>
         </DialogHeader>
@@ -134,46 +136,56 @@ export function EditTransactionDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-txn-amount">Amount (INR)</Label>
+              <Label htmlFor="edit-txn-amount" className="text-xs font-medium text-text-secondary">
+                Amount (INR)
+              </Label>
               <Input
                 id="edit-txn-amount"
                 type="number"
                 step="0.01"
                 {...register("amount")}
+                className="h-9 text-sm font-semibold tabular-nums bg-surface border-border"
               />
               {errors.amount && (
-                <p className="text-xs text-destructive">{errors.amount.message}</p>
+                <p className="text-xs text-danger">{errors.amount.message}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-txn-date">Date</Label>
+              <Label htmlFor="edit-txn-date" className="text-xs font-medium text-text-secondary">
+                Date
+              </Label>
               <Input
                 id="edit-txn-date"
                 type="date"
                 {...register("transaction_date")}
+                className="h-9 text-xs bg-surface border-border"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-txn-desc">Description</Label>
-            <Input id="edit-txn-desc" {...register("description")} />
+            <Label htmlFor="edit-txn-desc" className="text-xs font-medium text-text-secondary">
+              Description
+            </Label>
+            <Input
+              id="edit-txn-desc"
+              {...register("description")}
+              className="h-9 text-xs bg-surface border-border"
+            />
             {errors.description && (
-              <p className="text-xs text-destructive">
-                {errors.description.message}
-              </p>
+              <p className="text-xs text-danger">{errors.description.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Account</Label>
+              <Label className="text-xs font-medium text-text-secondary">Account</Label>
               <Select
                 value={watch("account_id")}
                 onValueChange={(val) => setValue("account_id", val)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs bg-surface border-border">
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
@@ -188,7 +200,7 @@ export function EditTransactionDialog({
 
             {selectedType !== "transfer" && (
               <div className="space-y-1.5">
-                <Label>Category</Label>
+                <Label className="text-xs font-medium text-text-secondary">Category</Label>
                 <Select
                   value={selectedCategoryId || "none"}
                   onValueChange={(val) => {
@@ -196,7 +208,7 @@ export function EditTransactionDialog({
                     setValue("subcategory_id", null);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs bg-surface border-border">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -214,14 +226,14 @@ export function EditTransactionDialog({
 
           {selectedType !== "transfer" && availableSubcategories.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Subcategory</Label>
+              <Label className="text-xs font-medium text-text-secondary">Subcategory</Label>
               <Select
                 value={watch("subcategory_id") || "none"}
                 onValueChange={(val) =>
                   setValue("subcategory_id", val === "none" ? null : val)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs bg-surface border-border">
                   <SelectValue placeholder="Select subcategory" />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,20 +249,31 @@ export function EditTransactionDialog({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-txn-ref">Reference (Optional)</Label>
-            <Input id="edit-txn-ref" {...register("reference_number")} />
+            <Label htmlFor="edit-txn-ref" className="text-xs font-medium text-text-secondary">
+              Reference / UPI ID (Optional)
+            </Label>
+            <Input
+              id="edit-txn-ref"
+              {...register("reference_number")}
+              className="h-8 text-xs bg-surface border-border"
+            />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
@@ -260,4 +283,3 @@ export function EditTransactionDialog({
     </Dialog>
   );
 }
-

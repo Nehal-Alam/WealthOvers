@@ -26,14 +26,14 @@ import { updateAccountAction } from "@/app/(dashboard)/accounts/actions";
 import { Tables } from "@/types/database";
 
 const COLOR_PRESETS = [
-  "#3B82F6",
-  "#10B981",
-  "#6366F1",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#06B6D4",
-  "#14B8A6",
+  "#244B3C", // Leftovers Forest Green
+  "#8BA58C", // Leftovers Sage
+  "#39805B", // Leftovers Success Green
+  "#C77A65", // Leftovers Terracotta
+  "#C39148", // Leftovers Amber
+  "#3B82F6", // Classic Blue
+  "#6366F1", // Indigo
+  "#8B5CF6", // Purple
 ];
 
 interface EditAccountDialogProps {
@@ -63,7 +63,7 @@ export function EditAccountDialog({
       name: account?.name || "",
       institution_name: account?.institution_name || "",
       account_number_masked: account?.account_number_masked || "",
-      color: account?.color || "#3B82F6",
+      color: account?.color || "#244B3C",
       icon: account?.icon || "Landmark",
       is_archived: account?.is_archived || false,
     },
@@ -107,42 +107,58 @@ export function EditAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Edit Account</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[480px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-bold tracking-tight text-text-primary">
+            Edit Account
+          </DialogTitle>
+          <DialogDescription className="text-xs text-text-secondary">
             Modify account configuration or archive status.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="edit-acc-name">Account Name</Label>
-            <Input id="edit-acc-name" {...register("name")} />
+            <Label htmlFor="edit-acc-name" className="text-xs font-medium text-text-secondary">
+              Account Name
+            </Label>
+            <Input
+              id="edit-acc-name"
+              {...register("name")}
+              className="h-9 text-xs bg-surface border-border text-text-primary"
+            />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p className="text-xs text-danger">{errors.name.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-acc-inst">Institution</Label>
-              <Input id="edit-acc-inst" {...register("institution_name")} />
-              {errors.institution_name && (
-                <p className="text-xs text-destructive">
-                  {errors.institution_name.message}
-                </p>
-              )}
+              <Label htmlFor="edit-acc-inst" className="text-xs font-medium text-text-secondary">
+                Institution
+              </Label>
+              <Input
+                id="edit-acc-inst"
+                {...register("institution_name")}
+                className="h-9 text-xs bg-surface border-border text-text-primary"
+              />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-acc-num">Masked Number</Label>
-              <Input id="edit-acc-num" {...register("account_number_masked")} />
+              <Label htmlFor="edit-acc-num" className="text-xs font-medium text-text-secondary">
+                Masked Account No.
+              </Label>
+              <Input
+                id="edit-acc-num"
+                {...register("account_number_masked")}
+                className="h-9 text-xs bg-surface border-border text-text-primary font-mono"
+              />
             </div>
           </div>
 
+          {/* Color Preset */}
           <div className="space-y-1.5">
-            <Label>Accent Color</Label>
+            <Label className="text-xs font-medium text-text-secondary">Accent Color</Label>
             <div className="flex items-center gap-2 flex-wrap pt-1">
               {COLOR_PRESETS.map((color) => (
                 <button
@@ -162,29 +178,37 @@ export function EditAccountDialog({
           </div>
 
           {/* Archive Toggle */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="flex items-center justify-between rounded-xl border border-border p-3 bg-surface-secondary/40">
             <div className="space-y-0.5">
-              <Label className="text-sm">Archive Account</Label>
-              <p className="text-xs text-muted-foreground">
-                Hide from active selection while preserving transaction history.
+              <Label htmlFor="edit-archive-toggle" className="text-xs font-medium cursor-pointer text-text-primary">
+                Archive Account
+              </Label>
+              <p className="text-[11px] text-text-secondary">
+                Archived accounts are hidden from primary dashboards but retain complete transaction history.
               </p>
             </div>
             <Switch
+              id="edit-archive-toggle"
               checked={isArchived}
               onCheckedChange={(val) => setValue("is_archived", val)}
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="border-border text-text-secondary hover:text-text-primary rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-surface font-semibold rounded-xl shadow-xs transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
@@ -194,4 +218,3 @@ export function EditAccountDialog({
     </Dialog>
   );
 }
-
