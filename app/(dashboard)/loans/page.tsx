@@ -20,8 +20,8 @@ export default async function LoansPage() {
     .from("loans")
     .select(
       `
-      *,
-      payments:loan_payments(*)
+      id, lender_or_borrower_name, loan_type, principal_amount, outstanding_balance, annual_interest_rate, tenure_months, monthly_emi, start_date, account_id, is_active, notes, created_at,
+      payments:loan_payments(id, loan_id, payment_date, emi_amount, principal_component, interest_component, extra_prepayment, remaining_balance)
     `
     )
     .eq("user_id", user.id)

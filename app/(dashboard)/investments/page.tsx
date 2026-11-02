@@ -18,17 +18,17 @@ export default async function InvestmentsPage() {
 
   const supabase = await createClient();
 
-  // Parallelize investments and accounts queries
+  // Parallelize investments and accounts queries with explicit column projections
   const [investmentsResult, accountsResult] = await Promise.all([
     supabase
       .from("investments")
-      .select("*")
+      .select("id, user_id, account_id, name, symbol, asset_type, broker_name, total_quantity, average_buy_price, total_invested_amount, current_nav_or_price, current_valuation, currency, notes, last_price_update_at, created_at, updated_at")
       .eq("user_id", user.id)
       .order("current_valuation", { ascending: false }),
 
     supabase
       .from("accounts")
-      .select("*")
+      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
   ]);

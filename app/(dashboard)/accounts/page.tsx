@@ -19,7 +19,7 @@ export default async function AccountsPage() {
   const supabase = await createClient();
   const { data: accountsData } = await supabase
     .from("accounts")
-    .select("*")
+    .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 

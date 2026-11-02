@@ -18,21 +18,22 @@ export default async function ImportPage() {
 
   const supabase = await createClient();
 
+  // Fetch accounts, categories, and import jobs with explicit column selections
   const [accountsRes, categoriesRes, importJobsRes] = await Promise.all([
     supabase
       .from("accounts")
-      .select("*")
+      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
     supabase
       .from("categories")
-      .select("*")
+      .select("id, user_id, name, color, icon, type, is_system, created_at, updated_at")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
     supabase
       .from("import_jobs")
-      .select("*")
+      .select("id, user_id, account_id, file_name, file_format, status, total_parsed, total_imported, total_duplicates, error_log, created_at, updated_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
   ]);

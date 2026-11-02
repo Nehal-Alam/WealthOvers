@@ -20,8 +20,8 @@ export default async function GoalsPage() {
     .from("financial_goals")
     .select(
       `
-      *,
-      contributions:goal_contributions(*)
+      id, name, target_amount, current_amount, target_date, category, is_completed, notes, created_at,
+      contributions:goal_contributions(id, goal_id, amount, contribution_date, notes)
     `
     )
     .eq("user_id", user.id)

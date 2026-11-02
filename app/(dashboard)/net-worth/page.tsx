@@ -23,7 +23,7 @@ export default async function NetWorthPage() {
   const monthStart = startOfMonth(now).toISOString();
   const monthEnd = endOfMonth(now).toISOString();
 
-  // Parallelize independent asset, liability, credit card, and summary queries
+  // Parallelize independent asset, liability, credit card, and summary queries with explicit column selection
   const [
     accountsResult,
     investmentsResult,
@@ -33,12 +33,30 @@ export default async function NetWorthPage() {
     creditCardsResult,
     summaryRpcResult,
   ] = await Promise.all([
-    supabase.from("accounts").select("*").eq("user_id", user.id),
-    supabase.from("investments").select("*").eq("user_id", user.id),
-    supabase.from("assets").select("*").eq("user_id", user.id),
-    supabase.from("loans").select("*").eq("user_id", user.id),
-    supabase.from("liabilities").select("*").eq("user_id", user.id),
-    supabase.from("credit_cards").select("*").eq("user_id", user.id),
+    supabase
+      .from("accounts")
+      .select("id, user_id, name, color, icon, account_type, initial_balance, current_balance, currency, institution_name, account_number_masked, is_archived, is_active, created_at, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("investments")
+      .select("id, user_id, account_id, name, symbol, asset_type, broker_name, total_quantity, average_buy_price, total_invested_amount, current_nav_or_price, current_valuation, currency, notes, last_price_update_at, created_at, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("assets")
+      .select("id, user_id, name, category, purchase_price, current_valuation, purchase_date, notes, created_at, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("loans")
+      .select("id, user_id, account_id, lender_or_borrower_name, loan_type, principal_amount, outstanding_balance, annual_interest_rate, tenure_months, monthly_emi, start_date, maturity_date, is_active, notes, created_at, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("liabilities")
+      .select("id, user_id, name, category, total_amount, outstanding_amount, due_date, interest_rate, notes, created_at, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("credit_cards")
+      .select("id, user_id, account_id, card_name, issuer_name, last_four_digits, credit_limit, current_outstanding, payment_due_day, statement_date_day, apr_percentage, created_at, updated_at")
+      .eq("user_id", user.id),
     supabase.rpc("get_dashboard_summary", {
       p_user_id: user.id,
       p_start_date: monthStart,

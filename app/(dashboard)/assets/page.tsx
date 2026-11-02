@@ -18,16 +18,16 @@ export default async function AssetsPage() {
 
   const supabase = await createClient();
 
-  // Concurrently fetch fixed assets and external liabilities in parallel
+  // Concurrently fetch fixed assets and external liabilities in parallel with explicit column selections
   const [assetsResult, liabilitiesResult] = await Promise.all([
     supabase
       .from("assets")
-      .select("*")
+      .select("id, user_id, name, category, purchase_price, current_valuation, purchase_date, notes, created_at, updated_at")
       .eq("user_id", user.id)
       .order("current_valuation", { ascending: false }),
     supabase
       .from("liabilities")
-      .select("*")
+      .select("id, user_id, name, category, total_amount, outstanding_amount, due_date, interest_rate, notes, created_at, updated_at")
       .eq("user_id", user.id)
       .order("outstanding_amount", { ascending: false }),
   ]);

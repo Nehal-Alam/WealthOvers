@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: settingsData } = await supabase
     .from("user_settings")
-    .select("*")
+    .select("id, currency, locale, financial_year_start_month, timezone, is_privacy_mode, theme_preference")
     .eq("user_id", user.id)
     .single();
 

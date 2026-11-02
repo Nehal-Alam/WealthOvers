@@ -19,16 +19,16 @@ export default async function CategoriesPage() {
 
   const supabase = await createClient();
 
-  // Fetch categories, subcategories, and rules in parallel
+  // Fetch categories, subcategories, and rules in parallel with explicit column selections
   const [categoriesRes, rulesRes] = await Promise.all([
     supabase
       .from("categories")
-      .select("*, subcategories(*)")
+      .select("id, user_id, name, color, icon, type, is_system, created_at, updated_at, subcategories(id, category_id, name, created_at, updated_at)")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
     supabase
       .from("categorization_rules")
-      .select("*")
+      .select("id, user_id, keyword_pattern, match_field, target_category_id, target_subcategory_id, priority, created_at, updated_at")
       .eq("user_id", user.id)
       .order("priority", { ascending: false }),
   ]);

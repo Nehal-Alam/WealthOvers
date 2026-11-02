@@ -18,15 +18,16 @@ export default async function DevicesPage() {
 
   const supabase = await createClient();
 
+  // Fetch devices and sync logs with explicit column selections
   const [devicesRes, syncLogsRes] = await Promise.all([
     supabase
       .from("devices")
-      .select("*")
+      .select("id, user_id, device_name, device_model, app_version, status, last_sync_at, created_at, updated_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("sync_logs")
-      .select("*")
+      .select("id, user_id, device_id, sync_status, records_received, records_ingested, records_flagged_for_review, error_message, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(30),

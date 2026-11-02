@@ -31,7 +31,8 @@ export default async function ReportsPage() {
       `
       )
       .eq("user_id", user.id)
-      .order("transaction_date", { ascending: false }),
+      .order("transaction_date", { ascending: false })
+      .limit(1500),
 
     supabase
       .from("accounts")
