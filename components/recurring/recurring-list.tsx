@@ -138,7 +138,7 @@ export function RecurringList({
     }
 
     return { monthlyExpenses: exp, monthlyIncome: inc, activeCount: count };
-  }, [recurringRules]);
+  }, [recurringRules, optimisticOverrides]);
 
   // Forward Cash Flow Projections (30, 60, 90 Days)
   const cashFlowForecast = React.useMemo(() => {
