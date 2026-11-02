@@ -25,7 +25,16 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateRecurringDialog } from "@/components/recurring/create-recurring-dialog";
+import dynamic from "next/dynamic";
+
+const CreateRecurringDialog = dynamic(
+  () =>
+    import("@/components/recurring/create-recurring-dialog").then(
+      (m) => m.CreateRecurringDialog
+    ),
+  { ssr: false }
+);
+
 import {
   toggleRecurringActiveAction,
   deleteRecurringAction,

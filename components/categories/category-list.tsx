@@ -20,9 +20,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreateCategoryDialog } from "@/components/categories/create-category-dialog";
-import { EditCategoryDialog } from "@/components/categories/edit-category-dialog";
-import { CreateSubcategoryDialog } from "@/components/categories/create-subcategory-dialog";
+import dynamic from "next/dynamic";
+
+const CreateCategoryDialog = dynamic(
+  () =>
+    import("@/components/categories/create-category-dialog").then(
+      (m) => m.CreateCategoryDialog
+    ),
+  { ssr: false }
+);
+
+const EditCategoryDialog = dynamic(
+  () =>
+    import("@/components/categories/edit-category-dialog").then(
+      (m) => m.EditCategoryDialog
+    ),
+  { ssr: false }
+);
+
+const CreateSubcategoryDialog = dynamic(
+  () =>
+    import("@/components/categories/create-subcategory-dialog").then(
+      (m) => m.CreateSubcategoryDialog
+    ),
+  { ssr: false }
+);
+
 import {
   deleteCategoryAction,
   deleteSubcategoryAction,

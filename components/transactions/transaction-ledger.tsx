@@ -41,8 +41,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreateTransactionDialog } from "@/components/transactions/create-transaction-dialog";
-import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
+import dynamic from "next/dynamic";
+
+const CreateTransactionDialog = dynamic(
+  () =>
+    import("@/components/transactions/create-transaction-dialog").then(
+      (m) => m.CreateTransactionDialog
+    ),
+  { ssr: false }
+);
+
+const EditTransactionDialog = dynamic(
+  () =>
+    import("@/components/transactions/edit-transaction-dialog").then(
+      (m) => m.EditTransactionDialog
+    ),
+  { ssr: false }
+);
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { TransactionMobileFeed } from "@/components/transactions/transaction-mobile-feed";
 import { MetricCard } from "@/components/financial/metric-card";

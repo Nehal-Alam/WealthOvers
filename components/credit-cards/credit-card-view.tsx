@@ -17,13 +17,36 @@ import { toast } from "sonner";
 import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import dynamic from "next/dynamic";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateCreditCardDialog } from "@/components/credit-cards/create-credit-card-dialog";
-import { RecordStatementDialog } from "@/components/credit-cards/record-statement-dialog";
-import { TransferFundsDialog } from "@/components/accounts/transfer-funds-dialog";
+
+const CreateCreditCardDialog = dynamic(
+  () =>
+    import("@/components/credit-cards/create-credit-card-dialog").then(
+      (m) => m.CreateCreditCardDialog
+    ),
+  { ssr: false }
+);
+
+const RecordStatementDialog = dynamic(
+  () =>
+    import("@/components/credit-cards/record-statement-dialog").then(
+      (m) => m.RecordStatementDialog
+    ),
+  { ssr: false }
+);
+
+const TransferFundsDialog = dynamic(
+  () =>
+    import("@/components/accounts/transfer-funds-dialog").then(
+      (m) => m.TransferFundsDialog
+    ),
+  { ssr: false }
+);
+
 import { settleCreditCardStatementAction } from "@/app/(dashboard)/credit-cards/actions";
 import { addMoney, subtractMoney } from "@/lib/calculations/financial";
 

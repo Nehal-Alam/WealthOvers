@@ -42,13 +42,35 @@ import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import dynamic from "next/dynamic";
 import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/financial/metric-card";
 import { MoneyDisplay } from "@/components/financial/money-display";
-import { TransferFundsDialog } from "@/components/accounts/transfer-funds-dialog";
-import { CreateAccountDialog } from "@/components/accounts/create-account-dialog";
-import { CreateInvestmentDialog } from "@/components/investments/create-investment-dialog";
 import { useUIStore } from "@/stores/ui-store";
+
+const TransferFundsDialog = dynamic(
+  () =>
+    import("@/components/accounts/transfer-funds-dialog").then(
+      (m) => m.TransferFundsDialog
+    ),
+  { ssr: false }
+);
+
+const CreateAccountDialog = dynamic(
+  () =>
+    import("@/components/accounts/create-account-dialog").then(
+      (m) => m.CreateAccountDialog
+    ),
+  { ssr: false }
+);
+
+const CreateInvestmentDialog = dynamic(
+  () =>
+    import("@/components/investments/create-investment-dialog").then(
+      (m) => m.CreateInvestmentDialog
+    ),
+  { ssr: false }
+);
 import {
   Dialog,
   DialogContent,

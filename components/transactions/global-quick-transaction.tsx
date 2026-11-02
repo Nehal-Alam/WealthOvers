@@ -1,9 +1,17 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useUIStore } from "@/stores/ui-store";
-import { CreateTransactionDialog } from "@/components/transactions/create-transaction-dialog";
 import { Tables } from "@/types/database";
+
+const CreateTransactionDialog = dynamic(
+  () =>
+    import("@/components/transactions/create-transaction-dialog").then(
+      (mod) => mod.CreateTransactionDialog
+    ),
+  { ssr: false }
+);
 
 interface GlobalQuickTransactionProps {
   accounts: Tables<"accounts">[];
@@ -16,6 +24,10 @@ export function GlobalQuickTransaction({
 }: GlobalQuickTransactionProps) {
   const { isQuickTransactionOpen, quickTransactionType, closeQuickTransaction } =
     useUIStore();
+
+  if (!isQuickTransactionOpen) {
+    return null;
+  }
 
   return (
     <CreateTransactionDialog

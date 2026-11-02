@@ -23,7 +23,16 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateBudgetDialog } from "@/components/budgets/create-budget-dialog";
+import dynamic from "next/dynamic";
+
+const CreateBudgetDialog = dynamic(
+  () =>
+    import("@/components/budgets/create-budget-dialog").then(
+      (m) => m.CreateBudgetDialog
+    ),
+  { ssr: false }
+);
+
 import { deleteBudgetAction } from "@/app/(dashboard)/budgets/actions";
 import {
   calculateBudgetUtilization,

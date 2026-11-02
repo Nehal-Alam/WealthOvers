@@ -13,10 +13,33 @@ import {
 } from "lucide-react";
 
 import { Tables } from "@/types/database";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { CreateAccountDialog } from "@/components/accounts/create-account-dialog";
-import { EditAccountDialog } from "@/components/accounts/edit-account-dialog";
-import { TransferFundsDialog } from "@/components/accounts/transfer-funds-dialog";
+
+const CreateAccountDialog = dynamic(
+  () =>
+    import("@/components/accounts/create-account-dialog").then(
+      (m) => m.CreateAccountDialog
+    ),
+  { ssr: false }
+);
+
+const EditAccountDialog = dynamic(
+  () =>
+    import("@/components/accounts/edit-account-dialog").then(
+      (m) => m.EditAccountDialog
+    ),
+  { ssr: false }
+);
+
+const TransferFundsDialog = dynamic(
+  () =>
+    import("@/components/accounts/transfer-funds-dialog").then(
+      (m) => m.TransferFundsDialog
+    ),
+  { ssr: false }
+);
+
 import { AccountCard } from "@/components/accounts/account-card";
 import { MetricCard } from "@/components/financial/metric-card";
 import { toDecimal, subtractMoney, addMoney } from "@/lib/calculations/financial";

@@ -20,10 +20,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import dynamic from "next/dynamic";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
-import { CreateLiabilityDialog } from "@/components/assets/create-liability-dialog";
+
+const CreateAssetDialog = dynamic(
+  () =>
+    import("@/components/assets/create-asset-dialog").then(
+      (m) => m.CreateAssetDialog
+    ),
+  { ssr: false }
+);
+
+const CreateLiabilityDialog = dynamic(
+  () =>
+    import("@/components/assets/create-liability-dialog").then(
+      (m) => m.CreateLiabilityDialog
+    ),
+  { ssr: false }
+);
+
 import { deleteAssetAction, deleteLiabilityAction } from "@/app/(dashboard)/assets/actions";
 import { addMoney, subtractMoney } from "@/lib/calculations/financial";
 

@@ -20,11 +20,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import dynamic from "next/dynamic";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateLoanDialog } from "@/components/loans/create-loan-dialog";
-import { LoanAmortizationModal } from "@/components/loans/loan-amortization-modal";
-import { RecordLoanPaymentDialog } from "@/components/loans/record-loan-payment-dialog";
+
+const CreateLoanDialog = dynamic(
+  () =>
+    import("@/components/loans/create-loan-dialog").then(
+      (m) => m.CreateLoanDialog
+    ),
+  { ssr: false }
+);
+
+const LoanAmortizationModal = dynamic(
+  () =>
+    import("@/components/loans/loan-amortization-modal").then(
+      (m) => m.LoanAmortizationModal
+    ),
+  { ssr: false }
+);
+
+const RecordLoanPaymentDialog = dynamic(
+  () =>
+    import("@/components/loans/record-loan-payment-dialog").then(
+      (m) => m.RecordLoanPaymentDialog
+    ),
+  { ssr: false }
+);
+
 import { deleteLoanAction } from "@/app/(dashboard)/loans/actions";
 import { addMoney, subtractMoney } from "@/lib/calculations/financial";
 

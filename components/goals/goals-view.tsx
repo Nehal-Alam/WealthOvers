@@ -21,8 +21,24 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateGoalDialog } from "@/components/goals/create-goal-dialog";
-import { ContributeGoalDialog } from "@/components/goals/contribute-goal-dialog";
+import dynamic from "next/dynamic";
+
+const CreateGoalDialog = dynamic(
+  () =>
+    import("@/components/goals/create-goal-dialog").then(
+      (m) => m.CreateGoalDialog
+    ),
+  { ssr: false }
+);
+
+const ContributeGoalDialog = dynamic(
+  () =>
+    import("@/components/goals/contribute-goal-dialog").then(
+      (m) => m.ContributeGoalDialog
+    ),
+  { ssr: false }
+);
+
 import { deleteGoalAction } from "@/app/(dashboard)/goals/actions";
 import {
   addMoney,

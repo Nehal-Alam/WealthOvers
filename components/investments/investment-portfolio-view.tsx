@@ -23,11 +23,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import dynamic from "next/dynamic";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
-import { CreateInvestmentDialog } from "@/components/investments/create-investment-dialog";
-import { UpdatePriceDialog } from "@/components/investments/update-price-dialog";
-import { CSVImportHoldingsDialog } from "@/components/investments/csv-import-holdings-dialog";
+
+const CreateInvestmentDialog = dynamic(
+  () =>
+    import("@/components/investments/create-investment-dialog").then(
+      (m) => m.CreateInvestmentDialog
+    ),
+  { ssr: false }
+);
+
+const UpdatePriceDialog = dynamic(
+  () =>
+    import("@/components/investments/update-price-dialog").then(
+      (m) => m.UpdatePriceDialog
+    ),
+  { ssr: false }
+);
+
+const CSVImportHoldingsDialog = dynamic(
+  () =>
+    import("@/components/investments/csv-import-holdings-dialog").then(
+      (m) => m.CSVImportHoldingsDialog
+    ),
+  { ssr: false }
+);
 import {
   calculateInvestmentReturns,
   addMoney,
