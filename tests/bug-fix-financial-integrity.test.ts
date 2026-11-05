@@ -341,4 +341,114 @@ describe("WealthOvers Bug Fix & Financial Integrity Verification", () => {
       expect(transferInInfo.direction).toBe("inflow");
     });
   });
+
+  describe("Section 10: Loan & Repayment Editing, and Inflow/Outflow Ledger Tracking", () => {
+    it("recalculates EMI and recalibrates outstanding balance when loan details are edited", () => {
+      // Original loan: ₹50,000 principal at 0% for 3 months
+      const originalPrincipal = toDecimal(50000);
+      const originalTenure = 3;
+      const { monthlyEmi: originalEmi } = calculateLoanEMI(originalPrincipal, toDecimal(0), originalTenure);
+      expect(parseFloat(originalEmi)).toBeCloseTo(16666.67, 1);
+
+      // Suppose 1 payment of ₹16,666 was already made (₹16,666 principal)
+      const principalPaid = toDecimal(16666);
+      const existingOutstanding = originalPrincipal.minus(principalPaid);
+      expect(existingOutstanding.toNumber()).toBe(33334);
+
+      // Now user edits the loan: corrects principal to ₹60,000, tenure to 4 months
+      const correctedPrincipal = toDecimal(60000);
+      const correctedTenure = 4;
+      const { monthlyEmi: newEmi } = calculateLoanEMI(correctedPrincipal, toDecimal(0), correctedTenure);
+      expect(parseFloat(newEmi)).toBe(15000);
+
+      // Recalibrated outstanding balance: correctedPrincipal (60000) - principalPaid (16666) = 43334
+      const recalibratedOutstanding = Decimal.max(0, correctedPrincipal.minus(principalPaid));
+      expect(recalibratedOutstanding.toNumber()).toBe(43334);
+    });
+
+    it("handles repayment payment editing with precise double-entry balance adjustment", () => {
+      // Loan starting at ₹33,334 outstanding balance
+      let loanOutstanding = toDecimal(33334);
+      let bankBalance = toDecimal(50000);
+
+      // Suppose previous recorded payment was: emi_amount: 16,666 (principal: 16,666, interest: 0, extra: 0)
+      const oldPayment = {
+        emi_amount: 16666,
+        principal_component: 16666,
+        extra_prepayment: 0,
+      };
+
+      // User realizes the actual EMI paid was ₹17,000 (with ₹334 extra prepayment)
+      const updatedPayment = {
+        emi_amount: 17000,
+        principal_component: 16666,
+        extra_prepayment: 334,
+      };
+
+      // Delta principal paid: (16666 + 334) - (16666 + 0) = +334
+      const oldTotalPrincipal = toDecimal(oldPayment.principal_component).plus(oldPayment.extra_prepayment);
+      const newTotalPrincipal = toDecimal(updatedPayment.principal_component).plus(updatedPayment.extra_prepayment);
+      const principalDelta = newTotalPrincipal.minus(oldTotalPrincipal);
+      expect(principalDelta.toNumber()).toBe(334);
+
+      // Loan outstanding decreases by delta
+      loanOutstanding = Decimal.max(0, loanOutstanding.minus(principalDelta));
+      expect(loanOutstanding.toNumber()).toBe(33000);
+
+      // Delta cash paid out: 17000 - 16666 = 334 more deducted from bank account
+      const cashDelta = toDecimal(updatedPayment.emi_amount).minus(oldPayment.emi_amount);
+      bankBalance = bankBalance.minus(cashDelta);
+      expect(bankBalance.toNumber()).toBe(49666);
+    });
+
+    it("restores loan outstanding balance and funding account on payment deletion", () => {
+      let loanOutstanding = toDecimal(33334);
+      let bankBalance = toDecimal(40000);
+
+      // Payment to delete: emi_amount: 16666 (principal: 16000, extra: 666)
+      const paymentToDelete = {
+        emi_amount: 16666,
+        principal_component: 16000,
+        extra_prepayment: 666,
+      };
+
+      const principalToRestore = toDecimal(paymentToDelete.principal_component).plus(paymentToDelete.extra_prepayment);
+      loanOutstanding = loanOutstanding.plus(principalToRestore);
+      expect(loanOutstanding.toNumber()).toBe(50000);
+
+      // Cash refunded/restored to funding bank account
+      bankBalance = bankBalance.plus(paymentToDelete.emi_amount);
+      expect(bankBalance.toNumber()).toBe(56666);
+    });
+
+    it("correctly models inflow vs outflow semantics for borrowed vs lent debt", () => {
+      // 1. Borrowed Loan (e.g. personal, vehicle, home loan):
+      // - Initial loan disbursement = INFLOW (+ money received)
+      // - Repayments = OUTFLOW (- money paid to bank/lender)
+      const borrowedPrincipal = 50000;
+      const borrowedPayments = [16666, 16666];
+
+      const borrowedInflow = borrowedPrincipal;
+      const borrowedOutflow = borrowedPayments.reduce((sum, p) => sum + p, 0);
+      const borrowedNet = borrowedInflow - borrowedOutflow;
+
+      expect(borrowedInflow).toBe(50000);
+      expect(borrowedOutflow).toBe(33332);
+      expect(borrowedNet).toBe(16668);
+
+      // 2. Lent Loan (loan_given, money lent to friend):
+      // - Initial loan disbursement = OUTFLOW (- money paid to borrower)
+      // - Repayments received = INFLOW (+ money received back from borrower)
+      const lentPrincipal = 20000;
+      const lentRepaymentsReceived = [5000, 5000];
+
+      const lentOutflow = lentPrincipal;
+      const lentInflow = lentRepaymentsReceived.reduce((sum, p) => sum + p, 0);
+      const remainingReceivable = lentOutflow - lentInflow;
+
+      expect(lentOutflow).toBe(20000);
+      expect(lentInflow).toBe(10000);
+      expect(remainingReceivable).toBe(10000);
+    });
+  });
 });

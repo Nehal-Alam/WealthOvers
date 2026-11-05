@@ -41,17 +41,27 @@ const TransferFundsDialog = dynamic(
   { ssr: false }
 );
 
+const AccountHistoryModal = dynamic(
+  () =>
+    import("@/components/accounts/account-history-modal").then(
+      (m) => m.AccountHistoryModal
+    ),
+  { ssr: false }
+);
+
 import { AccountCard } from "@/components/accounts/account-card";
 import { MetricCard } from "@/components/financial/metric-card";
 import { subtractMoney, addMoney } from "@/lib/calculations/financial";
 
 interface AccountGridProps {
   accounts: Tables<"accounts">[];
+  transactions?: any[];
 }
 
-export function AccountGrid({ accounts }: AccountGridProps) {
+export function AccountGrid({ accounts, transactions = [] }: AccountGridProps) {
   const [tab, setTab] = React.useState<"active" | "archived">("active");
   const [editingAccount, setEditingAccount] = React.useState<Tables<"accounts"> | null>(null);
+  const [historyAccount, setHistoryAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [transferSourceAccount, setTransferSourceAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [isTransferOpen, setIsTransferOpen] = React.useState(false);
 
@@ -213,6 +223,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
                 allAccounts={accounts}
                 onEdit={setEditingAccount}
                 onTransfer={handleOpenTransfer}
+                onViewHistory={setHistoryAccount}
               />
             ))}
           </div>
@@ -236,6 +247,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
                     allAccounts={accounts}
                     onEdit={setEditingAccount}
                     onTransfer={handleOpenTransfer}
+                    onViewHistory={setHistoryAccount}
                   />
                 ))}
               </div>
@@ -259,6 +271,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
                     allAccounts={accounts}
                     onEdit={setEditingAccount}
                     onTransfer={handleOpenTransfer}
+                    onViewHistory={setHistoryAccount}
                   />
                 ))}
               </div>
@@ -282,6 +295,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
                     allAccounts={accounts}
                     onEdit={setEditingAccount}
                     onTransfer={handleOpenTransfer}
+                    onViewHistory={setHistoryAccount}
                   />
                 ))}
               </div>
@@ -305,6 +319,7 @@ export function AccountGrid({ accounts }: AccountGridProps) {
                     allAccounts={accounts}
                     onEdit={setEditingAccount}
                     onTransfer={handleOpenTransfer}
+                    onViewHistory={setHistoryAccount}
                   />
                 ))}
               </div>
@@ -328,6 +343,13 @@ export function AccountGrid({ accounts }: AccountGridProps) {
           trigger={<span className="hidden" />}
         />
       )}
+      {/* Account Running Balance History Modal */}
+      <AccountHistoryModal
+        account={historyAccount}
+        transactions={transactions}
+        open={!!historyAccount}
+        onOpenChange={(open) => !open && setHistoryAccount(null)}
+      />
     </div>
   );
 }

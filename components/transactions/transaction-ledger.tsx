@@ -20,6 +20,8 @@ import {
   ListFilter,
   Layers,
   Coins,
+  CreditCard,
+  HandCoins,
 } from "lucide-react";
 import {
   isThisMonth,
@@ -62,6 +64,14 @@ const EditTransactionDialog = dynamic(
   { ssr: false }
 );
 
+const TransactionDetailModal = dynamic(
+  () =>
+    import("@/components/transactions/transaction-detail-modal").then(
+      (m) => m.TransactionDetailModal
+    ),
+  { ssr: false }
+);
+
 import { TransactionTimeline } from "@/components/transactions/transaction-timeline";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { TransactionMobileFeed } from "@/components/transactions/transaction-mobile-feed";
@@ -85,6 +95,7 @@ export function TransactionLedger({
   categories,
 }: TransactionLedgerProps) {
   const [editingTransaction, setEditingTransaction] = React.useState<any | null>(null);
+  const [inspectingTransaction, setInspectingTransaction] = React.useState<any | null>(null);
 
   // View Mode: Timeline (Leftovers default) vs Table
   const [viewMode, setViewMode] = React.useState<"timeline" | "table">("timeline");
@@ -143,26 +154,51 @@ export function TransactionLedger({
       if (viewTab === "needs_review") {
         if (txn.is_reviewed !== false && txn.category_id) return false;
       } else if (viewTab === "expense") {
-        if (txn.transaction_type !== "expense") return false;
+        if (txn.transaction_type !== "expense" && txn.transaction_type !== "bank_charges") return false;
       } else if (viewTab === "income") {
-        if (txn.transaction_type !== "income") return false;
+        if (txn.transaction_type !== "income" && txn.transaction_type !== "interest") return false;
       } else if (viewTab === "investment") {
-        if (txn.transaction_type !== "investment_buy" && txn.transaction_type !== "investment_sell") return false;
+        if (
+          txn.transaction_type !== "investment_buy" &&
+          txn.transaction_type !== "investment_sell" &&
+          txn.transaction_type !== "sip"
+        ) {
+          return false;
+        }
+      } else if (viewTab === "debt") {
+        const debtTypes = [
+          "borrowing",
+          "borrowing_repayment",
+          "lending",
+          "lending_collection",
+          "loan_disbursement",
+          "loan_repayment",
+        ];
+        if (!debtTypes.includes(txn.transaction_type)) return false;
+      } else if (viewTab === "card") {
+        if (
+          txn.transaction_type !== "credit_card_purchase" &&
+          txn.transaction_type !== "credit_card_repayment"
+        ) {
+          return false;
+        }
       } else if (viewTab === "transfer") {
         if (txn.transaction_type !== "transfer") return false;
       } else if (viewTab === "refund") {
         if (txn.transaction_type !== "refund") return false;
       }
 
-      // 2. Search Query (matches description, ref, notes, merchant, tags)
+      // 2. Search Query (matches description, transaction_number, person, ref, notes, tags)
       if (query) {
         const descMatch = txn.description?.toLowerCase().includes(query);
+        const numMatch = txn.transaction_number?.toLowerCase().includes(query);
+        const personMatch = txn.merchant_or_person?.toLowerCase().includes(query);
         const refMatch = txn.reference_number?.toLowerCase().includes(query);
         const notesMatch = txn.notes?.toLowerCase().includes(query);
         const tagMatch = txn.tags?.some((t: string) => t.toLowerCase().includes(query));
         const accountMatch = txn.account?.name?.toLowerCase().includes(query);
         const catMatch = txn.category?.name?.toLowerCase().includes(query);
-        if (!descMatch && !refMatch && !notesMatch && !tagMatch && !accountMatch && !catMatch) {
+        if (!descMatch && !numMatch && !personMatch && !refMatch && !notesMatch && !tagMatch && !accountMatch && !catMatch) {
           return false;
         }
       }
@@ -550,6 +586,32 @@ export function TransactionLedger({
 
         <button
           type="button"
+          onClick={() => setViewTab("debt")}
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "debt"
+              ? "bg-primary text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
+        >
+          <HandCoins className="h-3 w-3" />
+          <span>Debt & Loans</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setViewTab("card")}
+          className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
+            viewTab === "card"
+              ? "bg-primary text-surface font-semibold shadow-2xs"
+              : "bg-surface-secondary/60 text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+          }`}
+        >
+          <CreditCard className="h-3 w-3" />
+          <span>Credit Cards</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setViewTab("transfer")}
           className={`flex items-center gap-1.5 h-8 px-3 text-xs rounded-xl font-medium transition-all shrink-0 ${
             viewTab === "transfer"
@@ -607,12 +669,22 @@ export function TransactionLedger({
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="expense">Expense</SelectItem>
               <SelectItem value="income">Income</SelectItem>
-              <SelectItem value="investment_buy">Investment (Buy / SIP)</SelectItem>
-              <SelectItem value="investment_sell">Investment (Sell)</SelectItem>
+              <SelectItem value="investment_buy">Investment Buy</SelectItem>
+              <SelectItem value="investment_sell">Investment Sell</SelectItem>
+              <SelectItem value="sip">SIP Installment</SelectItem>
               <SelectItem value="transfer">Transfer</SelectItem>
-              <SelectItem value="refund">Refund</SelectItem>
-              <SelectItem value="loan_repayment">Loan Repayment</SelectItem>
+              <SelectItem value="borrowing">Borrowing (Money In)</SelectItem>
+              <SelectItem value="borrowing_repayment">Borrowing Repayment (Money Out)</SelectItem>
+              <SelectItem value="lending">Lending (Money Out)</SelectItem>
+              <SelectItem value="lending_collection">Lending Collection (Money In)</SelectItem>
+              <SelectItem value="credit_card_purchase">Credit Card Purchase</SelectItem>
+              <SelectItem value="credit_card_repayment">Credit Card Repayment</SelectItem>
               <SelectItem value="loan_disbursement">Loan Disbursement</SelectItem>
+              <SelectItem value="loan_repayment">Loan Repayment</SelectItem>
+              <SelectItem value="interest">Interest</SelectItem>
+              <SelectItem value="bank_charges">Bank Charges</SelectItem>
+              <SelectItem value="adjustment">Balance Adjustment</SelectItem>
+              <SelectItem value="refund">Refund</SelectItem>
             </SelectContent>
           </Select>
 
@@ -782,6 +854,7 @@ export function TransactionLedger({
               <TransactionTimeline
                 transactions={paginatedTransactions}
                 onEdit={setEditingTransaction}
+                onInspect={setInspectingTransaction}
                 selectedIds={selectedIds}
                 onToggleSelect={handleToggleSelect}
                 selectedAccountId={selectedAccountId}
@@ -790,6 +863,7 @@ export function TransactionLedger({
               <TransactionTable
                 transactions={paginatedTransactions}
                 onEdit={setEditingTransaction}
+                onInspect={setInspectingTransaction}
                 selectedIds={selectedIds}
                 onToggleSelect={handleToggleSelect}
                 onToggleSelectAll={handleToggleSelectAll}
@@ -804,6 +878,7 @@ export function TransactionLedger({
             <TransactionMobileFeed
               transactions={paginatedTransactions}
               onEdit={setEditingTransaction}
+              onInspect={setInspectingTransaction}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               selectedAccountId={selectedAccountId}
@@ -863,6 +938,25 @@ export function TransactionLedger({
         categories={categories}
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
+      />
+
+      {/* Transaction Details & Double-Entry Ledger Modal */}
+      <TransactionDetailModal
+        transaction={inspectingTransaction}
+        open={!!inspectingTransaction}
+        onOpenChange={(open) => !open && setInspectingTransaction(null)}
+        onEdit={(txn) => {
+          setInspectingTransaction(null);
+          setEditingTransaction(txn);
+        }}
+        onSelectRelatedTransaction={(relatedId) => {
+          const related = transactions.find((t) => t.id === relatedId);
+          if (related) {
+            setInspectingTransaction(related);
+          } else {
+            toast.info("Related transaction is not in current view list");
+          }
+        }}
       />
     </div>
   );

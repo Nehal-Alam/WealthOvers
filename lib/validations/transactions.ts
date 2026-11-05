@@ -10,6 +10,16 @@ export const transactionTypeValues = [
   "investment_sell",
   "loan_disbursement",
   "loan_repayment",
+  "borrowing",
+  "borrowing_repayment",
+  "lending",
+  "lending_collection",
+  "credit_card_purchase",
+  "credit_card_repayment",
+  "sip",
+  "interest",
+  "adjustment",
+  "bank_charges",
 ] as const;
 
 export const transactionSourceValues = [
@@ -38,6 +48,12 @@ export const createTransactionSchema = z
     description: z.string().min(1, "Description is required").max(255),
     notes: z.string().max(1000).optional().nullable(),
     reference_number: z.string().max(100).optional().nullable(),
+    merchant_or_person: z.string().max(255).optional().nullable(),
+    payment_method: z.string().max(50).optional().nullable(),
+    transaction_subtype: z.string().max(50).optional().nullable(),
+    investment_id: z.string().uuid().optional().nullable(),
+    credit_card_id: z.string().uuid().optional().nullable(),
+    loan_id: z.string().uuid().optional().nullable(),
     tags: z.array(z.string()).default([]),
   })
   .refine(
@@ -142,5 +158,13 @@ export const markTransactionsReviewedSchema = z.object({
 });
 
 export type MarkTransactionsReviewedInput = z.infer<typeof markTransactionsReviewedSchema>;
+
+export const reverseTransactionSchema = z.object({
+  transaction_id: z.string().uuid("Invalid transaction ID"),
+  reason: z.string().min(2, "Please provide a reason for the reversal").max(500),
+});
+
+export type ReverseTransactionInput = z.infer<typeof reverseTransactionSchema>;
+
 
 

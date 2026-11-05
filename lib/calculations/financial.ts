@@ -1801,6 +1801,45 @@ export function getTransactionDisplayInfo(
     };
   }
 
+  if (type === "interest") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "income",
+      badgeLabel: "Interest Income",
+    };
+  }
+
+  if (type === "borrowing") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "loan_disbursement",
+      badgeLabel: "Borrowing",
+    };
+  }
+
+  if (type === "lending_collection") {
+    return {
+      direction: "inflow",
+      isDebit: false,
+      isCredit: true,
+      isTransfer: false,
+      displaySign: "+",
+      textColorClass: "text-success",
+      badgeVariant: "loan_repayment",
+      badgeLabel: "Lending Collection",
+    };
+  }
+
   if (type === "refund") {
     return {
       direction: "inflow",
@@ -1841,6 +1880,71 @@ export function getTransactionDisplayInfo(
     };
   }
 
+  if (type === "bank_charges") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "expense",
+      badgeLabel: "Bank Charges",
+    };
+  }
+
+  if (type === "borrowing_repayment") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "loan_repayment",
+      badgeLabel: "Borrowing Repayment",
+    };
+  }
+
+  if (type === "lending") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "loan_disbursement",
+      badgeLabel: "Money Lent",
+    };
+  }
+
+  if (type === "credit_card_purchase") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "expense",
+      badgeLabel: "Credit Card Purchase",
+    };
+  }
+
+  if (type === "credit_card_repayment") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "transfer",
+      badgeLabel: "Card Repayment",
+    };
+  }
+
   if (type === "investment_buy") {
     const isSip = desc.includes("sip") || notes.includes("sip");
     return {
@@ -1852,6 +1956,19 @@ export function getTransactionDisplayInfo(
       textColorClass: "text-danger",
       badgeVariant: "investment_buy",
       badgeLabel: isSip ? "SIP Installment" : "Investment Buy",
+    };
+  }
+
+  if (type === "sip") {
+    return {
+      direction: "outflow",
+      isDebit: true,
+      isCredit: false,
+      isTransfer: false,
+      displaySign: "-",
+      textColorClass: "text-danger",
+      badgeVariant: "investment_buy",
+      badgeLabel: "SIP Installment",
     };
   }
 

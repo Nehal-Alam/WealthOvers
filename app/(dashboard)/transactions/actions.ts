@@ -9,13 +9,18 @@ import {
   bulkUpdateCategorySchema,
   bulkDeleteTransactionsSchema,
   markTransactionsReviewedSchema,
+  reverseTransactionSchema,
   CreateTransactionInput,
   UpdateTransactionInput,
   CreateSplitTransactionInput,
   BulkUpdateCategoryInput,
   BulkDeleteTransactionsInput,
   MarkTransactionsReviewedInput,
+  ReverseTransactionInput,
 } from "@/lib/validations/transactions";
+import { FinancialTransactionService } from "@/lib/services/financial-transaction-service";
+import { toDecimal } from "@/lib/calculations/financial";
+import { Tables } from "@/types/database";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -34,32 +39,31 @@ export async function createTransactionAction(input: CreateTransactionInput): Pr
       return { success: false, error: "Unauthorized. Please log in." };
     }
 
-    const amountNum = parseFloat(validated.amount);
+    const result = await FinancialTransactionService.createFinancialTransaction(supabase, {
+      userId: user.id,
+      transactionType: validated.transaction_type,
+      transactionSubtype: validated.transaction_subtype || undefined,
+      amount: validated.amount,
+      currency: validated.currency,
+      transactionDate: validated.transaction_date,
+      description: validated.description.trim(),
+      notes: validated.notes?.trim() || undefined,
+      accountId: validated.account_id,
+      destinationAccountId: validated.destination_account_id || undefined,
+      categoryId: validated.category_id || undefined,
+      subcategoryId: validated.subcategory_id || undefined,
+      referenceNumber: validated.reference_number?.trim() || undefined,
+      merchantOrPerson: validated.merchant_or_person?.trim() || undefined,
+      paymentMethod: validated.payment_method?.trim() || undefined,
+      investmentId: validated.investment_id || undefined,
+      creditCardId: validated.credit_card_id || undefined,
+      loanId: validated.loan_id || undefined,
+      tags: validated.tags,
+      sourceModule: "transactions",
+    });
 
-    const { data, error } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        account_id: validated.account_id,
-        destination_account_id: validated.destination_account_id || null,
-        category_id: validated.category_id || null,
-        subcategory_id: validated.subcategory_id || null,
-        amount: amountNum,
-        currency: validated.currency,
-        transaction_type: validated.transaction_type,
-        transaction_date: new Date(validated.transaction_date).toISOString(),
-        description: validated.description.trim(),
-        notes: validated.notes?.trim() || null,
-        reference_number: validated.reference_number?.trim() || null,
-        tags: validated.tags || [],
-        source: "manual",
-        is_reviewed: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
     revalidatePath("/transactions");
@@ -67,9 +71,47 @@ export async function createTransactionAction(input: CreateTransactionInput): Pr
     revalidatePath("/dashboard");
     revalidatePath("/budgets");
     revalidatePath("/reports");
-    return { success: true, message: "Transaction added successfully", data };
+    revalidatePath("/net-worth");
+    return { success: true, message: "Transaction recorded and posted to ledger", data: result.transaction };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to record transaction";
+    return { success: false, error: errorMsg };
+  }
+}
+
+export async function reverseTransactionAction(input: ReverseTransactionInput): Promise<ActionResult> {
+  try {
+    const validated = reverseTransactionSchema.parse(input);
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized. Please log in." };
+    }
+
+    const result = await FinancialTransactionService.reverseFinancialTransaction(
+      supabase,
+      validated.transaction_id,
+      user.id,
+      validated.reason
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    revalidatePath("/transactions");
+    revalidatePath("/accounts");
+    revalidatePath("/dashboard");
+    revalidatePath("/reports");
+    revalidatePath("/net-worth");
+    return {
+      success: true,
+      message: result.message || "Transaction reversed with immutable ledger audit trail",
+      data: result.transaction,
+    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to reverse transaction";
     return { success: false, error: errorMsg };
   }
 }
@@ -131,6 +173,39 @@ export async function deleteTransactionAction(id: string): Promise<ActionResult>
       return { success: false, error: "Unauthorized. Please log in." };
     }
 
+    // Fetch existing transaction and ledger entries to restore account balance
+    const { data: existingTx } = await supabase
+      .from("transactions")
+      .select("*, ledger_entries(*)")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (existingTx) {
+      const entries = (existingTx as any).ledger_entries as Tables<"ledger_entries">[] | undefined;
+      if (entries && entries.length > 0) {
+        for (const entry of entries) {
+          if (entry.account_id) {
+            const { data: acc } = await supabase
+              .from("accounts")
+              .select("id, current_balance")
+              .eq("id", entry.account_id)
+              .single();
+            if (acc) {
+              const curBal = toDecimal(acc.current_balance);
+              const amt = toDecimal(entry.amount);
+              // Reversing: if debited (money added), subtract; if credited (money deducted), add back
+              const restoredBal = entry.entry_type === "debit" ? curBal.minus(amt) : curBal.plus(amt);
+              await supabase
+                .from("accounts")
+                .update({ current_balance: restoredBal.toNumber(), updated_at: new Date().toISOString() })
+                .eq("id", acc.id);
+            }
+          }
+        }
+      }
+    }
+
     const { error } = await supabase
       .from("transactions")
       .delete()
@@ -146,7 +221,8 @@ export async function deleteTransactionAction(id: string): Promise<ActionResult>
     revalidatePath("/dashboard");
     revalidatePath("/budgets");
     revalidatePath("/reports");
-    return { success: true, message: "Transaction deleted successfully" };
+    revalidatePath("/net-worth");
+    return { success: true, message: "Transaction deleted and account balance restored successfully" };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to delete transaction";
     return { success: false, error: errorMsg };

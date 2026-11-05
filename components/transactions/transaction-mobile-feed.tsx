@@ -6,6 +6,7 @@ import { TransactionTimeline } from "@/components/transactions/transaction-timel
 interface TransactionMobileFeedProps {
   transactions: any[];
   onEdit: (transaction: any) => void;
+  onInspect?: (transaction: any) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   selectedAccountId?: string;
@@ -14,6 +15,7 @@ interface TransactionMobileFeedProps {
 export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
   transactions,
   onEdit,
+  onInspect,
   selectedIds,
   onToggleSelect,
   selectedAccountId,
@@ -22,6 +24,7 @@ export const TransactionMobileFeed = React.memo(function TransactionMobileFeed({
     <TransactionTimeline
       transactions={transactions}
       onEdit={onEdit}
+      onInspect={onInspect}
       selectedIds={selectedIds}
       onToggleSelect={onToggleSelect}
       selectedAccountId={selectedAccountId}

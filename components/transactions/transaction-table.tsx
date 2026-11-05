@@ -39,6 +39,7 @@ import { getTransactionDisplayInfo } from "@/lib/calculations/financial";
 interface TransactionTableProps {
   transactions: any[];
   onEdit: (transaction: any) => void;
+  onInspect?: (transaction: any) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: () => void;
@@ -49,6 +50,7 @@ interface TransactionTableProps {
 export const TransactionTable = React.memo(function TransactionTable({
   transactions,
   onEdit,
+  onInspect,
   selectedIds = new Set(),
   onToggleSelect,
   onToggleSelectAll,
@@ -173,13 +175,14 @@ export const TransactionTable = React.memo(function TransactionTable({
             return (
               <TableRow
                 key={txn.id}
-                className={`hover:bg-surface-secondary/40 transition-colors border-border/60 ${
+                onClick={() => onInspect?.(txn)}
+                className={`hover:bg-surface-secondary/50 transition-colors border-border/60 cursor-pointer ${
                   isSelected ? "bg-primary-soft/30 hover:bg-primary-soft/40" : ""
                 }`}
               >
                 {/* Select Checkbox */}
                 {onToggleSelect && (
-                  <TableCell className="px-3">
+                  <TableCell className="px-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -190,9 +193,16 @@ export const TransactionTable = React.memo(function TransactionTable({
                   </TableCell>
                 )}
 
-                {/* Date */}
+                {/* Date & Number */}
                 <TableCell className="font-mono text-xs text-text-secondary whitespace-nowrap">
-                  {format(new Date(txn.transaction_date), "dd MMM yyyy")}
+                  <div>
+                    <span className="block text-foreground font-medium">
+                      {format(new Date(txn.transaction_date), "dd MMM yyyy")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground block">
+                      {txn.transaction_number || `TXN-${txn.id.slice(0, 6)}`}
+                    </span>
+                  </div>
                 </TableCell>
 
                 {/* Type */}
@@ -280,7 +290,7 @@ export const TransactionTable = React.memo(function TransactionTable({
                 </TableCell>
 
                 {/* Actions */}
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -293,6 +303,10 @@ export const TransactionTable = React.memo(function TransactionTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-surface text-text-primary border-border">
+                      <DropdownMenuItem onClick={() => onInspect?.(txn)}>
+                        <Coins className="mr-2 h-4 w-4 text-primary" />
+                        <span className="font-medium text-primary">View Ledger & Details</span>
+                      </DropdownMenuItem>
                       {needsReview && (
                         <DropdownMenuItem onClick={() => handleMarkReviewed(txn.id)}>
                           <span>Mark as Reviewed</span>

@@ -11,6 +11,7 @@ import {
   RecordCreditCardRepaymentInput,
 } from "@/lib/validations/credit-cards";
 import { toDecimal } from "@/lib/calculations/financial";
+import { FinancialTransactionService } from "@/lib/services/financial-transaction-service";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -198,30 +199,28 @@ export async function recordCreditCardRepaymentAction(
     }
 
     const repayAmt = toDecimal(validated.amount);
-    const currentOutstanding = toDecimal(card.current_outstanding);
-    const newOutstanding = currentOutstanding.minus(repayAmt).clamp(0, Infinity);
+    const idempotencyKey = `cc_repay_${user.id}_${card.id}_${Date.now()}`;
 
-    // 3. Deduct from paying account
-    const newPayingBal = toDecimal(payingAccount.current_balance).minus(repayAmt);
-    await supabase
-      .from("accounts")
-      .update({
-        current_balance: newPayingBal.toNumber(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", payingAccount.id)
-      .eq("user_id", user.id);
+    const result = await FinancialTransactionService.createFinancialTransaction(supabase, {
+      userId: user.id,
+      transactionType: "credit_card_repayment",
+      amount: repayAmt.toNumber(),
+      currency: payingAccount.currency || "INR",
+      transactionDate: validated.payment_date,
+      description: `Credit Card Repayment: ${card.issuer_name} ${card.card_name}`,
+      notes: validated.notes?.trim() || undefined,
+      accountId: payingAccount.id,
+      destinationAccountId: card.account_id || undefined,
+      creditCardId: card.id,
+      idempotencyHash: idempotencyKey,
+      sourceModule: "credit_cards",
+    });
 
-    // 4. Update credit card current_outstanding
-    await supabase
-      .from("credit_cards")
-      .update({
-        current_outstanding: newOutstanding.toNumber(),
-      })
-      .eq("id", card.id)
-      .eq("user_id", user.id);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
 
-    // 5. Update linked card account if present (balance becomes less negative)
+    // Also update linked card account if present (balance becomes less negative)
     if (card.account_id) {
       const { data: cardAcc } = await supabase
         .from("accounts")
@@ -243,31 +242,16 @@ export async function recordCreditCardRepaymentAction(
       }
     }
 
-    // 6. Record transfer transaction (zero double expense)
-    const idempotencyKey = `cc_repay_${user.id}_${card.id}_${Date.now()}`;
-    await supabase.from("transactions").insert({
-      user_id: user.id,
-      account_id: payingAccount.id,
-      destination_account_id: card.account_id || null,
-      amount: repayAmt.toNumber(),
-      currency: payingAccount.currency || "INR",
-      transaction_type: "transfer",
-      transaction_date: new Date(validated.payment_date).toISOString(),
-      description: `Credit Card Repayment: ${card.issuer_name} ${card.card_name}`,
-      notes: validated.notes?.trim() || null,
-      source: "manual",
-      idempotency_hash: idempotencyKey,
-      is_reviewed: true,
-    });
-
     revalidatePath("/credit-cards");
     revalidatePath("/accounts");
     revalidatePath("/net-worth");
     revalidatePath("/dashboard");
+    revalidatePath("/transactions");
+    revalidatePath("/reports");
 
     return {
       success: true,
-      message: `Repayment of ₹${repayAmt.toString()} recorded successfully`,
+      message: `Repayment of ₹${repayAmt.toString()} recorded and posted to unified ledger`,
     };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to record card repayment";

@@ -43,6 +43,7 @@ import { addMoney, subtractMoney, getTransactionDisplayInfo } from "@/lib/calcul
 interface TransactionTimelineProps {
   transactions: any[];
   onEdit: (transaction: any) => void;
+  onInspect?: (transaction: any) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   selectedAccountId?: string;
@@ -91,6 +92,7 @@ function getCategoryIcon(name: string) {
 export const TransactionTimeline = React.memo(function TransactionTimeline({
   transactions,
   onEdit,
+  onInspect,
   selectedIds = new Set(),
   onToggleSelect,
   selectedAccountId,
@@ -214,20 +216,23 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
                 return (
                   <div
                     key={txn.id}
-                    className={`flex items-center justify-between p-3.5 sm:px-4 transition-colors hover:bg-surface-secondary/40 ${
+                    onClick={() => onInspect?.(txn)}
+                    className={`flex items-center justify-between p-3.5 sm:px-4 transition-colors hover:bg-surface-secondary/50 cursor-pointer ${
                       isSelected ? "bg-primary-soft/30" : ""
                     }`}
                   >
                     <div className="flex items-center space-x-3 min-w-0">
                       {/* Checkbox for bulk actions */}
                       {onToggleSelect && (
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => onToggleSelect(txn.id)}
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer shrink-0"
-                          aria-label={`Select ${txn.description}`}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => onToggleSelect(txn.id)}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer shrink-0"
+                            aria-label={`Select ${txn.description}`}
+                          />
+                        </div>
                       )}
 
                       {/* Leftovers-style Category Icon Circle */}
@@ -323,22 +328,27 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
                       </div>
 
                       {/* Dropdown Menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-text-secondary hover:text-text-primary"
-                            aria-label="Transaction actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44 bg-surface text-text-primary border-border">
-                          <DropdownMenuItem onClick={() => onEdit(txn)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            <span>Edit Transaction</span>
-                          </DropdownMenuItem>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-text-secondary hover:text-text-primary"
+                              aria-label="Transaction actions"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 bg-surface text-text-primary border-border">
+                            <DropdownMenuItem onClick={() => onInspect?.(txn)}>
+                              <Coins className="mr-2 h-4 w-4 text-primary" />
+                              <span className="font-medium text-primary">View Ledger & Details</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit(txn)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Edit Transaction</span>
+                            </DropdownMenuItem>
                           {needsReview && (
                             <DropdownMenuItem onClick={() => handleMarkReviewed(txn.id)}>
                               <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
@@ -357,7 +367,8 @@ export const TransactionTimeline = React.memo(function TransactionTimeline({
                       </DropdownMenu>
                     </div>
                   </div>
-                );
+                </div>
+              );
               })}
             </div>
           </div>

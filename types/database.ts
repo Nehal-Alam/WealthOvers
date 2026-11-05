@@ -746,6 +746,63 @@ export type Database = {
           },
         ]
       }
+      ledger_entries: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          entry_type: "debit" | "credit"
+          id: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string
+          entity_id?: string | null
+          entity_type: string
+          entry_type: "debit" | "credit"
+          id?: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          entry_type?: "debit" | "credit"
+          id?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       liabilities: {
         Row: {
           category: string
@@ -1199,72 +1256,117 @@ export type Database = {
         Row: {
           account_id: string
           amount: number
+          asset_id: string | null
           category_id: string | null
           created_at: string
+          credit_card_id: string | null
           currency: string
           description: string
           destination_account_id: string | null
           id: string
           idempotency_hash: string | null
+          investment_id: string | null
           is_reviewed: boolean
+          loan_id: string | null
+          loan_payment_id: string | null
           merchant_id: string | null
+          merchant_or_person: string | null
           notes: string | null
           original_transaction_id: string | null
           parser_confidence: number | null
+          payment_method: string | null
           reference_number: string | null
+          related_transaction_id: string | null
+          sip_installment_id: string | null
+          sip_schedule_id: string | null
           source: Database["public"]["Enums"]["transaction_source_enum"]
+          source_module: string
+          status: string
           subcategory_id: string | null
           tags: string[] | null
           transaction_date: string
+          transaction_number: string
+          transaction_subtype: string | null
           transaction_type: Database["public"]["Enums"]["transaction_type_enum"]
+          transfer_group_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           account_id: string
           amount: number
+          asset_id?: string | null
           category_id?: string | null
           created_at?: string
+          credit_card_id?: string | null
           currency?: string
           description?: string
           destination_account_id?: string | null
           id?: string
           idempotency_hash?: string | null
+          investment_id?: string | null
           is_reviewed?: boolean
+          loan_id?: string | null
+          loan_payment_id?: string | null
           merchant_id?: string | null
+          merchant_or_person?: string | null
           notes?: string | null
           original_transaction_id?: string | null
           parser_confidence?: number | null
+          payment_method?: string | null
           reference_number?: string | null
+          related_transaction_id?: string | null
+          sip_installment_id?: string | null
+          sip_schedule_id?: string | null
           source?: Database["public"]["Enums"]["transaction_source_enum"]
+          source_module?: string
+          status?: string
           subcategory_id?: string | null
           tags?: string[] | null
           transaction_date: string
+          transaction_number?: string
+          transaction_subtype?: string | null
           transaction_type: Database["public"]["Enums"]["transaction_type_enum"]
+          transfer_group_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           account_id?: string
           amount?: number
+          asset_id?: string | null
           category_id?: string | null
           created_at?: string
+          credit_card_id?: string | null
           currency?: string
           description?: string
           destination_account_id?: string | null
           id?: string
           idempotency_hash?: string | null
+          investment_id?: string | null
           is_reviewed?: boolean
+          loan_id?: string | null
+          loan_payment_id?: string | null
           merchant_id?: string | null
+          merchant_or_person?: string | null
           notes?: string | null
           original_transaction_id?: string | null
           parser_confidence?: number | null
+          payment_method?: string | null
           reference_number?: string | null
+          related_transaction_id?: string | null
+          sip_installment_id?: string | null
+          sip_schedule_id?: string | null
           source?: Database["public"]["Enums"]["transaction_source_enum"]
+          source_module?: string
+          status?: string
           subcategory_id?: string | null
           tags?: string[] | null
           transaction_date?: string
+          transaction_number?: string
+          transaction_subtype?: string | null
           transaction_type?: Database["public"]["Enums"]["transaction_type_enum"]
+          transfer_group_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1542,6 +1644,16 @@ export type Database = {
         | "investment_sell"
         | "loan_disbursement"
         | "loan_repayment"
+        | "borrowing"
+        | "borrowing_repayment"
+        | "lending"
+        | "lending_collection"
+        | "credit_card_purchase"
+        | "credit_card_repayment"
+        | "sip"
+        | "interest"
+        | "adjustment"
+        | "bank_charges"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1737,6 +1849,16 @@ export const Constants = {
         "investment_sell",
         "loan_disbursement",
         "loan_repayment",
+        "borrowing",
+        "borrowing_repayment",
+        "lending",
+        "lending_collection",
+        "credit_card_purchase",
+        "credit_card_repayment",
+        "sip",
+        "interest",
+        "adjustment",
+        "bank_charges",
       ],
     },
   },

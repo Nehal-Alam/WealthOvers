@@ -202,4 +202,61 @@ CREATE INDEX IF NOT EXISTS idx_sip_installments_user ON public.sip_installments(
   4. Updated `transaction-timeline.tsx`, `transaction-table.tsx`, and `dashboard-client.tsx` to display `-₹1,600.00` in `text-danger` with the `SIP Installment` / `Investment Buy` badge, and correctly display daily spent amounts.
   5. Added unit tests in `tests/bug-fix-financial-integrity.test.ts` verifying the exact numbers matching the user's live scenario.
 
+---
+
+## 6. Loan Management & Repayment Editing, and Inflow/Outflow History
+
+### User Requirements Addressed:
+1. **Loan & Repayment Correction**: If an incorrect amount or details were entered while recording a repayment of a loan, borrowing, or lending, provide full editing capabilities.
+2. **Loan Card Drilldown**: When clicking on any loan card, display all associated transactions with complete Inflow and Outflow history.
+
+### Architectural Implementation:
+1. **Loan Details Correction (`UpdateLoanInput`, `updateLoanAction`)**:
+   - Allows correcting principal amount, interest rate, tenure, start date, maturity date, lender/borrower name, notes, and funding account.
+   - Recalculates monthly EMI via 28-digit precision `calculateLoanEMI()`.
+   - Automatically recalibrates `outstanding_balance = max(0, principal - total_principal_repaid)` so past payments remain accounted for.
+   - Built dialog component `components/loans/edit-loan-dialog.tsx` matching Leftovers design system.
+2. **Loan Repayment Correction (`UpdateLoanPaymentInput`, `updateLoanPaymentAction`, `deleteLoanPaymentAction`)**:
+   - Allows editing payment date, regular EMI amount, extra prepayment, and funding account.
+   - Recomputes principal vs interest components and determines the exact net difference (`principalDelta`).
+   - Atomically adjusts `loans.outstanding_balance` and `accounts.current_balance` by the exact net difference.
+   - Deletion safely restores both the principal portion back to the loan's outstanding balance and cash back to the funding bank account.
+   - Built dialog component `components/loans/edit-loan-payment-dialog.tsx`.
+3. **Inflow & Outflow History Modal (`components/loans/loan-transactions-modal.tsx`)**:
+   - Loan cards are now clickable with hover state and a dedicated "Inflow & Outflow History" bar.
+   - Accurately models cash flow direction:
+     - **Borrowed Debt**: Initial loan disbursement is **Inflow (+)** into the user's bank; all EMI repayments and prepayments are **Outflow (-)**.
+     - **Lent Debt (`loan_given`)**: Initial loan disbursement is **Outflow (-)** from the user's bank; repayments collected back are **Inflow (+)**.
+   - Includes summary KPI cards: Total Inflow, Total Outflow, and Remaining Balance.
+   - Provides filter tabs (`All`, `Inflow`, `Outflow`) and an itemized timeline with direct "Edit Payment" and "Delete Payment" actions.
+   - Fully tested in `tests/bug-fix-financial-integrity.test.ts` (19 tests passing).
+
+---
+
+## 7. Unified Financial Transaction Ledger & Complete Transaction Linking
+
+### Core Architecture & Implementation:
+1. **Central Database Migration (`supabase/migrations/20261105160000_unified_financial_ledger.sql`)**:
+   - Expanded `transaction_type_enum` to 18 supported financial types (`income`, `expense`, `transfer`, `investment_buy`, `investment_sell`, `sip`, `borrowing`, `borrowing_repayment`, `lending`, `lending_collection`, `credit_card_purchase`, `credit_card_repayment`, `loan_disbursement`, `loan_repayment`, `interest`, `bank_charges`, `adjustment`, `refund`).
+   - Added human-readable sequence-based transaction numbers (`TXN-YYYYMM-XXXXX`) via PostgreSQL trigger.
+   - Added linked foreign keys: `related_transaction_id`, `transfer_group_id`, `investment_id`, `credit_card_id`, `loan_id`, `loan_payment_id`, `sip_schedule_id`, `sip_installment_id`, `asset_id`.
+   - Created `public.ledger_entries` table with strict Row Level Security (`auth.uid() = user_id`) and performance indexes on `(user_id, created_at)`, `transaction_id`, and `account_id`.
+   - Safely backfilled all existing production transactions with balanced debit and credit ledger entries.
+2. **Central Transaction Engine (`lib/services/financial-transaction-service.ts`)**:
+   - `createFinancialTransaction()`: Enforces $\sum \text{Debits} == \sum \text{Credits}$ ($\le 0.0001$), creates master transaction and ledger entries, and applies atomic account/card balance adjustments.
+   - `reverseFinancialTransaction()`: Creates immutable contra-entry reversals, restoring balances and updating status to `reversed`.
+   - `getAccountRunningBalanceHistory()`: Computes exact account running balance ledger ($\text{Running} = \text{Previous} + \text{In} - \text{Out}$).
+   - `getLinkedTransactionsForEntity()`: Fetches chronological transaction history for any loan, credit card, investment, SIP, or account.
+3. **UI Integration**:
+   - `components/transactions/transaction-detail-modal.tsx`: Leftovers-styled dialog displaying transaction details, complete double-entry ledger postings breakdown, and one-click reversal.
+   - `components/accounts/account-history-modal.tsx`: Account-level running balance ledger table with Money In/Out metrics and filter tabs.
+   - `components/accounts/account-card.tsx` & `account-grid.tsx`: Wired up "Running Ledger History" menu item.
+   - `components/transactions/transaction-ledger.tsx`: Quick view tabs for `Investments`, `Debt & Loans`, `Credit Cards`, `Transfers`, `Refunds`, all 18 transaction types in Select filter, and transaction detail inspection.
+4. **Verification**:
+   - Verified across `tests/unified-financial-ledger.test.ts` (13 tests passing covering Scenarios 1–7).
+   - Full test suite: 26 files, 221 tests passing (100%).
+   - Production build `next build`: 31 static and dynamic pages generated with 0 errors.
+
+
+
 

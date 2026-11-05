@@ -11,6 +11,9 @@ import {
   Trash2,
   Table as TableIcon,
   ShieldAlert,
+  Pencil,
+  ArrowRight,
+  ReceiptText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -48,6 +51,22 @@ const RecordLoanPaymentDialog = dynamic(
   { ssr: false }
 );
 
+const EditLoanDialog = dynamic(
+  () =>
+    import("@/components/loans/edit-loan-dialog").then(
+      (m) => m.EditLoanDialog
+    ),
+  { ssr: false }
+);
+
+const LoanTransactionsModal = dynamic(
+  () =>
+    import("@/components/loans/loan-transactions-modal").then(
+      (m) => m.LoanTransactionsModal
+    ),
+  { ssr: false }
+);
+
 import { deleteLoanAction } from "@/app/(dashboard)/loans/actions";
 import { addMoney, subtractMoney } from "@/lib/calculations/financial";
 
@@ -63,6 +82,14 @@ interface LoanViewProps {
 export function LoanView({ loans, accounts = [] }: LoanViewProps) {
   const [amortizationLoan, setAmortizationLoan] = React.useState<Tables<"loans"> | null>(null);
   const [paymentLoan, setPaymentLoan] = React.useState<Tables<"loans"> | null>(null);
+  const [editingLoan, setEditingLoan] = React.useState<Tables<"loans"> | null>(null);
+  const [selectedLoanForTransactions, setSelectedLoanForTransactions] = React.useState<LoanWithPayments | null>(null);
+
+  // Keep transactions modal loan synced if loans array updates
+  const activeTransactionsLoan = React.useMemo(() => {
+    if (!selectedLoanForTransactions) return null;
+    return loans.find((l) => l.id === selectedLoanForTransactions.id) || selectedLoanForTransactions;
+  }, [loans, selectedLoanForTransactions]);
 
   // Aggregate Metrics
   const { totalPrincipal, totalOutstanding, totalMonthlyEMI } = React.useMemo(() => {
@@ -173,7 +200,11 @@ export function LoanView({ loans, accounts = [] }: LoanViewProps) {
                 : 0;
 
             return (
-              <Card key={loan.id} className="overflow-hidden border border-border/80 bg-card rounded-2xl shadow-xs hover:border-primary/40 transition-colors">
+              <Card
+                key={loan.id}
+                onClick={() => setSelectedLoanForTransactions(loan)}
+                className="overflow-hidden border border-border/80 bg-card rounded-2xl shadow-xs hover:border-primary/60 hover:shadow-sm transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+              >
                 <CardHeader className="p-5 pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -188,15 +219,34 @@ export function LoanView({ loans, accounts = [] }: LoanViewProps) {
                       </CardTitle>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-danger"
-                      onClick={() => handleDelete(loan.id, loan.lender_or_borrower_name)}
-                      aria-label="Delete loan"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingLoan(loan);
+                        }}
+                        aria-label="Edit loan details"
+                        title="Edit loan details"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(loan.id, loan.lender_or_borrower_name);
+                        }}
+                        aria-label="Delete loan"
+                        title="Delete loan"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -249,13 +299,28 @@ export function LoanView({ loans, accounts = [] }: LoanViewProps) {
                     </div>
                   </div>
 
+                  {/* Inflow & Outflow Transactions Bar */}
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-secondary/40 hover:bg-surface-secondary/70 border border-border/50 text-xs transition-colors group-hover:border-primary/30">
+                    <span className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground font-medium">
+                      <ReceiptText className="h-3.5 w-3.5 text-primary" />
+                      <span>Inflow & Outflow History</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+                      <span>{loan.payments?.length || 0} recorded</span>
+                      <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-1 border-t border-border/60">
                     <Button
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1.5 h-8 text-xs border-border/80"
-                      onClick={() => setAmortizationLoan(loan)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAmortizationLoan(loan);
+                      }}
                     >
                       <TableIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Amortization</span>
@@ -264,7 +329,10 @@ export function LoanView({ loans, accounts = [] }: LoanViewProps) {
                     <Button
                       size="sm"
                       className="flex-1 gap-1.5 h-8 text-xs bg-primary hover:bg-primary-hover text-primary-foreground"
-                      onClick={() => setPaymentLoan(loan)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentLoan(loan);
+                      }}
                     >
                       <DollarSign className="h-3.5 w-3.5" />
                       <span>Record EMI</span>
@@ -290,6 +358,32 @@ export function LoanView({ loans, accounts = [] }: LoanViewProps) {
         accounts={accounts}
         open={!!paymentLoan}
         onOpenChange={(open) => !open && setPaymentLoan(null)}
+      />
+
+      {/* Edit Loan Dialog */}
+      <EditLoanDialog
+        loan={editingLoan}
+        accounts={accounts}
+        open={!!editingLoan}
+        onOpenChange={(open) => !open && setEditingLoan(null)}
+      />
+
+      {/* Loan Transactions Inflow & Outflow Modal */}
+      <LoanTransactionsModal
+        loan={activeTransactionsLoan}
+        accounts={accounts}
+        open={!!selectedLoanForTransactions}
+        onOpenChange={(open) => !open && setSelectedLoanForTransactions(null)}
+        onEditLoan={(l) => {
+          setSelectedLoanForTransactions(null);
+          setEditingLoan(l);
+        }}
+        onRecordPayment={(l) => {
+          setPaymentLoan(l);
+        }}
+        onOpenAmortization={(l) => {
+          setAmortizationLoan(l);
+        }}
       />
     </div>
   );

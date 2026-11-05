@@ -47,3 +47,47 @@ export const recordLoanPaymentSchema = z.object({
 
 export type RecordLoanPaymentInput = z.infer<typeof recordLoanPaymentSchema>;
 
+export const updateLoanSchema = z.object({
+  id: z.string().uuid(),
+  account_id: z.string().uuid().optional().nullable(),
+  loan_type: z.enum(loanTypeValues),
+  lender_or_borrower_name: z.string().min(1, "Name is required").max(120),
+  principal_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter a valid principal amount")
+    .refine((val) => parseFloat(val) > 0, "Principal must be greater than zero"),
+  outstanding_balance: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter a valid outstanding balance")
+    .refine((val) => parseFloat(val) >= 0, "Outstanding balance cannot be negative")
+    .optional(),
+  annual_interest_rate: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter annual interest rate")
+    .refine((val) => parseFloat(val) >= 0, "Interest rate cannot be negative"),
+  tenure_months: z.number().int().min(1, "Tenure must be at least 1 month"),
+  start_date: z.string().min(10, "Select loan start date"),
+  maturity_date: z.string().min(10, "Select maturity date"),
+  notes: z.string().max(1000).optional().nullable(),
+});
+
+export type UpdateLoanInput = z.infer<typeof updateLoanSchema>;
+
+export const updateLoanPaymentSchema = z.object({
+  payment_id: z.string().uuid(),
+  loan_id: z.string().uuid(),
+  funding_account_id: z.string().uuid().optional().nullable(),
+  payment_date: z.string().min(10, "Select payment date"),
+  emi_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter valid EMI payment")
+    .refine((val) => parseFloat(val) > 0, "Payment must be greater than zero"),
+  extra_prepayment: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Enter valid extra prepayment")
+    .default("0.00"),
+});
+
+export type UpdateLoanPaymentInput = z.infer<typeof updateLoanPaymentSchema>;
+
+

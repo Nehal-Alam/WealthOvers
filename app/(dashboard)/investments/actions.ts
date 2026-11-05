@@ -13,6 +13,7 @@ import {
   CreateSipInput,
 } from "@/lib/validations/investments";
 import { toDecimal } from "@/lib/calculations/financial";
+import { FinancialTransactionService } from "@/lib/services/financial-transaction-service";
 
 export type ActionResult<T = unknown> = {
   success: boolean;
@@ -63,44 +64,23 @@ export async function createInvestmentAction(input: CreateInvestmentInput): Prom
       return { success: false, error: error.message };
     }
 
-    // Atomically debit funding account and record investment buy transaction
+    // Atomically debit funding account, record unified investment buy transaction, and post ledger entries
     if (validated.account_id && data) {
-      const { data: fundingAccount } = await supabase
-        .from("accounts")
-        .select("id, current_balance, currency, name")
-        .eq("id", validated.account_id)
-        .eq("user_id", user.id)
-        .single();
+      const idempotencyKey = `inv_buy_${user.id}_${data.id}_${Date.now()}`;
 
-      if (fundingAccount) {
-        const curBal = toDecimal(fundingAccount.current_balance);
-        const newBal = curBal.minus(invested);
-
-        await supabase
-          .from("accounts")
-          .update({
-            current_balance: newBal.toNumber(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", fundingAccount.id)
-          .eq("user_id", user.id);
-
-        const idempotencyKey = `inv_buy_${user.id}_${data.id}_${Date.now()}`;
-
-        await supabase.from("transactions").insert({
-          user_id: user.id,
-          account_id: fundingAccount.id,
-          amount: invested.toNumber(),
-          currency: fundingAccount.currency || "INR",
-          transaction_type: "investment_buy",
-          transaction_date: new Date().toISOString(),
-          description: `Investment Buy: ${validated.name.trim()}`,
-          notes: `Purchased ${qty.toString()} units @ ${avg.toString()}`,
-          source: "manual",
-          idempotency_hash: idempotencyKey,
-          is_reviewed: true,
-        });
-      }
+      await FinancialTransactionService.createFinancialTransaction(supabase, {
+        userId: user.id,
+        transactionType: "investment_buy",
+        amount: invested.toNumber(),
+        transactionDate: new Date().toISOString(),
+        description: `Investment Buy: ${validated.name.trim()}`,
+        notes: `Purchased ${qty.toString()} units @ ${avg.toString()}`,
+        accountId: validated.account_id,
+        investmentId: data.id,
+        merchantOrPerson: validated.broker_name.trim(),
+        idempotencyHash: idempotencyKey,
+        sourceModule: "investments",
+      });
     }
 
     // Record initial investment transaction entry
@@ -377,48 +357,27 @@ export async function processDueSipAction(sipId: string): Promise<ActionResult> 
 
     const sipAmount = toDecimal(sip.amount);
 
-    // 3. Deduct from funding account
-    const { data: fundingAccount } = await supabase
-      .from("accounts")
-      .select("id, current_balance, currency")
-      .eq("id", sip.account_id)
-      .eq("user_id", user.id)
-      .single();
+    // 3. Post unified SIP deduction transaction to ledger (atomically debits account and creates balanced ledger entries)
+    const txResult = await FinancialTransactionService.createFinancialTransaction(supabase, {
+      userId: user.id,
+      transactionType: "sip",
+      transactionSubtype: "sip",
+      amount: sipAmount.toNumber(),
+      transactionDate: new Date().toISOString(),
+      description: `SIP Installment: ${sip.sip_name}`,
+      notes: `Automated deduction for ${sip.sip_name} (Due: ${sip.next_due_date})`,
+      accountId: sip.account_id,
+      investmentId: sip.investment_id,
+      sipScheduleId: sip.id,
+      idempotencyHash: idempotencyKey,
+      sourceModule: "investments",
+    });
 
-    if (!fundingAccount) {
-      return { success: false, error: "Funding account not found" };
+    if (!txResult.success) {
+      return { success: false, error: txResult.error };
     }
 
-    const currentBal = toDecimal(fundingAccount.current_balance);
-    const newBal = currentBal.minus(sipAmount);
-
-    await supabase
-      .from("accounts")
-      .update({
-        current_balance: newBal.toNumber(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", fundingAccount.id)
-      .eq("user_id", user.id);
-
-    // 4. Record main transactions entry
-    const { data: txRecord } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        account_id: fundingAccount.id,
-        amount: sipAmount.toNumber(),
-        currency: fundingAccount.currency || "INR",
-        transaction_type: "investment_buy",
-        transaction_date: new Date().toISOString(),
-        description: `SIP Installment: ${sip.sip_name}`,
-        notes: `Automated deduction for ${sip.sip_name} (Due: ${sip.next_due_date})`,
-        source: "recurring_rule",
-        idempotency_hash: idempotencyKey,
-        is_reviewed: true,
-      })
-      .select()
-      .single();
+    const txRecord = txResult.transaction;
 
     // 5. Update investment holding: allot units
     const { data: holding } = await supabase

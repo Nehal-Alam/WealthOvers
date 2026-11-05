@@ -44,6 +44,7 @@ interface AccountCardProps {
   allAccounts: Tables<"accounts">[];
   onEdit: (account: Tables<"accounts">) => void;
   onTransfer: (account: Tables<"accounts">) => void;
+  onViewHistory?: (account: Tables<"accounts">) => void;
 }
 
 export function AccountCard({
@@ -51,6 +52,7 @@ export function AccountCard({
   allAccounts,
   onEdit,
   onTransfer,
+  onViewHistory,
 }: AccountCardProps) {
   const router = useRouter();
   const [isReconcileOpen, setIsReconcileOpen] = React.useState(false);
@@ -166,6 +168,12 @@ export function AccountCard({
                     <span>Reconcile Balance</span>
                   </DropdownMenuItem>
                 </>
+              )}
+              {onViewHistory && (
+                <DropdownMenuItem onClick={() => onViewHistory(account)}>
+                  <Receipt className="mr-2 h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">Running Ledger History</span>
+                </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={() => router.push(`/transactions?accountId=${account.id}`)}>
                 <Receipt className="mr-2 h-4 w-4" />
