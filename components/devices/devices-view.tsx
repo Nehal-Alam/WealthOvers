@@ -75,17 +75,21 @@ export function DevicesView({
     }
   };
 
-  // Telemetry Aggregates
-  const { activeDevicesCount, totalTransactionsSynced, successRate } = React.useMemo(() => {
+  // Telemetry Aggregates (Truthful Metrics: No fake 100% when no sync has occurred)
+  const { activeDevicesCount, totalTransactionsSynced, successRateText, successRateSubtitle } = React.useMemo(() => {
     const active = devices.filter((d) => d.status === "active").length;
     const synced = syncLogs.reduce((acc, l) => acc + (l.records_ingested || 0), 0);
-    const rate = syncLogs.length > 0
+    const hasLogs = syncLogs.length > 0;
+    const rate = hasLogs
       ? Math.round((syncLogs.filter((l) => l.sync_status === "success").length / syncLogs.length) * 100)
-      : 100;
+      : null;
     return {
       activeDevicesCount: active,
       totalTransactionsSynced: synced,
-      successRate: rate,
+      successRateText: rate !== null ? `${rate}%` : "N/A",
+      successRateSubtitle: hasLogs
+        ? "On-device parser reliability"
+        : "No synchronization events yet",
     };
   }, [devices, syncLogs]);
 
@@ -124,9 +128,9 @@ export function DevicesView({
         />
         <MetricCard
           title="Ingestion Success Rate"
-          amount={`${successRate}%`}
-          formatType="percent"
-          subtitle="On-device SMS parser reliability"
+          amount={successRateText}
+          formatType={successRateText.includes("%") ? "percent" : undefined}
+          subtitle={successRateSubtitle}
           icon={CheckCircle2}
           iconColor="#39805B"
         />

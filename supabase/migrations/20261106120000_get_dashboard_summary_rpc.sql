@@ -58,3 +58,4 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_dashboard_summary(UUID, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated, service_role, anon;
+
