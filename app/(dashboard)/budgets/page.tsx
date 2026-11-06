@@ -3,10 +3,10 @@ import { redirect } from "next/navigation";
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { BudgetView } from "@/components/budgets/budget-view";
-import { addMoney } from "@/lib/calculations/financial";
+import { addMoney, toDecimal } from "@/lib/calculations/financial";
 
 export const metadata: Metadata = {
-  title: "Budgets — WealthOvers",
+  title: "Budgets & Limits — WealthOvers",
   description: "Track monthly spending budgets, rollovers, and category limits",
 };
 
@@ -19,13 +19,14 @@ export default async function BudgetsPage() {
 
   const supabase = await createClient();
 
-  // Fetch all budgets and categories concurrently in parallel with explicit column selections
-  const [budgetsResult, categoriesResult] = await Promise.all([
+  // Fetch budgets, categories, accounts, and upcoming bills in parallel
+  const [budgetsResult, categoriesResult, accountsResult, billsResult] = await Promise.all([
     supabase
       .from("budgets")
       .select(
         `
-        id, name, total_amount, start_date, end_date, rollover_enabled, period_type, alert_threshold_percent, created_at,
+        id, name, total_amount, start_date, end_date, rollover_enabled, rollover_mode, rollover_limit,
+        period_type, alert_threshold_percent, status, notes, created_at,
         budget_categories:budget_categories(
           id,
           category_id,
@@ -41,13 +42,34 @@ export default async function BudgetsPage() {
       .select("id, name, color, icon, type")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
+    supabase
+      .from("accounts")
+      .select("id, name, institution_name, currency, current_balance, is_archived")
+      .eq("user_id", user.id)
+      .eq("is_archived", false)
+      .order("name", { ascending: true }),
+    supabase
+      .from("bill_occurrences")
+      .select("amount, status, due_date")
+      .eq("user_id", user.id)
+      .in("status", ["upcoming", "due", "overdue"]),
   ]);
 
   const rawBudgets = (budgetsResult.data || []) as any[];
   const categories = (categoriesResult.data || []) as Tables<"categories">[];
+  const accounts = (accountsResult.data || []) as Tables<"accounts">[];
+  const pendingBills = billsResult.data || [];
 
-  // Eliminate N+1 loop: Batch-aggregate spending for all budgets in a single indexed query
+  // Calculate upcoming bills total
+  let upcomingBillsTotal = "0.00";
+  for (const bill of pendingBills) {
+    upcomingBillsTotal = addMoney(upcomingBillsTotal, bill.amount);
+  }
+
+  // Batch fetch transaction expenses for all budget periods
   let budgetsWithSpending: any[] = [];
+  let periodTransactions: any[] = [];
+
   if (rawBudgets.length > 0) {
     let minStartDate = rawBudgets[0].start_date;
     let maxEndDate = rawBudgets[0].end_date;
@@ -58,20 +80,21 @@ export default async function BudgetsPage() {
 
     const { data: allExpenses } = await supabase
       .from("transactions")
-      .select("amount, category_id, transaction_date")
+      .select("id, description, amount, category_id, transaction_date, account_id, account:accounts(name)")
       .eq("user_id", user.id)
       .eq("transaction_type", "expense")
       .gte("transaction_date", minStartDate)
-      .lte("transaction_date", `${maxEndDate}T23:59:59.999Z`);
+      .lte("transaction_date", `${maxEndDate}T23:59:59.999Z`)
+      .order("transaction_date", { ascending: false });
 
-    const expensesList = allExpenses || [];
+    periodTransactions = allExpenses || [];
 
     budgetsWithSpending = rawBudgets.map((b) => {
       const spentByCategory: Record<string, string> = {};
       let totalSpent = "0.0000";
       const bEnd = `${b.end_date}T23:59:59.999Z`;
 
-      for (const t of expensesList) {
+      for (const t of periodTransactions) {
         if (t.transaction_date >= b.start_date && t.transaction_date <= bEnd) {
           totalSpent = addMoney(totalSpent, t.amount);
           if (t.category_id) {
@@ -93,8 +116,13 @@ export default async function BudgetsPage() {
 
   return (
     <div className="space-y-6">
-      <BudgetView budgets={budgetsWithSpending} categories={categories} />
+      <BudgetView
+        budgets={budgetsWithSpending}
+        categories={categories}
+        accounts={accounts}
+        transactions={periodTransactions}
+        upcomingBillsTotal={upcomingBillsTotal}
+      />
     </div>
   );
 }
-

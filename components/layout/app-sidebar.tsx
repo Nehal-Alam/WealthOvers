@@ -70,7 +70,7 @@ const navSections: { group?: string; items: NavSectionItem[] }[] = [
     group: "PLANNING & INSIGHTS",
     items: [
       { title: "Insights", href: "/insights", icon: BarChart3 },
-      { title: "Plan", href: "/budgets", icon: Target },
+      { title: "Plan", href: "/plan", icon: Target },
       { title: "Investments", href: "/investments", icon: Coins },
     ],
   },
@@ -122,6 +122,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const isItemActive = (item: NavSectionItem) => {
     if (item.exact) {
       return pathname === item.href;
+    }
+    if (item.title === "Plan") {
+      return (
+        pathname === "/plan" ||
+        pathname.startsWith("/plan") ||
+        pathname.startsWith("/budgets") ||
+        pathname.startsWith("/goals") ||
+        pathname.startsWith("/recurring")
+      );
     }
     return (
       pathname === item.href ||

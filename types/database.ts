@@ -178,27 +178,33 @@ export type Database = {
       }
       budget_categories: {
         Row: {
+          alert_threshold_percent: number | null
           allocated_amount: number
           budget_id: string
           category_id: string
           created_at: string
           id: string
+          notes: string | null
           updated_at: string
         }
         Insert: {
+          alert_threshold_percent?: number | null
           allocated_amount: number
           budget_id: string
           category_id: string
           created_at?: string
           id?: string
+          notes?: string | null
           updated_at?: string
         }
         Update: {
+          alert_threshold_percent?: number | null
           allocated_amount?: number
           budget_id?: string
           category_id?: string
           created_at?: string
           id?: string
+          notes?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -218,45 +224,111 @@ export type Database = {
           },
         ]
       }
+      budget_rollovers: {
+        Row: {
+          budget_id: string
+          category_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          rolled_over_amount: number
+          rollover_mode: string
+          unspent_amount: number
+          user_id: string
+        }
+        Insert: {
+          budget_id: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          rolled_over_amount: number
+          rollover_mode?: string
+          unspent_amount: number
+          user_id: string
+        }
+        Update: {
+          budget_id?: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          rolled_over_amount?: number
+          rollover_mode?: string
+          unspent_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
+          account_id: string | null
           alert_threshold_percent: number
+          alert_thresholds: number[] | null
+          budget_type: string
+          category_id: string | null
           created_at: string
           end_date: string
           id: string
           name: string
+          notes: string | null
           period_type: string
           rolled_over_amount: number
           rollover_enabled: boolean
+          rollover_limit: number
+          rollover_mode: string
           start_date: string
+          status: string
           total_amount: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           alert_threshold_percent?: number
+          alert_thresholds?: number[] | null
+          budget_type?: string
+          category_id?: string | null
           created_at?: string
           end_date: string
           id?: string
           name: string
+          notes?: string | null
           period_type?: string
           rolled_over_amount?: number
           rollover_enabled?: boolean
+          rollover_limit?: number
+          rollover_mode?: string
           start_date: string
+          status?: string
           total_amount: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_id?: string | null
           alert_threshold_percent?: number
+          alert_thresholds?: number[] | null
+          budget_type?: string
+          category_id?: string | null
           created_at?: string
           end_date?: string
           id?: string
           name?: string
+          notes?: string | null
           period_type?: string
           rolled_over_amount?: number
           rollover_enabled?: boolean
+          rollover_limit?: number
+          rollover_mode?: string
           start_date?: string
+          status?: string
           total_amount?: number
           updated_at?: string
           user_id?: string
@@ -497,33 +569,63 @@ export type Database = {
       }
       financial_goals: {
         Row: {
+          account_id: string | null
           category: string
+          contribution_frequency: string | null
           created_at: string
           current_amount: number
+          icon_or_image: string | null
           id: string
+          investment_id: string | null
+          is_completed: boolean
           name: string
+          notes: string | null
+          planned_contribution_amount: number | null
+          priority: string
+          start_date: string
+          status: string
           target_amount: number
           target_date: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           category?: string
+          contribution_frequency?: string | null
           created_at?: string
           current_amount?: number
+          icon_or_image?: string | null
           id?: string
+          investment_id?: string | null
+          is_completed?: boolean
           name: string
+          notes?: string | null
+          planned_contribution_amount?: number | null
+          priority?: string
+          start_date?: string
+          status?: string
           target_amount: number
           target_date: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_id?: string | null
           category?: string
+          contribution_frequency?: string | null
           created_at?: string
           current_amount?: number
+          icon_or_image?: string | null
           id?: string
+          investment_id?: string | null
+          is_completed?: boolean
           name?: string
+          notes?: string | null
+          planned_contribution_amount?: number | null
+          priority?: string
+          start_date?: string
+          status?: string
           target_amount?: number
           target_date?: string
           updated_at?: string
@@ -533,32 +635,41 @@ export type Database = {
       }
       goal_contributions: {
         Row: {
+          account_id: string | null
           amount: number
           contribution_date: string
+          contribution_type: string
           created_at: string
           goal_id: string
           id: string
           notes: string | null
+          transaction_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount: number
           contribution_date: string
+          contribution_type?: string
           created_at?: string
           goal_id: string
           id?: string
           notes?: string | null
+          transaction_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           contribution_date?: string
+          contribution_type?: string
           created_at?: string
           goal_id?: string
           id?: string
           notes?: string | null
+          transaction_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1022,6 +1133,65 @@ export type Database = {
         }
         Relationships: []
       }
+      bill_occurrences: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          notes: string | null
+          paid_amount: number | null
+          paid_date: string | null
+          payment_method: string | null
+          recurring_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurring_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurring_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_occurrences_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_transactions: {
         Row: {
           account_id: string
@@ -1030,15 +1200,22 @@ export type Database = {
           category_id: string | null
           created_at: string
           currency: string
+          description: string | null
           end_date: string | null
           id: string
           interval_count: number
           is_active: boolean
+          is_autopay: boolean
+          is_variable_amount: boolean
           merchant_id: string | null
           name: string
           next_occurrence_date: string
+          notes: string | null
+          payment_method: string | null
           recurrence_interval: Database["public"]["Enums"]["recurrence_interval_enum"]
+          reminder_days_before: number
           start_date: string
+          status: string
           transaction_type: Database["public"]["Enums"]["transaction_type_enum"]
           updated_at: string
           user_id: string
@@ -1050,15 +1227,22 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           currency?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           interval_count?: number
           is_active?: boolean
+          is_autopay?: boolean
+          is_variable_amount?: boolean
           merchant_id?: string | null
           name: string
           next_occurrence_date: string
+          notes?: string | null
+          payment_method?: string | null
           recurrence_interval?: Database["public"]["Enums"]["recurrence_interval_enum"]
+          reminder_days_before?: number
           start_date: string
+          status?: string
           transaction_type?: Database["public"]["Enums"]["transaction_type_enum"]
           updated_at?: string
           user_id: string
@@ -1070,15 +1254,22 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           currency?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           interval_count?: number
           is_active?: boolean
+          is_autopay?: boolean
+          is_variable_amount?: boolean
           merchant_id?: string | null
           name?: string
           next_occurrence_date?: string
+          notes?: string | null
+          payment_method?: string | null
           recurrence_interval?: Database["public"]["Enums"]["recurrence_interval_enum"]
+          reminder_days_before?: number
           start_date?: string
+          status?: string
           transaction_type?: Database["public"]["Enums"]["transaction_type_enum"]
           updated_at?: string
           user_id?: string

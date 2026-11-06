@@ -8,6 +8,9 @@ import {
   startOfMonth,
   endOfMonth,
   subMonths,
+  addMonths,
+  startOfQuarter,
+  endOfQuarter,
   startOfYear,
   endOfYear,
   subYears,
@@ -22,8 +25,10 @@ export type DateDurationFilter =
   | "this_week"
   | "last_week"
   | "this_month"
+  | "next_month"
   | "last_month"
   | "last_3_months"
+  | "this_quarter"
   | "last_6_months"
   | "this_year"
   | "previous_year"
@@ -50,8 +55,10 @@ export const DATE_FILTER_OPTIONS: Array<{
   { value: "this_week", label: "This Week" },
   { value: "last_week", label: "Last Week" },
   { value: "this_month", label: "This Month" },
+  { value: "next_month", label: "Next Month" },
   { value: "last_month", label: "Last Month" },
   { value: "last_3_months", label: "Last 3 Months" },
+  { value: "this_quarter", label: "This Quarter" },
   { value: "last_6_months", label: "Last 6 Months" },
   { value: "this_year", label: "This Year" },
   { value: "previous_year", label: "Previous Year" },
@@ -120,6 +127,13 @@ export function getDateRangeFromFilter(
       label = "This Month";
       break;
     }
+    case "next_month": {
+      const nm = addMonths(now, 1);
+      start = startOfMonth(nm);
+      end = endOfMonth(nm);
+      label = "Next Month";
+      break;
+    }
     case "last_month": {
       const prevMonth = subMonths(now, 1);
       start = startOfMonth(prevMonth);
@@ -131,6 +145,12 @@ export function getDateRangeFromFilter(
       start = startOfMonth(subMonths(now, 2));
       end = endOfMonth(now);
       label = "Last 3 Months";
+      break;
+    }
+    case "this_quarter": {
+      start = startOfQuarter(now);
+      end = endOfQuarter(now);
+      label = "This Quarter";
       break;
     }
     case "last_6_months": {

@@ -14,6 +14,9 @@ import {
   Layers,
   Calculator,
   Repeat,
+  ArrowUpRight,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -26,6 +29,7 @@ import { MoneyDisplay } from "@/components/financial/money-display";
 import { MetricCard } from "@/components/financial/metric-card";
 import { ProgressRing } from "@/components/goals/progress-ring";
 import { GoalCalculator } from "@/components/goals/goal-calculator";
+import { PlanHeader } from "@/components/plan/plan-header";
 import dynamic from "next/dynamic";
 
 const CreateGoalDialog = dynamic(
@@ -50,6 +54,7 @@ import {
   subtractMoney,
   calculateGoalMonthlyRequired,
   calculateGoalTrajectory,
+  toDecimal,
 } from "@/lib/calculations/financial";
 
 interface GoalWithContributions extends Tables<"financial_goals"> {
@@ -58,9 +63,10 @@ interface GoalWithContributions extends Tables<"financial_goals"> {
 
 interface GoalsViewProps {
   goals: GoalWithContributions[];
+  accounts?: Tables<"accounts">[];
 }
 
-export function GoalsView({ goals }: GoalsViewProps) {
+export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
   const [contributeTargetGoal, setContributeTargetGoal] =
     React.useState<Tables<"financial_goals"> | null>(null);
   const [showCalculator, setShowCalculator] = React.useState<boolean>(false);
@@ -93,27 +99,17 @@ export function GoalsView({ goals }: GoalsViewProps) {
       };
     }, [goals]);
 
-  const getGoalCategoryBadgeClass = (category: string) => {
-    const c = category.toLowerCase();
-    if (c.includes("emergency") || c.includes("safety")) {
-      return "border-primary/30 text-primary bg-primary/10";
+  const getPriorityBadgeClass = (priority?: string | null) => {
+    switch (priority) {
+      case "urgent":
+        return "bg-danger/15 text-danger border-danger/30 font-bold";
+      case "high":
+        return "bg-warning/15 text-warning border-warning/30 font-semibold";
+      case "low":
+        return "bg-surface-secondary text-text-secondary border-border font-medium";
+      default:
+        return "bg-primary/10 text-primary border-primary/20 font-semibold";
     }
-    if (c.includes("retire") || c.includes("pension")) {
-      return "border-primary/30 text-primary bg-primary/10";
-    }
-    if (c.includes("home") || c.includes("house") || c.includes("property")) {
-      return "border-success/30 text-success bg-success/10";
-    }
-    if (c.includes("car") || c.includes("vehicle") || c.includes("bike")) {
-      return "border-warning/30 text-warning bg-warning/10";
-    }
-    if (c.includes("vacation") || c.includes("travel") || c.includes("trip")) {
-      return "border-primary/20 text-primary bg-primary/5";
-    }
-    if (c.includes("wedding") || c.includes("family") || c.includes("education")) {
-      return "border-danger/30 text-danger bg-danger/10";
-    }
-    return "border-border text-text-secondary bg-surface-secondary";
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -129,32 +125,25 @@ export function GoalsView({ goals }: GoalsViewProps) {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-text-primary">
-            Financial Goals & Milestones
-          </h2>
-          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
-            SVG circular progress meters, target pacing, and monthly contribution calculators.
-          </p>
-        </div>
+      <PlanHeader
+        activeTab="goals"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCalculator(!showCalculator)}
+              className="gap-1.5 h-9 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary"
+            >
+              <Calculator className="h-4 w-4" />
+              <span>{showCalculator ? "Hide Calculator" : "Goal Calculator"}</span>
+            </Button>
+            <CreateGoalDialog />
+          </div>
+        }
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCalculator(!showCalculator)}
-            className="gap-1.5 h-9 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary"
-          >
-            <Calculator className="h-4 w-4" />
-            <span>{showCalculator ? "Hide Calculator" : "Goal Calculator"}</span>
-          </Button>
-
-          <CreateGoalDialog />
-        </div>
-      </div>
-
-      {/* Unified Plan Tabs */}
+      {/* Unified Plan Navigation Tabs */}
       <div className="flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70 w-fit">
         <Link
           href="/budgets"
@@ -163,12 +152,10 @@ export function GoalsView({ goals }: GoalsViewProps) {
           <Layers className="h-3.5 w-3.5" />
           <span>Monthly Budgets</span>
         </Link>
-
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-surface shadow-2xs">
           <Target className="h-3.5 w-3.5" />
           <span>Financial Goals</span>
         </div>
-
         <Link
           href="/recurring"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
@@ -213,7 +200,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
           title="Overall Goal Progress"
           amount={`${overallProgress}%`}
           formatType="percent"
-          subtitle={`${goals.filter((g) => g.current_amount >= g.target_amount).length} of ${goals.length} goals achieved`}
+          subtitle={`${goals.filter((g) => toDecimal(g.current_amount).gte(g.target_amount)).length} of ${goals.length} goals achieved`}
           icon={Sparkles}
           iconColor="indigo"
         />
@@ -225,7 +212,7 @@ export function GoalsView({ goals }: GoalsViewProps) {
           <Target className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
           <h3 className="text-base font-semibold text-text-primary">No financial goals set</h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4 max-w-md mx-auto">
-            Add your first milestone like an emergency fund, home deposit, or retirement corpus to track capital accumulation and target pacing.
+            Establish long-term milestones like an emergency reserve, down payment, or retirement corpus to track capital accumulation and target pacing.
           </p>
           <CreateGoalDialog />
         </div>
@@ -237,13 +224,17 @@ export function GoalsView({ goals }: GoalsViewProps) {
               goal.current_amount,
               goal.target_date
             );
-            const isCompleted = metrics.progressPercent >= 100;
+            const isCompleted = metrics.progressPercent >= 100 || goal.is_completed;
 
             let recentVelocity = 0;
             if (goal.contributions && goal.contributions.length > 0) {
-              const sum = goal.contributions.reduce((acc: number, c: any) => acc + parseFloat(c.amount.toString()), 0);
+              const sum = goal.contributions.reduce(
+                (acc: number, c: any) => acc + parseFloat(c.amount.toString()),
+                0
+              );
               recentVelocity = sum / Math.max(1, goal.contributions.length);
             }
+
             const trajectory = calculateGoalTrajectory(
               goal.target_amount,
               goal.current_amount,
@@ -251,131 +242,121 @@ export function GoalsView({ goals }: GoalsViewProps) {
               recentVelocity
             );
 
-            const remainingAmount = subtractMoney(goal.target_amount, goal.current_amount);
-
             return (
               <Card
                 key={goal.id}
-                className={`overflow-hidden border border-border/80 bg-surface rounded-2xl shadow-2xs transition-all hover:shadow-xs ${
-                  isCompleted ? "border-success/30 bg-success/5" : ""
-                }`}
+                className="rounded-2xl border border-border/80 bg-surface shadow-2xs flex flex-col justify-between hover:border-primary/40 transition-colors"
               >
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                <CardHeader className="p-5 pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] py-0 px-2 h-4.5 font-medium rounded-md ${getGoalCategoryBadgeClass(
-                            goal.category
+                          className="text-[10px] py-0 px-2 h-4 rounded-md font-semibold border-primary/20 text-primary bg-primary/5"
+                        >
+                          {goal.category || "General"}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] py-0 px-2 h-4 rounded-md capitalize ${getPriorityBadgeClass(
+                            goal.priority
                           )}`}
                         >
-                          {goal.category}
+                          {goal.priority || "Medium"} Priority
                         </Badge>
-                        {!isCompleted && trajectory.projectedMonthsToComplete !== null && (
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] py-0 px-1.5 h-4.5 rounded-md ${
-                              trajectory.isOnTrack
-                                ? "border-success/30 text-success bg-success/10"
-                                : "border-warning/30 text-warning bg-warning/10"
-                            }`}
-                          >
-                            {trajectory.isOnTrack ? "On Track" : "Pacing Lag"}
+                        {isCompleted && (
+                          <Badge className="text-[10px] py-0 px-2 h-4 rounded-md bg-success text-surface font-bold">
+                            Completed
                           </Badge>
                         )}
                       </div>
-                      <CardTitle className="text-base font-bold text-text-primary mt-1.5 truncate">
+                      <CardTitle className="text-base font-bold text-text-primary truncate pt-1">
                         {goal.name}
                       </CardTitle>
+                      <CardDescription className="text-xs text-text-secondary flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3 text-primary" />
+                        <span>Target: {format(new Date(goal.target_date), "dd MMM yyyy")}</span>
+                      </CardDescription>
                     </div>
+
+                    <ProgressRing
+                      progress={metrics.progressPercent}
+                      size={64}
+                      strokeWidth={6}
+                      strokeColor={isCompleted ? "var(--success)" : "var(--primary)"}
+                    />
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-5 pt-0 space-y-4 flex-1 flex flex-col justify-between">
+                  {/* Financial Metrics */}
+                  <div className="space-y-3 pt-2 border-t border-border/60">
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="text-text-secondary">Saved Capital:</span>
+                      <MoneyDisplay
+                        amount={goal.current_amount}
+                        className="font-bold text-sm text-text-primary"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="text-text-secondary">Target Corpus:</span>
+                      <MoneyDisplay
+                        amount={goal.target_amount}
+                        className="font-semibold text-text-secondary"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="text-text-secondary">Corpus Gap:</span>
+                      <MoneyDisplay
+                        amount={metrics.remainingAmount}
+                        className={isCompleted ? "text-success font-bold" : "text-danger font-bold"}
+                      />
+                    </div>
+
+                    {/* Monthly Required Pacing */}
+                    {!isCompleted && (
+                      <div className="p-2.5 rounded-xl bg-surface-secondary/70 border border-border/50 space-y-1">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-text-secondary">Monthly Required:</span>
+                          <span className="font-bold text-primary font-mono tabular-nums">
+                            ₹{Math.ceil(parseFloat(metrics.monthlyRequired)).toLocaleString("en-IN")}/mo
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-text-secondary flex items-center justify-between">
+                          <span>{metrics.monthsRemaining} months remaining</span>
+                          {goal.planned_contribution_amount && (
+                            <span className="text-text-primary font-medium">
+                              Planned: ₹{parseFloat(goal.planned_contribution_amount.toString()).toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setContributeTargetGoal(goal)}
+                      className="flex-1 h-8 text-xs font-semibold bg-primary hover:bg-primary-hover text-surface rounded-xl shadow-xs gap-1"
+                    >
+                      <PiggyBank className="h-3.5 w-3.5" />
+                      <span>Manage Funds</span>
+                    </Button>
 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-text-secondary hover:text-danger shrink-0"
                       onClick={() => handleDelete(goal.id, goal.name)}
-                      aria-label="Delete goal"
+                      className="h-8 w-8 text-text-secondary hover:text-danger rounded-xl shrink-0"
+                      title="Delete Goal"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="p-4 pt-2 space-y-4">
-                  {/* Leftovers-style Circular Progress Ring & Numbers */}
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-secondary/40 border border-border/60">
-                    <ProgressRing
-                      progress={metrics.progressPercent}
-                      size={72}
-                      strokeWidth={6.5}
-                      strokeColor={isCompleted ? "#39805B" : "var(--primary)"}
-                      trackColor="var(--border)"
-                    />
-
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex justify-between items-baseline text-xs">
-                        <span className="text-text-secondary">Saved</span>
-                        <span className="font-bold tabular-nums text-text-primary">
-                          ₹{parseFloat(goal.current_amount as any).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-baseline text-xs">
-                        <span className="text-text-secondary">Target</span>
-                        <span className="font-bold tabular-nums text-text-primary">
-                          ₹{parseFloat(goal.target_amount as any).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-baseline text-xs pt-0.5 border-t border-border/50">
-                        <span className="text-text-secondary">Remaining</span>
-                        <span className={`font-bold tabular-nums ${isCompleted ? "text-success" : "text-text-primary"}`}>
-                          {isCompleted ? "Goal Reached!" : `₹${parseFloat(remainingAmount).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Monthly Required Target */}
-                  {!isCompleted ? (
-                    <div className="p-2.5 rounded-xl border border-border/70 bg-surface flex justify-between items-center text-xs">
-                      <div>
-                        <span className="text-text-secondary block text-[11px] font-medium">
-                          Required Monthly Savings
-                        </span>
-                        <span className="font-mono font-bold text-sm text-primary">
-                          <MoneyDisplay amount={metrics.monthlyRequired} /> / mo
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-text-secondary block text-[11px] font-medium">
-                          Time Left
-                        </span>
-                        <span className="font-mono font-semibold text-text-primary">
-                          {metrics.monthsRemaining} month(s)
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 rounded-xl border border-success/30 bg-success/10 text-success flex items-center gap-2 text-xs font-semibold">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>Target Milestone Achieved!</span>
-                    </div>
-                  )}
-
-                  {/* Footer Action */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
-                    <span className="text-text-secondary flex items-center gap-1 text-[11px]">
-                      <Calendar className="h-3 w-3" />
-                      Target: {format(new Date(goal.target_date), "MMM yyyy")}
-                    </span>
-
-                    <Button
-                      size="sm"
-                      className="h-8 text-xs gap-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface font-semibold shadow-xs transition-colors"
-                      onClick={() => setContributeTargetGoal(goal)}
-                    >
-                      <PiggyBank className="h-3.5 w-3.5" />
-                      <span>Add Funds</span>
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </CardContent>
@@ -385,11 +366,14 @@ export function GoalsView({ goals }: GoalsViewProps) {
         </div>
       )}
 
-      {/* Contribute Funds Modal */}
+      {/* Contribute Modal */}
       <ContributeGoalDialog
         goal={contributeTargetGoal}
+        accounts={accounts}
         open={!!contributeTargetGoal}
-        onOpenChange={(open) => !open && setContributeTargetGoal(null)}
+        onOpenChange={(open) => {
+          if (!open) setContributeTargetGoal(null);
+        }}
       />
     </div>
   );

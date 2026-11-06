@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, Loader2, Target } from "lucide-react";
+import { PlusCircle, Loader2, Target, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format, addYears } from "date-fns";
 
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createGoalSchema, CreateGoalInput } from "@/lib/validations/goals";
+import {
+  createGoalSchema,
+  CreateGoalInput,
+  goalCategoryValues,
+  goalPriorityValues,
+} from "@/lib/validations/goals";
 import { createGoalAction } from "@/app/(dashboard)/goals/actions";
 
 interface CreateGoalDialogProps {
@@ -37,24 +43,56 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const defaultStartDate = format(new Date(), "yyyy-MM-dd");
   const defaultTargetDate = format(addYears(new Date(), 3), "yyyy-MM-dd");
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<CreateGoalInput>({
-    resolver: zodResolver(createGoalSchema),
+    resolver: zodResolver(createGoalSchema) as any,
     defaultValues: {
       name: "",
       target_amount: "",
       current_amount: "0.00",
+      start_date: defaultStartDate,
       target_date: defaultTargetDate,
-      category: "General",
+      category: "Emergency Fund",
+      priority: "medium",
+      contribution_frequency: "monthly",
+      planned_contribution_amount: "",
+      notes: "",
     },
   });
+
+  const targetAmount = watch("target_amount");
+  const currentAmount = watch("current_amount");
+  const targetDate = watch("target_date");
+
+  // Live estimated monthly savings recommendation
+  const monthlyRecommendation = React.useMemo(() => {
+    const t = parseFloat(targetAmount || "0");
+    const c = parseFloat(currentAmount || "0");
+    if (!t || isNaN(t) || t <= c) return null;
+    if (!targetDate) return null;
+
+    const months = Math.max(
+      1,
+      Math.round(
+        (new Date(targetDate).getTime() - new Date().getTime()) /
+          (1000 * 60 * 60 * 24 * 30.4375)
+      )
+    );
+    const needed = (t - c) / months;
+    return {
+      months,
+      monthlyNeeded: Math.ceil(needed),
+    };
+  }, [targetAmount, currentAmount, targetDate]);
 
   const onSubmit = async (data: CreateGoalInput) => {
     setIsSubmitting(true);
@@ -84,14 +122,14 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[460px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl">
+      <DialogContent className="sm:max-w-[520px] bg-surface text-text-primary border-border p-5 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-text-primary">
             <Target className="h-5 w-5 text-primary" />
             <span>Create Financial Goal</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-text-secondary">
-            Target long-term savings goals with automated monthly milestone projections.
+            Target savings goals with automated monthly milestone projections and ledger linking.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,11 +137,11 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
           {/* Goal Name */}
           <div className="space-y-1.5">
             <Label htmlFor="goal-name" className="text-xs font-medium text-text-secondary">
-              Goal Name
+              Goal Name *
             </Label>
             <Input
               id="goal-name"
-              placeholder="e.g. Emergency Fund, Apartment Down Payment"
+              placeholder="e.g. Emergency Fund, House Down Payment, Child Education"
               {...register("name")}
               className="h-9 text-xs bg-surface border-border text-text-primary"
             />
@@ -113,10 +151,56 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
+            {/* Category */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">
+                Category
+              </Label>
+              <Select
+                defaultValue="Emergency Fund"
+                onValueChange={(val: any) => setValue("category", val)}
+              >
+                <SelectTrigger className="h-9 text-xs bg-surface border-border">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface text-text-primary border-border">
+                  {goalCategoryValues.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">
+                Priority
+              </Label>
+              <Select
+                defaultValue="medium"
+                onValueChange={(val: any) => setValue("priority", val)}
+              >
+                <SelectTrigger className="h-9 text-xs bg-surface border-border">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface text-text-primary border-border">
+                  {goalPriorityValues.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      <span className="capitalize">{p} Priority</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             {/* Target Corpus */}
             <div className="space-y-1.5">
               <Label htmlFor="goal-target" className="text-xs font-medium text-text-secondary">
-                Target Corpus (INR)
+                Target Amount (₹) *
               </Label>
               <Input
                 id="goal-target"
@@ -136,7 +220,7 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
             {/* Current Seed Capital */}
             <div className="space-y-1.5">
               <Label htmlFor="goal-current" className="text-xs font-medium text-text-secondary">
-                Already Saved (INR)
+                Initial Saved (₹)
               </Label>
               <Input
                 id="goal-current"
@@ -155,13 +239,26 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Target Date */}
+            {/* Start Date */}
             <div className="space-y-1.5">
-              <Label htmlFor="goal-date" className="text-xs font-medium text-text-secondary">
-                Target Date
+              <Label htmlFor="goal-start-date" className="text-xs font-medium text-text-secondary">
+                Start Date
               </Label>
               <Input
-                id="goal-date"
+                id="goal-start-date"
+                type="date"
+                {...register("start_date")}
+                className="h-9 text-xs bg-surface border-border"
+              />
+            </div>
+
+            {/* Target Date */}
+            <div className="space-y-1.5">
+              <Label htmlFor="goal-target-date" className="text-xs font-medium text-text-secondary">
+                Target Date *
+              </Label>
+              <Input
+                id="goal-target-date"
                 type="date"
                 {...register("target_date")}
                 className="h-9 text-xs bg-surface border-border"
@@ -172,33 +269,77 @@ export function CreateGoalDialog({ trigger }: CreateGoalDialogProps) {
                 </p>
               )}
             </div>
+          </div>
 
-            {/* Category */}
+          {/* Monthly Recommendation Preview */}
+          {monthlyRecommendation && (
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-text-primary">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              <span>
+                To reach target in <strong>{monthlyRecommendation.months} months</strong>, plan to save approximately{" "}
+                <strong className="text-primary font-mono">
+                  ₹{monthlyRecommendation.monthlyNeeded.toLocaleString("en-IN")}/month
+                </strong>.
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Planned Contribution Amount */}
             <div className="space-y-1.5">
-              <Label htmlFor="goal-cat" className="text-xs font-medium text-text-secondary">
-                Category
+              <Label className="text-xs font-medium text-text-secondary">
+                Planned Contribution (₹)
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder={
+                  monthlyRecommendation
+                    ? `${monthlyRecommendation.monthlyNeeded}`
+                    : "e.g. 10000"
+                }
+                {...register("planned_contribution_amount")}
+                className="h-9 text-xs tabular-nums bg-surface border-border"
+              />
+            </div>
+
+            {/* Contribution Frequency */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-text-secondary">
+                Frequency
               </Label>
               <Select
-                defaultValue="General"
-                onValueChange={(val) => setValue("category", val)}
+                defaultValue="monthly"
+                onValueChange={(val: any) => setValue("contribution_frequency", val)}
               >
-                <SelectTrigger id="goal-cat" className="h-9 text-xs bg-surface border-border">
-                  <SelectValue placeholder="Category" />
+                <SelectTrigger className="h-9 text-xs bg-surface border-border">
+                  <SelectValue placeholder="Frequency" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface text-text-primary border-border">
-                  <SelectItem value="Emergency">Emergency Reserve</SelectItem>
-                  <SelectItem value="Retirement">Retirement</SelectItem>
-                  <SelectItem value="Home">Home & Real Estate</SelectItem>
-                  <SelectItem value="Vehicle">Vehicle Purchase</SelectItem>
-                  <SelectItem value="Vacation">Vacation / Travel</SelectItem>
-                  <SelectItem value="Education">Education</SelectItem>
-                  <SelectItem value="General">General Milestone</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-text-secondary">
+              Notes (Optional)
+            </Label>
+            <Textarea
+              placeholder="Rationale, target milestone, or strategy..."
+              {...register("notes")}
+              className="text-xs bg-surface border-border resize-none h-16"
+            />
+          </div>
+
+          <DialogFooter className="pt-2 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"

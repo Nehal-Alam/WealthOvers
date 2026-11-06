@@ -651,6 +651,85 @@ export function calculateDailySafeSpend(
   };
 }
 
+export interface AdvancedBudgetForecast {
+  daysCompleted: number;
+  daysRemaining: number;
+  totalDays: number;
+  averageDailySpend: string;
+  projectedMonthEndSpending: string;
+  projectedRemaining: string;
+  projectedSavings: string;
+  isProjectedToExceed: boolean;
+  projectedOverspentAmount: string;
+  dailySafeSpend: string;
+  adjustedDailySafeSpend: string;
+  upcomingBillsTotal: string;
+}
+
+/**
+ * Calculates projected month-end spending, safe velocity, and risk analysis
+ * based on observed spending velocity, remaining cycle days, and known upcoming bills.
+ */
+export function calculateAdvancedBudgetForecast(
+  totalBudget: number | string | Decimal,
+  totalSpent: number | string | Decimal,
+  startDateStr: string | Date,
+  endDateStr: string | Date,
+  upcomingBills: number | string | Decimal = 0,
+  referenceDate: string | Date = new Date()
+): AdvancedBudgetForecast {
+  const budget = toDecimal(totalBudget);
+  const spent = toDecimal(totalSpent);
+  const bills = toDecimal(upcomingBills);
+  const start = typeof startDateStr === "string" ? parseISO(startDateStr) : startDateStr;
+  const end = typeof endDateStr === "string" ? parseISO(endDateStr) : endDateStr;
+  const now = typeof referenceDate === "string" ? parseISO(referenceDate) : referenceDate;
+
+  const totalDays = Math.max(1, differenceInDays(end, start) + 1);
+  const daysDiff = differenceInDays(end, now);
+  const daysRemaining = Math.max(0, Math.min(totalDays, daysDiff + 1));
+  const daysCompleted = Math.max(1, totalDays - daysRemaining);
+
+  const remainingBudget = budget.minus(spent);
+  const avgDaily = spent.dividedBy(daysCompleted);
+
+  // Projected total = spent so far + (daily average * remaining days) + upcoming unpaid bills
+  const projectedVariable = avgDaily.times(daysRemaining);
+  const projectedTotal = spent.plus(projectedVariable).plus(bills);
+  const projectedRemaining = budget.minus(projectedTotal);
+  const isProjectedToExceed = projectedTotal.greaterThan(budget);
+  const projectedOverspentAmount = isProjectedToExceed ? projectedTotal.minus(budget) : toDecimal(0);
+  const projectedSavings = projectedRemaining.greaterThan(0) ? projectedRemaining : toDecimal(0);
+
+  // Basic Daily Safe-to-Spend: Remaining Budget / Remaining Days
+  let dailySafe = toDecimal(0);
+  if (daysRemaining > 0 && remainingBudget.greaterThan(0)) {
+    dailySafe = remainingBudget.dividedBy(daysRemaining);
+  }
+
+  // Adjusted Daily Safe-to-Spend: (Remaining Budget - Upcoming Bills) / Remaining Days
+  let adjDailySafe = toDecimal(0);
+  const netRemainingAfterBills = remainingBudget.minus(bills);
+  if (daysRemaining > 0 && netRemainingAfterBills.greaterThan(0)) {
+    adjDailySafe = netRemainingAfterBills.dividedBy(daysRemaining);
+  }
+
+  return {
+    daysCompleted,
+    daysRemaining,
+    totalDays,
+    averageDailySpend: avgDaily.toFixed(2),
+    projectedMonthEndSpending: projectedTotal.toFixed(2),
+    projectedRemaining: projectedRemaining.toFixed(2),
+    projectedSavings: projectedSavings.toFixed(2),
+    isProjectedToExceed,
+    projectedOverspentAmount: projectedOverspentAmount.toFixed(2),
+    dailySafeSpend: dailySafe.toFixed(2),
+    adjustedDailySafeSpend: adjDailySafe.toFixed(2),
+    upcomingBillsTotal: bills.toFixed(2),
+  };
+}
+
 export interface RecurringRuleForecastItem {
   amount: number | string | Decimal;
   recurrence_interval: string;
