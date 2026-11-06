@@ -57,3 +57,4 @@ To prevent merge conflicts, data corruption, or architectural divergence across 
 4. **Verification & Regression Testing (`tests/`)**:
    * *Exclusive Owner:* **Agent E (QA Engineer)**.
    * *Rule:* Every new feature or financial formula modification must be accompanied by an automated Vitest suite.
+

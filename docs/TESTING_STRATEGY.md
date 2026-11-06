@@ -67,3 +67,4 @@ WealthOvers enforces rigorous fintech testing standards where monetary calculati
    $$\Delta \text{Net Worth}_{\text{Investment Buy}} \equiv 0 \quad (\text{cash decrease offset by asset increase})$$
 3. **Cash-Flow Accuracy:**
    Bank deduction for SIP ($₹1,600$) is an **Outflow** from bank cash while simultaneously an asset acquisition. Total bank outflow reflects both direct expenses ($₹112$) and automated investments ($₹1,600$), totaling $₹1,712$.
+

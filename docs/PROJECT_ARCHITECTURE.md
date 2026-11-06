@@ -100,3 +100,4 @@ WealthOvers delivers 17 cohesive financial planning and tracking modules:
 - **No Direct Schema Alterations:** Agent B authors migrations in `supabase/migrations/`; Agent A reviews before execution.
 - **Unified Transaction Invariant:** All financial mutations must call `FinancialTransactionService.createFinancialTransaction()`. No frontend component or server action may perform standalone unrecorded balance updates.
 - **No Pre-Populated Master Category Envelopes:** Predefined categories must only act as templates or reference taxonomies. They must never appear as active user budgets unless allocated by the user.
+

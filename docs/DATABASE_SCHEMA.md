@@ -232,3 +232,4 @@ Every single table in `public` schema has `ROW LEVEL SECURITY` strictly enabled.
 * Tenant isolation pattern: `USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)`.
 * No public or unauthenticated read access is permitted on financial entities.
 * Service role bypass is limited to administrative background automation tasks.
+
