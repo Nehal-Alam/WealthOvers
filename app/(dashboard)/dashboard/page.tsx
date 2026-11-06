@@ -4,7 +4,7 @@ import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
 import { Tables } from "@/types/database";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { addMoney, calculateSavingsRate } from "@/lib/calculations/financial";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 export default async function DashboardPage() {
   const user = await getAuthenticatedUser();
@@ -104,16 +104,16 @@ export default async function DashboardPage() {
       .select("id, name, category, current_valuation")
       .eq("user_id", user.id),
 
-    // 9. Loans
+    // 9. Loans (with principal, dates, and interest for mobile overview)
     supabase
       .from("loans")
-      .select("id, lender_or_borrower_name, loan_type, outstanding_balance, monthly_emi, annual_interest_rate")
+      .select("id, lender_or_borrower_name, loan_type, principal_amount, outstanding_balance, monthly_emi, annual_interest_rate, start_date, maturity_date")
       .eq("user_id", user.id),
 
-    // 10. External Liabilities
+    // 10. External Liabilities (Private debts & friends/family)
     supabase
       .from("liabilities")
-      .select("id, name, category, outstanding_amount, due_date")
+      .select("id, name, category, total_amount, outstanding_amount, due_date, notes")
       .eq("user_id", user.id),
 
     // 11. Financial Goals
@@ -124,19 +124,19 @@ export default async function DashboardPage() {
       .order("target_date", { ascending: true })
       .limit(4),
 
-    // 12. Month Transactions for Category Expense Breakdown & Deterministic Insights
+    // 12. Period Transactions (last 12 months for seamless mobile date filtering)
     supabase
       .from("transactions")
       .select(
         `
-        id, amount, currency, transaction_type, transaction_date, description, category_id,
+        id, amount, currency, transaction_type, transaction_date, description, category_id, account_id,
         category:categories(id, name, color, icon)
       `
       )
       .eq("user_id", user.id)
-      .gte("transaction_date", monthStart)
-      .lte("transaction_date", monthEnd)
-      .order("transaction_date", { ascending: false }),
+      .gte("transaction_date", subMonths(now, 13).toISOString())
+      .order("transaction_date", { ascending: false })
+      .limit(1500),
 
     // 13. Fast Server-side SQL Aggregation RPC
     supabase.rpc("get_dashboard_summary", {

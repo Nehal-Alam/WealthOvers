@@ -5,6 +5,7 @@ import { Globe, Shield, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemePreferenceCard } from "@/components/settings/theme-preference-card";
+import { MobileSettingsExtras } from "@/components/settings/mobile-settings-extras";
 import type { Tables } from "@/types/database";
 
 export default async function SettingsPage() {
@@ -15,13 +16,21 @@ export default async function SettingsPage() {
   }
 
   const supabase = await createClient();
-  const { data: settingsData } = await supabase
-    .from("user_settings")
-    .select("id, currency, locale, financial_year_start_month, timezone, is_privacy_mode, theme_preference")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: settingsData }, { data: profile }] = await Promise.all([
+    supabase
+      .from("user_settings")
+      .select("id, currency, locale, financial_year_start_month, timezone, is_privacy_mode, theme_preference")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
 
   const settings = settingsData as Tables<"user_settings"> | null;
+  const userName = profile?.full_name || user.user_metadata?.full_name || "Investor";
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -35,6 +44,9 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Profile, Privacy, AI & Device Extra Controls */}
+        <MobileSettingsExtras userEmail={user.email || ""} userName={userName} />
+
         {/* Appearance & Theme System */}
         <ThemePreferenceCard initialTheme={settings?.theme_preference || "system"} />
 

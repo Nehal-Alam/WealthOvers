@@ -79,23 +79,23 @@ describe("Phase 2: Shared Application Layout & Navigation Redesign", () => {
   });
 
   describe("Mobile Bottom Navigation (4-Tab Destination + FAB)", () => {
-    it("configures the 4 primary mobile destinations (Home, Activity, Insights, Plan)", () => {
+    it("configures the 4 primary mobile destinations (Home, Stats, Accounts, Settings)", () => {
       expect(mobileNavContent).toContain('href="/dashboard"');
       expect(mobileNavContent).toContain("<span>Home</span>");
-      expect(mobileNavContent).toContain('href="/transactions"');
-      expect(mobileNavContent).toContain("<span>Activity</span>");
       expect(mobileNavContent).toContain('href="/insights"');
-      expect(mobileNavContent).toContain("<span>Insights</span>");
-      expect(mobileNavContent).toContain('href="/budgets"');
-      expect(mobileNavContent).toContain("<span>Plan</span>");
+      expect(mobileNavContent).toContain("<span>Stats</span>");
+      expect(mobileNavContent).toContain('href="/accounts"');
+      expect(mobileNavContent).toContain("<span>Accounts</span>");
+      expect(mobileNavContent).toContain('href="/settings"');
+      expect(mobileNavContent).toContain("<span>Settings</span>");
     });
 
     it("includes the central elevated floating action button (FAB) for quick transactions", () => {
       expect(mobileNavContent).toContain("openQuickTransaction");
-      expect(mobileNavContent).toContain("Add Expense");
-      expect(mobileNavContent).toContain("Add Income");
-      expect(mobileNavContent).toContain("Transfer Funds");
-      expect(mobileNavContent).toContain("-top-3");
+      expect(mobileNavContent).toContain("Expense");
+      expect(mobileNavContent).toContain("Income");
+      expect(mobileNavContent).toContain("Transfer");
+      expect(mobileNavContent).toContain("-top-4");
     });
 
     it("incorporates mobile safe area padding (pb-safe)", () => {

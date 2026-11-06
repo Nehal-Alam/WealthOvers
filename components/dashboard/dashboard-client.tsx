@@ -78,6 +78,7 @@ import {
 } from "@/lib/calculations/financial";
 import Decimal from "decimal.js";
 import { HomeNetWorthHero } from "./net-worth-hero";
+import { MobileDashboardView } from "./mobile-dashboard-view";
 
 interface DashboardClientProps {
   userName?: string;
@@ -401,10 +402,33 @@ export function DashboardClient({
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <>
       {/* ─────────────────────────────────────────────────────────────
-          HEADER BAR: GREETING & CONCISE CONTROLS
+          MOBILE EXPERIENCE (< lg): MINIMAL, TOUCH-FIRST, 4 SUB-TABS
       ────────────────────────────────────────────────────────────── */}
+      <div className="block lg:hidden">
+        <MobileDashboardView
+          userName={userName}
+          accounts={accounts}
+          recentTransactions={recentTransactions}
+          allTransactions={monthTransactions}
+          categories={categories}
+          activeBudget={activeBudget}
+          upcomingRecurring={upcomingRecurring}
+          loans={loans}
+          liabilities={liabilities}
+          creditCards={creditCards}
+          precomputedSummary={precomputedSummary}
+        />
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          DESKTOP EXPERIENCE (>= lg): BLOOMBERG FINANCIAL TERMINAL
+      ────────────────────────────────────────────────────────────── */}
+      <div className="hidden lg:block space-y-6 sm:space-y-8">
+        {/* ─────────────────────────────────────────────────────────────
+            HEADER BAR: GREETING & CONCISE CONTROLS
+        ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
@@ -924,5 +948,6 @@ export function DashboardClient({
         </div>
       </div>
     </div>
+  </>
   );
 }
