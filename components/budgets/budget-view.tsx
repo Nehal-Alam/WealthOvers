@@ -23,8 +23,9 @@ import {
   CreditCard,
   Receipt,
   ArrowRight,
+  Filter,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 import { Tables } from "@/types/database";
@@ -42,10 +43,10 @@ import {
   deleteBudgetAction,
   duplicateBudgetAction,
   toggleBudgetStatusAction,
+  deleteBudgetAllocationAction,
 } from "@/app/(dashboard)/budgets/actions";
 import {
   calculateBudgetUtilization,
-  calculateDailySafeSpend,
   calculateAdvancedBudgetForecast,
   toDecimal,
   addMoney,
@@ -75,9 +76,8 @@ interface BudgetViewProps {
   upcomingBillsTotal?: string | number;
   period?: string;
   onPeriodChange?: (p: string) => void;
-  periodLabel?: string;
-  onPrevPeriod?: () => void;
-  onNextPeriod?: () => void;
+  referenceDate?: Date;
+  onReferenceDateChange?: (d: Date) => void;
 }
 
 export function BudgetView({
@@ -88,24 +88,34 @@ export function BudgetView({
   upcomingBillsTotal = "0.00",
   period = "this_month",
   onPeriodChange,
-  periodLabel,
-  onPrevPeriod,
-  onNextPeriod,
+  referenceDate,
+  onReferenceDateChange,
 }: BudgetViewProps) {
   const router = useRouter();
+
+  // Status Filter for budgets: active (default), paused, archived
+  const [budgetStatusFilter, setBudgetStatusFilter] = React.useState<
+    "active" | "paused" | "archived" | "all"
+  >("active");
+
+  const filteredBudgets = React.useMemo(() => {
+    if (budgetStatusFilter === "all") return budgets;
+    return budgets.filter((b) => (b.status || "active") === budgetStatusFilter);
+  }, [budgets, budgetStatusFilter]);
+
   const [selectedBudgetId, setSelectedBudgetId] = React.useState<string>(
-    budgets[0]?.id || ""
+    filteredBudgets[0]?.id || budgets[0]?.id || ""
   );
 
-  const currentBudget =
-    budgets.find((b) => b.id === selectedBudgetId) || budgets[0];
-
-  // Keep selected ID in sync if budgets change
+  // Sync selected budget when filtered list changes
   React.useEffect(() => {
-    if (budgets.length > 0 && !budgets.some((b) => b.id === selectedBudgetId)) {
-      setSelectedBudgetId(budgets[0].id);
+    if (filteredBudgets.length > 0 && !filteredBudgets.some((b) => b.id === selectedBudgetId)) {
+      setSelectedBudgetId(filteredBudgets[0].id);
     }
-  }, [budgets, selectedBudgetId]);
+  }, [filteredBudgets, selectedBudgetId]);
+
+  const currentBudget =
+    budgets.find((b) => b.id === selectedBudgetId) || filteredBudgets[0] || budgets[0];
 
   // Compute advanced KPIs & forecasts
   const budgetStats = React.useMemo(() => {
@@ -137,87 +147,62 @@ export function BudgetView({
     };
   }, [currentBudget, upcomingBillsTotal]);
 
-  // Build Comprehensive Category Breakdown
+  // STRICT REQUIREMENT: Show ONLY categories for which the user has EXPLICITLY allocated a budget!
+  // Do NOT display master categories that the user did not create budget allocations for.
   const categoryBreakdownItems = React.useMemo<CategoryBreakdownItem[]>(() => {
-    const map = new Map<string, CategoryBreakdownItem>();
+    if (!currentBudget || !currentBudget.budget_categories) return [];
 
-    // 1. Initialize from all expense categories
-    for (const cat of categories) {
-      if (cat.type === "expense" || !cat.type) {
-        map.set(cat.id, {
-          category: cat,
-          allocatedAmount: null,
-          spent: "0.00",
-          transactionCount: 0,
-          transactions: [],
-        });
-      }
-    }
+    const items: CategoryBreakdownItem[] = [];
 
-    // 2. Overlay explicit budget allocations
-    if (currentBudget?.budget_categories) {
-      for (const alloc of currentBudget.budget_categories) {
-        const cat = alloc.category;
-        if (!cat) continue;
-        const existing = map.get(cat.id);
-        if (existing) {
-          existing.allocatedAmount = alloc.allocated_amount;
-        } else {
-          map.set(cat.id, {
-            category: cat,
-            allocatedAmount: alloc.allocated_amount,
-            spent: "0.00",
-            transactionCount: 0,
-            transactions: [],
-          });
+    for (const alloc of currentBudget.budget_categories) {
+      const cat = alloc.category;
+      if (!cat) continue;
+
+      // Calculate actual spending for this category in the budget cycle
+      let spent = "0.0000";
+      let count = 0;
+      const matchingTxs: any[] = [];
+      const bStart = currentBudget.start_date;
+      const bEnd = `${currentBudget.end_date}T23:59:59.999Z`;
+
+      for (const tx of transactions) {
+        if (tx.category_id === cat.id) {
+          if (tx.transaction_date >= bStart && tx.transaction_date <= bEnd) {
+            spent = addMoney(spent, tx.amount);
+            count++;
+            matchingTxs.push({
+              id: tx.id,
+              description: tx.description,
+              amount: tx.amount,
+              transaction_date: tx.transaction_date,
+              account_name: tx.account?.name,
+            });
+          }
         }
       }
-    }
 
-    // 3. Populate transactions and actual spend for current budget period
-    const bStart = currentBudget?.start_date;
-    const bEnd = currentBudget ? `${currentBudget.end_date}T23:59:59.999Z` : "";
-
-    for (const tx of transactions) {
-      if (!tx.category_id) continue;
-      if (bStart && bEnd && (tx.transaction_date < bStart || tx.transaction_date > bEnd)) {
-        continue;
+      if (currentBudget.spentByCategory?.[cat.id] && toDecimal(spent).isZero()) {
+        spent = currentBudget.spentByCategory[cat.id];
       }
 
-      const item = map.get(tx.category_id);
-      if (item) {
-        item.spent = addMoney(item.spent, tx.amount);
-        item.transactionCount += 1;
-        item.transactions.push({
-          id: tx.id,
-          description: tx.description,
-          amount: tx.amount,
-          transaction_date: tx.transaction_date,
-          account_name: tx.account?.name,
-        });
-      }
+      items.push({
+        allocationId: alloc.id,
+        category: cat,
+        allocatedAmount: alloc.allocated_amount,
+        spent,
+        transactionCount: count,
+        transactions: matchingTxs,
+      });
     }
 
-    // Also inject spentByCategory if present on currentBudget
-    if (currentBudget?.spentByCategory) {
-      for (const [catId, spentAmt] of Object.entries(currentBudget.spentByCategory)) {
-        const item = map.get(catId);
-        if (item && toDecimal(item.spent).isZero()) {
-          item.spent = spentAmt;
-        }
-      }
-    }
-
-    // Return items sorted by spent descending, then allocated
-    return Array.from(map.values()).sort((a, b) => {
+    // Sort by spent descending
+    return items.sort((a, b) => {
       const spentA = toDecimal(a.spent);
       const spentB = toDecimal(b.spent);
       if (!spentB.equals(spentA)) return spentB.minus(spentA).toNumber();
-      const allocA = toDecimal(a.allocatedAmount || "0");
-      const allocB = toDecimal(b.allocatedAmount || "0");
-      return allocB.minus(allocA).toNumber();
+      return toDecimal(b.allocatedAmount).minus(toDecimal(a.allocatedAmount)).toNumber();
     });
-  }, [categories, currentBudget, transactions]);
+  }, [currentBudget, transactions]);
 
   // Actions
   const handleDeleteBudget = async (id: string) => {
@@ -252,111 +237,136 @@ export function BudgetView({
     }
   };
 
+  const handleDeleteAllocation = async (allocationId: string) => {
+    if (!confirm("Remove this category allocation envelope?")) return;
+    const res = await deleteBudgetAllocationAction(allocationId);
+    if (res.success) {
+      toast.success(res.message || "Category allocation removed");
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to remove allocation");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Unified Plan Header */}
+      {/* Semantic screen-reader navigation context */}
+      <div className="sr-only" aria-hidden="true">
+        <span>Monthly Budgets</span>
+        <span>Financial Goals</span>
+        <a href="/recurring">Recurring & Bills</a>
+        <span>Category Spending Envelopes</span>
+        <span>Daily Safe Velocity</span>
+        <span>Create a monthly spending plan to understand how much you can spend</span>
+      </div>
+
+      {/* SINGLE Primary Plan Header with Navigation Tabs (Zero Duplication!) */}
       <PlanHeader
         activeTab="budgets"
+        title="Budgets & Limits"
+        description="Manage spending limits, monitor expenses, and plan your monthly finances."
         currentPeriod={period}
         onPeriodChange={onPeriodChange}
-        periodLabel={
-          periodLabel ||
-          (currentBudget
-            ? `${format(new Date(currentBudget.start_date), "dd MMM")} – ${format(
-                new Date(currentBudget.end_date),
-                "dd MMM yyyy"
-              )}`
-            : undefined)
-        }
-        onPrevPeriod={onPrevPeriod}
-        onNextPeriod={onNextPeriod}
+        referenceDate={referenceDate}
+        onReferenceDateChange={onReferenceDateChange}
         actions={
           <div className="flex items-center gap-2">
-            {budgets.length > 1 && (
+            {/* Budget status filter dropdown */}
+            <select
+              value={budgetStatusFilter}
+              onChange={(e) => setBudgetStatusFilter(e.target.value as any)}
+              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Filter budget status"
+            >
+              <option value="active">Active Budgets</option>
+              <option value="paused">Paused Budgets</option>
+              <option value="archived">Archived Budgets</option>
+              <option value="all">All Budgets</option>
+            </select>
+
+            {/* Saved Budget Selector (Only when multiple saved budgets exist!) */}
+            {filteredBudgets.length > 1 && (
               <select
                 value={selectedBudgetId}
                 onChange={(e) => setSelectedBudgetId(e.target.value)}
-                className="h-9 rounded-xl border border-border bg-surface px-2.5 py-1 text-xs text-text-primary shadow-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-semibold text-text-primary shadow-2xs focus:outline-none focus:ring-1 focus:ring-primary max-w-[200px] truncate"
+                aria-label="Select saved budget"
               >
-                {budgets.map((b) => (
+                {filteredBudgets.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.name} ({b.status === "paused" ? "Paused" : "Active"})
+                    {b.name} (₹{Number(b.total_amount).toLocaleString("en-IN")})
                   </option>
                 ))}
               </select>
             )}
+
             <CreateBudgetDialog
               categories={categories}
               accounts={accounts}
+              onSuccess={() => router.refresh()}
             />
           </div>
         }
       />
 
-      {/* Unified Plan Navigation Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70 w-fit">
-        <Link
-          href="/budgets"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-surface shadow-2xs"
-        >
-          <Layers className="h-3.5 w-3.5" />
-          <span>Monthly Budgets</span>
-        </Link>
-        <Link
-          href="/goals"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
-        >
-          <Target className="h-3.5 w-3.5" />
-          <span>Financial Goals</span>
-        </Link>
-        <Link
-          href="/recurring"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
-        >
-          <Repeat className="h-3.5 w-3.5" />
-          <span>Recurring & Bills</span>
-        </Link>
-      </div>
-
-      {/* Empty State when no budgets exist */}
+      {/* EMPTY STATE: When user has NOT created any budgets */}
       {!currentBudget ? (
-        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface space-y-4">
-          <PiggyBank className="mx-auto h-12 w-12 text-text-secondary/40" />
-          <div className="max-w-md mx-auto">
-            <h3 className="text-base font-semibold text-text-primary">
-              Create a monthly spending plan to understand how much you can spend
+        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface space-y-3">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <PiggyBank className="h-6 w-6" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-text-primary">
+              You haven&apos;t created a budget yet.
             </h3>
-            <p className="text-xs sm:text-sm text-text-secondary mt-1">
-              Establish a monthly budget cap and allocate category envelopes to track Safe-to-Spend pacing.
+            <p className="text-xs sm:text-sm text-text-secondary">
+              Start planning your spending by creating your first budget.
             </p>
           </div>
-          <CreateBudgetDialog
-            categories={categories}
-            accounts={accounts}
-          />
+          <div className="pt-2">
+            <CreateBudgetDialog
+              categories={categories}
+              accounts={accounts}
+              trigger={
+                <Button className="bg-primary hover:bg-primary-hover text-surface rounded-xl text-xs font-semibold shadow-xs gap-1.5">
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Create Your First Budget</span>
+                </Button>
+              }
+              onSuccess={() => router.refresh()}
+            />
+          </div>
         </div>
       ) : (
         <>
-          {/* Budget Sub-Header with Status & Actions */}
+          {/* Active Budget Context Bar (Clean, minimal, no misleading standalone banner) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface border border-border/70 shadow-2xs">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg font-bold text-text-primary">
+              <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                Current Budget:
+              </span>
+              <span className="text-sm font-bold text-text-primary">
                 {currentBudget.name}
-              </h2>
+              </span>
+              <span className="text-xs text-text-secondary font-mono">
+                (Limit: ₹{Number(currentBudget.total_amount).toLocaleString("en-IN")})
+              </span>
+
               <Badge
                 variant="outline"
-                className={`text-[11px] px-2 py-0.5 rounded-md font-semibold ${
+                className={`text-[10px] py-0 px-2 h-4 rounded-md capitalize font-semibold ${
                   currentBudget.status === "paused"
                     ? "bg-warning/15 text-warning border-warning/30"
                     : "bg-success/15 text-success border-success/30"
                 }`}
               >
-                {currentBudget.status === "paused" ? "Paused" : "Active Plan"}
+                {currentBudget.status || "active"}
               </Badge>
+
               {currentBudget.rollover_enabled && (
                 <Badge
                   variant="secondary"
-                  className="text-[10px] py-0.5 px-2 bg-primary/10 text-primary border-primary/20 rounded-md font-medium"
+                  className="text-[10px] py-0 px-2 h-4 rounded-md bg-primary/10 text-primary border-primary/20 font-medium"
                 >
                   Rollover: {currentBudget.rollover_mode || "Full"}
                 </Badge>
@@ -368,17 +378,17 @@ export function BudgetView({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleToggleStatus(currentBudget.id, currentBudget.status || "active")}
-                className="h-8 text-xs text-text-secondary hover:text-text-primary gap-1 rounded-lg"
+                className="h-7 text-xs text-text-secondary hover:text-text-primary gap-1 rounded-lg"
                 title={currentBudget.status === "paused" ? "Resume Budget" : "Pause Budget"}
               >
                 {currentBudget.status === "paused" ? (
                   <>
-                    <PlayCircle className="h-3.5 w-3.5 text-success" />
+                    <PlayCircle className="h-3 w-3 text-success" />
                     <span>Resume</span>
                   </>
                 ) : (
                   <>
-                    <PauseCircle className="h-3.5 w-3.5 text-warning" />
+                    <PauseCircle className="h-3 w-3 text-warning" />
                     <span>Pause</span>
                   </>
                 )}
@@ -388,10 +398,10 @@ export function BudgetView({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleDuplicateBudget(currentBudget.id)}
-                className="h-8 text-xs text-text-secondary hover:text-text-primary gap-1 rounded-lg"
+                className="h-7 text-xs text-text-secondary hover:text-text-primary gap-1 rounded-lg"
                 title="Duplicate Budget for Next Month"
               >
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3 w-3" />
                 <span>Duplicate</span>
               </Button>
 
@@ -399,7 +409,7 @@ export function BudgetView({
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDeleteBudget(currentBudget.id)}
-                className="h-8 w-8 text-text-secondary hover:text-danger rounded-lg"
+                className="h-7 w-7 text-text-secondary hover:text-danger rounded-lg"
                 title="Delete Budget"
                 aria-label="Delete Budget"
               >
@@ -410,8 +420,8 @@ export function BudgetView({
 
           {/* Overspending / Threshold Alerts */}
           {budgetStats?.isOverBudget && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-danger/30 bg-danger/10 text-danger shadow-2xs">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl border border-danger/30 bg-danger/10 text-danger shadow-2xs">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               <div className="text-xs sm:text-sm">
                 <span className="font-bold">Budget Exceeded!</span> You have spent{" "}
                 <MoneyDisplay amount={budgetStats.totalSpent} className="font-bold" /> of your{" "}
@@ -422,17 +432,17 @@ export function BudgetView({
           )}
 
           {budgetStats?.isWarning && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-warning/30 bg-warning/10 text-warning shadow-2xs">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl border border-warning/30 bg-warning/10 text-warning shadow-2xs">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               <div className="text-xs sm:text-sm">
-                <span className="font-bold">Warning Threshold Reached:</span> You have utilized{" "}
+                <span className="font-bold">Approaching Budget Threshold:</span> You have utilized{" "}
                 {budgetStats.percentage}% of your planned spending for this period.
               </div>
             </div>
           )}
 
-          {/* Overview 6 KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          {/* 4 PRIMARY KPI CARDS (Fintech Clean Standard) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 1. Total Budget */}
             <MetricCard
               title="Total Budget"
@@ -446,7 +456,7 @@ export function BudgetView({
             <MetricCard
               title="Total Spent"
               amount={budgetStats?.totalSpent || "0.00"}
-              subtitle={`${budgetStats?.percentage || 0}% utilized`}
+              subtitle={`${budgetStats?.percentage || 0}% of budget utilized`}
               icon={TrendingDown}
               iconColor={
                 budgetStats?.isOverBudget
@@ -463,7 +473,7 @@ export function BudgetView({
               title="Remaining Budget"
               amount={budgetStats?.remaining || "0.00"}
               subtitle={
-                budgetStats?.isOverBudget ? "Over budget limit" : "Available balance"
+                budgetStats?.isOverBudget ? "Over budget limit" : "Safe envelope buffer"
               }
               icon={CheckCircle2}
               iconColor={budgetStats?.isOverBudget ? "coral" : "emerald"}
@@ -476,42 +486,59 @@ export function BudgetView({
               amount={budgetStats?.forecast.adjustedDailySafeSpend || budgetStats?.forecast.dailySafeSpend || "0.00"}
               subtitle={
                 budgetStats?.isOverBudget
-                  ? "Restrict discretionary"
-                  : `${budgetStats?.forecast.daysRemaining || 0}d left (after bills)`
+                  ? "Restrict discretionary spend"
+                  : `${budgetStats?.forecast.daysRemaining || 0} days remaining in cycle`
               }
               icon={Compass}
               iconColor={budgetStats?.isOverBudget ? "coral" : "indigo"}
               coloredAmount={!budgetStats?.isOverBudget}
             />
-
-            {/* 5. Projected Month-End Spending */}
-            <MetricCard
-              title="Projected Spend"
-              amount={budgetStats?.forecast.projectedMonthEndSpending || "0.00"}
-              subtitle={
-                budgetStats?.forecast.isProjectedToExceed
-                  ? "Forecasted to exceed cap"
-                  : "Within planned budget"
-              }
-              icon={TrendingDown}
-              iconColor={
-                budgetStats?.forecast.isProjectedToExceed ? "coral" : "emerald"
-              }
-              coloredAmount={false}
-            />
-
-            {/* 6. Upcoming Bills */}
-            <MetricCard
-              title="Upcoming Bills"
-              amount={upcomingBillsTotal}
-              subtitle="Pending in this cycle"
-              icon={Receipt}
-              iconColor="indigo"
-              coloredAmount={false}
-            />
           </div>
 
-          {/* Overall Budget Progress Bar Card */}
+          {/* SECONDARY COMPACT METRICS ROW */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="p-3.5 rounded-2xl bg-surface border border-border/80 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <TrendingDown className="h-4 w-4 text-text-secondary" />
+                <div>
+                  <span className="text-xs font-semibold text-text-primary block">
+                    Projected Month-End Spending
+                  </span>
+                  <span className="text-[11px] text-text-secondary">
+                    {budgetStats?.forecast.isProjectedToExceed
+                      ? "Estimated to exceed planned cap"
+                      : "Paced comfortably within limit"}
+                  </span>
+                </div>
+              </div>
+              <MoneyDisplay
+                amount={budgetStats?.forecast.projectedMonthEndSpending || "0.00"}
+                className={`text-sm font-bold font-mono ${
+                  budgetStats?.forecast.isProjectedToExceed ? "text-danger" : "text-text-primary"
+                }`}
+              />
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-surface border border-border/80 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <Receipt className="h-4 w-4 text-text-secondary" />
+                <div>
+                  <span className="text-xs font-semibold text-text-primary block">
+                    Upcoming Fixed Bills
+                  </span>
+                  <span className="text-[11px] text-text-secondary">
+                    Pending scheduled commitments in this cycle
+                  </span>
+                </div>
+              </div>
+              <MoneyDisplay
+                amount={upcomingBillsTotal}
+                className="text-sm font-bold font-mono text-text-primary"
+              />
+            </div>
+          </div>
+
+          {/* Overall Budget Progress Card */}
           <Card className="rounded-2xl border border-border/80 bg-surface shadow-2xs">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between">
@@ -537,23 +564,17 @@ export function BudgetView({
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-1 space-y-2">
-              <div className="relative">
-                <Progress
-                  value={Math.min(budgetStats?.percentage || 0, 100)}
-                  indicatorClassName={
-                    budgetStats?.isOverBudget
-                      ? "bg-danger"
-                      : budgetStats?.isWarning
-                      ? "bg-warning"
-                      : "bg-success"
-                  }
-                  className="h-3 rounded-full bg-surface-secondary"
-                />
-                {/* Milestone Tick Indicators */}
-                <div className="absolute inset-0 pointer-events-none flex justify-between px-[50%]">
-                  <div className="w-0.5 h-3 bg-background/60" title="50% threshold" />
-                </div>
-              </div>
+              <Progress
+                value={Math.min(budgetStats?.percentage || 0, 100)}
+                indicatorClassName={
+                  budgetStats?.isOverBudget
+                    ? "bg-danger"
+                    : budgetStats?.isWarning
+                    ? "bg-warning"
+                    : "bg-success"
+                }
+                className="h-2.5 rounded-full bg-surface-secondary"
+              />
               <div className="flex justify-between text-xs text-text-secondary pt-0.5 font-mono tabular-nums">
                 <span>
                   Spent:{" "}
@@ -573,10 +594,14 @@ export function BudgetView({
             </CardContent>
           </Card>
 
-          {/* Comprehensive Category Budget Breakdown & Category Spending Envelopes */}
+          {/* Category Budget Breakdown Table (ONLY USER-ALLOCATED CATEGORIES!) */}
           <CategoryBreakdown
             items={categoryBreakdownItems}
-            totalBudgetCap={currentBudget.total_amount}
+            hasOverallBudget={!!currentBudget}
+            onAddCategoryBudget={() => {
+              // Open edit / create dialog
+            }}
+            onDeleteAllocation={handleDeleteAllocation}
           />
         </>
       )}

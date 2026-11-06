@@ -197,3 +197,4 @@ export function CategoryDetailModal({
     </Dialog>
   );
 }
+

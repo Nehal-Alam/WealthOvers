@@ -6,9 +6,11 @@ import { BudgetView } from "@/components/budgets/budget-view";
 import { GoalsView } from "@/components/goals/goals-view";
 import { BillsDashboard } from "@/components/recurring/bills-dashboard";
 import { PlanningCalendar, CalendarEventItem } from "@/components/plan/planning-calendar";
-import { PlanHeader, PlanTab } from "@/components/plan/plan-header";
+import { PlanAnalytics } from "@/components/plan/plan-analytics";
+import { PlanHeader } from "@/components/plan/plan-header";
+import { PlanSectionTab } from "@/components/plan/plan-navigation";
 import { addMoney, toDecimal } from "@/lib/calculations/financial";
-import { format, addMonths } from "date-fns";
+import { format } from "date-fns";
 
 export const metadata: Metadata = {
   title: "Financial Planning Hub — WealthOvers",
@@ -27,7 +29,10 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
   }
 
   const resolvedParams = await searchParams;
-  const currentTab = (resolvedParams.tab as PlanTab) || "budgets";
+  let currentTab: PlanSectionTab = (resolvedParams.tab as any) || "budgets";
+  if ((resolvedParams.tab as any) === "reports") {
+    currentTab = "analytics";
+  }
 
   const supabase = await createClient();
 
@@ -196,7 +201,7 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
     });
   }
 
-  // Aggregate Calendar Events across all financial plans
+  // Aggregate Calendar Events across all saved financial records
   const calendarEvents: CalendarEventItem[] = [];
 
   // 1. Bill occurrences
@@ -286,7 +291,7 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
     }
   }
 
-  // Render active tab
+  // Render active section
   return (
     <div className="space-y-6">
       {currentTab === "budgets" && (
@@ -322,15 +327,13 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
         </div>
       )}
 
-      {currentTab === "reports" && (
+      {currentTab === "analytics" && (
         <div className="space-y-6">
-          <PlanHeader activeTab="reports" />
-          <BudgetView
+          <PlanHeader activeTab="analytics" />
+          <PlanAnalytics
             budgets={budgetsWithSpending}
-            categories={categories}
-            accounts={accounts}
             transactions={periodTransactions}
-            upcomingBillsTotal={upcomingBillsTotal}
+            categories={categories}
           />
         </div>
       )}

@@ -295,3 +295,31 @@ export async function deleteBudgetAction(id: string): Promise<ActionResult> {
   }
 }
 
+export async function deleteBudgetAllocationAction(allocationId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized. Please log in." };
+    }
+
+    const { error } = await supabase
+      .from("budget_categories")
+      .delete()
+      .eq("id", allocationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/budgets");
+    revalidatePath("/plan");
+    return { success: true, message: "Category budget allocation removed" };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to remove category budget allocation";
+    return { success: false, error: errorMsg };
+  }
+}
+

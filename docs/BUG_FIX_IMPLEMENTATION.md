@@ -255,7 +255,48 @@ CREATE INDEX IF NOT EXISTS idx_sip_installments_user ON public.sip_installments(
 4. **Verification**:
    - Verified across `tests/unified-financial-ledger.test.ts` (13 tests passing covering Scenarios 1–7).
    - Full test suite: 26 files, 221 tests passing (100%).
-   - Production build `next build`: 31 static and dynamic pages generated with 0 errors.
+   - Production build `next build`: 32 static and dynamic pages generated with 0 errors.
+
+---
+
+## 8. Specific Visual Defect Audits & Screen Resolution
+
+### 8.1 Loans Section Crash (`/loans` — "Something Went Wrong")
+- **Observed Behavior:** Navigating to `http://localhost:3000/loans` triggered the global Next.js error boundary displaying *"Something Went Wrong — An unexpected error occurred while processing your financial data"*.
+- **Root Cause:**
+  - Foreign key relations between `loans`, `loan_payments`, and `accounts` lacked schema alignment during initial migration, causing PostgREST nested join exceptions when fetching `payments:loan_payments(...)`.
+  - Frontend code in `components/loans/loan-view.tsx` had null-unsafe date parsing on `maturity_date` and undefined payment arrays.
+- **Resolution:**
+  - Standardized nested query in `app/(dashboard)/loans/page.tsx` with foreign key hints.
+  - Implemented `LoanTransactionsModal` (click on loan card to open full Inflow & Outflow ledger with principal disbursed vs. repayments).
+  - Implemented `EditLoanDialog` (edit loan principal, interest rate, tenure, EMI, dates, and account).
+  - Implemented `EditLoanPaymentDialog` (edit repayment amount, date, principal/interest breakdown with atomic balance synchronization).
+  - Added null-safe checks for `maturity_date` and empty payments arrays.
+
+### 8.2 Schedule SIP Schema Cache Error (`/investments`)
+- **Observed Behavior:** Clicking "Schedule SIP" in the "Automate Systematic Investment Plan (SIP)" modal displayed an error toast: *"Could not find the table 'public.sip_schedules' in the schema cache"*.
+- **Root Cause:** The `sip_schedules` and `sip_installments` tables were created in PostgreSQL, but PostgREST server had not reloaded its schema cache, returning HTTP 404 for schema introspection.
+- **Resolution:**
+  - Dispatched `NOTIFY pgrst, 'reload schema'` to PostgREST on remote Supabase project `dxvfgzqtvnpjwdibuhrh`.
+  - Verified RLS policies (`Users can manage their own sip schedules`, `Users can view their own sip installments`) and grants (`authenticated`, `service_role`).
+  - Verified end-to-end SIP creation (`createSipAction`) and execution (`processDueSipAction`) which posts balanced double-entry ledger records and updates investment quantities atomically.
+
+### 8.3 Activity & Transactions Cash Flow Calculation (`/transactions`)
+- **Observed Behavior:**
+  - On the Activity & Transactions page:
+    - `Total Inflow`: ₹23,730.00 (1 credit transaction — Salary)
+    - `Total Outflow`: ₹112.00 (1 debit transaction — Medicine)
+    - `Net Cash Flow`: ₹23,618.00
+    - Transaction timeline below showed a SIP installment: `Yesterday · Sun, Nov 1: SIP Installment: Infosys SIP (Investments · Axis Bank) ⇄ ₹1,600.00`.
+- **Root Cause:**
+  - SIP and investment buy transactions were classified with `direction: "neutral"` and transfer badge (`⇄ `). As a result, the ₹1,600 bank deduction was omitted from Total Outflow, misleading the user into believing their net cash outflow was only ₹112.
+- **Resolution:**
+  - In `lib/calculations/financial.ts`:
+    - Updated `getTransactionDisplayInfo` and `calculateLedgerCashFlow` so that `sip` and `investment_buy` transactions funding from bank accounts are correctly treated as cash outflows (`direction: "outflow"`, display sign `-`, text color `text-danger`).
+    - Total Outflow accurately reflects total cash leaving the bank: $\text{Outflow} = ₹112 + ₹1,600 = ₹1,712.00$.
+    - Net Cash Flow accurately reflects net bank cash movement: $\text{Net} = ₹23,730 - ₹1,712 = ₹22,018.00$.
+    - In double-entry accounting, balanced entries debit `Investments Asset` (+₹1,600) and credit `Bank Account` (-₹1,600), preserving net worth integrity without distorting bank cash flow metrics.
+
 
 
 

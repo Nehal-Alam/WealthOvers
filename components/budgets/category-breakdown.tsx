@@ -11,12 +11,23 @@ import {
   AlertTriangle,
   CheckCircle2,
   Receipt,
+  Trash2,
+  Edit2,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MoneyDisplay } from "@/components/financial/money-display";
 import { Tables } from "@/types/database";
 import {
@@ -29,8 +40,9 @@ import {
 } from "./category-detail-modal";
 
 export interface CategoryBreakdownItem {
+  allocationId?: string;
   category: Tables<"categories">;
-  allocatedAmount?: string | number | null;
+  allocatedAmount: string | number;
   spent: string | number;
   transactionCount: number;
   transactions: Array<{
@@ -44,35 +56,85 @@ export interface CategoryBreakdownItem {
 
 interface CategoryBreakdownProps {
   items: CategoryBreakdownItem[];
-  totalBudgetCap?: string | number;
+  hasOverallBudget?: boolean;
+  onAddCategoryBudget?: () => void;
+  onEditAllocation?: (item: CategoryBreakdownItem) => void;
+  onDeleteAllocation?: (allocationId: string) => void;
 }
+
+type SortField = "name" | "limit" | "spent" | "remaining" | "used";
+type StatusFilter = "all" | "within" | "near" | "over";
 
 export function CategoryBreakdown({
   items,
-  totalBudgetCap,
+  hasOverallBudget = false,
+  onAddCategoryBudget,
+  onEditAllocation,
+  onDeleteAllocation,
 }: CategoryBreakdownProps) {
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+  const [sortField, setSortField] = React.useState<SortField>("spent");
+  const [sortAsc, setSortAsc] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"table" | "grid">("table");
   const [selectedCategoryData, setSelectedCategoryData] =
     React.useState<CategoryDetailData | null>(null);
 
-  const filteredItems = React.useMemo(() => {
-    return items.filter((item) =>
-      item.category.name.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [items, search]);
+  // Filter and sort items
+  const processedItems = React.useMemo(() => {
+    return items
+      .filter((item) => {
+        // Search filter
+        if (
+          search &&
+          !item.category.name.toLowerCase().includes(search.toLowerCase())
+        ) {
+          return false;
+        }
+
+        // Status filter
+        const util = calculateBudgetUtilization(
+          item.allocatedAmount,
+          item.spent
+        );
+        if (statusFilter === "over" && !util.isOverBudget) return false;
+        if (
+          statusFilter === "near" &&
+          (util.percentage < 75 || util.isOverBudget)
+        )
+          return false;
+        if (statusFilter === "within" && (util.percentage >= 75 || util.isOverBudget))
+          return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        const utilA = calculateBudgetUtilization(a.allocatedAmount, a.spent);
+        const utilB = calculateBudgetUtilization(b.allocatedAmount, b.spent);
+
+        let diff = 0;
+        if (sortField === "name") {
+          diff = a.category.name.localeCompare(b.category.name);
+        } else if (sortField === "limit") {
+          diff = toDecimal(a.allocatedAmount)
+            .minus(toDecimal(b.allocatedAmount))
+            .toNumber();
+        } else if (sortField === "spent") {
+          diff = toDecimal(a.spent).minus(toDecimal(b.spent)).toNumber();
+        } else if (sortField === "remaining") {
+          diff = toDecimal(utilA.remaining)
+            .minus(toDecimal(utilB.remaining))
+            .toNumber();
+        } else if (sortField === "used") {
+          diff = utilA.percentage - utilB.percentage;
+        }
+
+        return sortAsc ? diff : -diff;
+      });
+  }, [items, search, statusFilter, sortField, sortAsc]);
 
   const handleRowClick = (item: CategoryBreakdownItem) => {
-    const util = item.allocatedAmount
-      ? calculateBudgetUtilization(item.allocatedAmount, item.spent)
-      : {
-          remaining: totalBudgetCap
-            ? toDecimal(totalBudgetCap).minus(toDecimal(item.spent)).toString()
-            : "0",
-          percentage: 0,
-          isOverBudget: false,
-        };
-
+    const util = calculateBudgetUtilization(item.allocatedAmount, item.spent);
     setSelectedCategoryData({
       categoryId: item.category.id,
       categoryName: item.category.name,
@@ -80,27 +142,72 @@ export function CategoryBreakdown({
       categoryIcon: item.category.icon || undefined,
       allocatedAmount: item.allocatedAmount,
       totalSpent: item.spent,
-      remaining: item.allocatedAmount ? util.remaining : undefined,
+      remaining: util.remaining,
       percentage: util.percentage,
       isOverBudget: util.isOverBudget,
       transactions: item.transactions,
     });
   };
 
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(false);
+    }
+  };
+
+  // EMPTY STATES PER USER REQUIREMENT:
+  // 1. Overall budget exists, but 0 category budgets created
+  if (items.length === 0 && hasOverallBudget) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border/80 p-8 sm:p-12 text-center bg-surface space-y-3">
+        <div className="mx-auto h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <Layers className="h-5 w-5" />
+        </div>
+        <div className="max-w-md mx-auto space-y-1">
+          <h3 className="text-base font-bold text-text-primary">
+            No category budgets yet
+          </h3>
+          <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+            Allocate part of your overall budget to categories to track your spending in detail.
+          </p>
+        </div>
+        {onAddCategoryBudget && (
+          <div className="pt-2">
+            <Button
+              onClick={onAddCategoryBudget}
+              className="bg-primary hover:bg-primary-hover text-surface rounded-xl text-xs font-semibold shadow-xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Category Budget</span>
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. No budgets exist at all
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
-      {/* Category Section Header */}
+      {/* Category Section Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
-            Category Spending Envelopes & Budget Breakdown ({items.length})
+          <h3 className="text-sm font-bold tracking-tight text-text-primary">
+            Category Spending Envelopes &amp; Limits ({items.length})
           </h3>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Search Box */}
-          <div className="relative w-44 sm:w-56">
+          <div className="relative w-40 sm:w-48">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-text-secondary" />
             <Input
               type="text"
@@ -111,7 +218,24 @@ export function CategoryBreakdown({
             />
           </div>
 
-          {/* Table / Grid Toggle */}
+          {/* Status Filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val: any) => setStatusFilter(val)}
+          >
+            <SelectTrigger className="h-8 text-xs bg-surface border-border w-32">
+              <Filter className="h-3 w-3 text-text-secondary mr-1 shrink-0" />
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-surface text-text-primary border-border">
+              <SelectItem value="all" className="text-xs">All Status</SelectItem>
+              <SelectItem value="within" className="text-xs">Within Budget</SelectItem>
+              <SelectItem value="near" className="text-xs">Near Limit</SelectItem>
+              <SelectItem value="over" className="text-xs">Over Limit</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Table / Grid View Switcher */}
           <div className="flex items-center bg-surface-secondary rounded-lg p-0.5 border border-border/60">
             <Button
               variant="ghost"
@@ -119,10 +243,11 @@ export function CategoryBreakdown({
               onClick={() => setViewMode("table")}
               className={`h-7 w-7 rounded-md ${
                 viewMode === "table"
-                  ? "bg-surface text-primary shadow-2xs"
+                  ? "bg-surface text-primary shadow-2xs font-bold"
                   : "text-text-secondary hover:text-text-primary"
               }`}
               title="Table View"
+              aria-label="Table View"
             >
               <List className="h-3.5 w-3.5" />
             </Button>
@@ -132,53 +257,106 @@ export function CategoryBreakdown({
               onClick={() => setViewMode("grid")}
               className={`h-7 w-7 rounded-md ${
                 viewMode === "grid"
-                  ? "bg-surface text-primary shadow-2xs"
+                  ? "bg-surface text-primary shadow-2xs font-bold"
                   : "text-text-secondary hover:text-text-primary"
               }`}
               title="Grid View"
+              aria-label="Grid View"
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </Button>
           </div>
+
+          {/* Add Category Allocation button */}
+          {onAddCategoryBudget && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddCategoryBudget}
+              className="h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 rounded-lg shrink-0 font-medium"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Envelope</span>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Breakdown View */}
-      {filteredItems.length === 0 ? (
+      {processedItems.length === 0 ? (
         <div className="p-8 text-center rounded-2xl border border-dashed border-border/80 bg-surface text-xs text-text-secondary">
-          No categories match &ldquo;{search}&rdquo;.
+          No allocated categories match current search or status filter.
         </div>
       ) : viewMode === "table" ? (
         /* Table View */
         <div className="rounded-2xl border border-border/80 bg-surface shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-surface-secondary/60 border-b border-border/70 text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+              <thead className="bg-surface-secondary/60 border-b border-border/70 text-[11px] font-semibold text-text-secondary uppercase tracking-wider select-none">
                 <tr>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-3 text-right">Limit</th>
-                  <th className="py-3 px-3 text-right">Spent</th>
-                  <th className="py-3 px-3 text-right">Remaining</th>
-                  <th className="py-3 px-4 min-w-[140px]">% Used</th>
+                  <th
+                    onClick={() => toggleSort("name")}
+                    className="py-3 px-4 cursor-pointer hover:text-text-primary transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Category</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => toggleSort("limit")}
+                    className="py-3 px-3 text-right cursor-pointer hover:text-text-primary transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Budget Limit</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => toggleSort("spent")}
+                    className="py-3 px-3 text-right cursor-pointer hover:text-text-primary transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Spent</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => toggleSort("remaining")}
+                    className="py-3 px-3 text-right cursor-pointer hover:text-text-primary transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Remaining</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => toggleSort("used")}
+                    className="py-3 px-4 min-w-[140px] cursor-pointer hover:text-text-primary transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Used</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </th>
                   <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-center">Txns</th>
-                  <th className="py-3 px-3 text-right">Action</th>
+                  <th className="py-3 px-3 text-center">Transactions</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60 font-sans">
-                {filteredItems.map((item) => {
-                  const hasAlloc = !!item.allocatedAmount;
-                  const util = hasAlloc
-                    ? calculateBudgetUtilization(item.allocatedAmount!, item.spent)
-                    : null;
-                  const pct = util ? util.percentage : 0;
-                  const isOver = util ? util.isOverBudget : false;
-                  const isWarning = pct >= 75 && !isOver;
+                {processedItems.map((item) => {
+                  const util = calculateBudgetUtilization(
+                    item.allocatedAmount,
+                    item.spent
+                  );
+                  const isOver = util.isOverBudget;
+                  const isWarning = util.percentage >= 75 && !isOver;
                   const spentZero = toDecimal(item.spent).isZero();
 
                   let statusBadge = (
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 text-text-secondary border-border/70">
-                      Inactive
+                    <Badge className="text-[10px] py-0 px-1.5 h-4 bg-success/15 text-success border-success/30 font-semibold">
+                      Within Budget
                     </Badge>
                   );
 
@@ -194,12 +372,6 @@ export function CategoryBreakdown({
                         Near Limit
                       </Badge>
                     );
-                  } else if (!spentZero) {
-                    statusBadge = (
-                      <Badge className="text-[10px] py-0 px-1.5 h-4 bg-success/15 text-success border-success/30 font-semibold">
-                        On Track
-                      </Badge>
-                    );
                   }
 
                   return (
@@ -209,7 +381,7 @@ export function CategoryBreakdown({
                       className="hover:bg-surface-secondary/40 cursor-pointer transition-colors"
                     >
                       {/* Category Name & Color */}
-                      <td className="py-3 px-4 font-semibold text-text-primary">
+                      <td className="py-3.5 px-4 font-semibold text-text-primary">
                         <div className="flex items-center gap-2.5">
                           <span
                             className="h-3 w-3 rounded-full shrink-0"
@@ -223,33 +395,25 @@ export function CategoryBreakdown({
                       </td>
 
                       {/* Limit */}
-                      <td className="py-3 px-3 text-right font-medium text-text-secondary font-mono tabular-nums">
-                        {hasAlloc ? (
-                          <MoneyDisplay amount={item.allocatedAmount!} />
-                        ) : (
-                          <span className="text-text-secondary/60">Overall</span>
-                        )}
+                      <td className="py-3.5 px-3 text-right font-medium text-text-secondary font-mono tabular-nums">
+                        <MoneyDisplay amount={item.allocatedAmount} />
                       </td>
 
                       {/* Spent */}
-                      <td className="py-3 px-3 text-right font-bold text-text-primary font-mono tabular-nums">
+                      <td className="py-3.5 px-3 text-right font-bold text-text-primary font-mono tabular-nums">
                         <MoneyDisplay amount={item.spent} />
                       </td>
 
                       {/* Remaining */}
-                      <td className="py-3 px-3 text-right font-semibold font-mono tabular-nums">
-                        {util ? (
-                          <MoneyDisplay
-                            amount={util.remaining}
-                            className={isOver ? "text-danger" : "text-success"}
-                          />
-                        ) : (
-                          <span className="text-text-secondary/60">—</span>
-                        )}
+                      <td className="py-3.5 px-3 text-right font-semibold font-mono tabular-nums">
+                        <MoneyDisplay
+                          amount={util.remaining}
+                          className={isOver ? "text-danger" : "text-success"}
+                        />
                       </td>
 
-                      {/* % Used & Progress Bar */}
-                      <td className="py-3 px-4">
+                      {/* Used & Progress Bar */}
+                      <td className="py-3.5 px-4">
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px] font-mono tabular-nums">
                             <span
@@ -263,19 +427,17 @@ export function CategoryBreakdown({
                                   : "text-text-secondary"
                               }`}
                             >
-                              {hasAlloc ? `${pct}%` : `${toDecimal(item.spent).gt(0) ? "Active" : "0%"}`}
+                              {util.percentage}%
                             </span>
                           </div>
                           <Progress
-                            value={hasAlloc ? Math.min(pct, 100) : spentZero ? 0 : 50}
+                            value={Math.min(util.percentage, 100)}
                             indicatorClassName={
                               isOver
                                 ? "bg-danger"
                                 : isWarning
                                 ? "bg-warning"
-                                : !spentZero
-                                ? "bg-success"
-                                : "bg-text-secondary/30"
+                                : "bg-success"
                             }
                             className="h-1.5 rounded-full bg-surface-secondary"
                           />
@@ -283,26 +445,57 @@ export function CategoryBreakdown({
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-3 text-center">{statusBadge}</td>
+                      <td className="py-3.5 px-3 text-center">{statusBadge}</td>
 
                       {/* Transaction Count */}
-                      <td className="py-3 px-3 text-center font-mono text-[11px] text-text-secondary">
+                      <td className="py-3.5 px-3 text-center font-mono text-[11px] text-text-secondary">
                         {item.transactionCount}
                       </td>
 
-                      {/* Action */}
-                      <td className="py-3 px-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRowClick(item);
-                          }}
-                          className="h-7 w-7 p-0 text-text-secondary hover:text-primary rounded-lg"
-                        >
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </Button>
+                      {/* Actions */}
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {onEditAllocation && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditAllocation(item);
+                              }}
+                              className="h-7 w-7 text-text-secondary hover:text-text-primary rounded-lg"
+                              title="Edit Allocation"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {onDeleteAllocation && item.allocationId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteAllocation(item.allocationId!);
+                              }}
+                              className="h-7 w-7 text-text-secondary hover:text-danger rounded-lg"
+                              title="Delete Allocation"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(item);
+                            }}
+                            className="h-7 w-7 text-text-secondary hover:text-primary rounded-lg"
+                            title="View Transactions"
+                          >
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -314,20 +507,19 @@ export function CategoryBreakdown({
       ) : (
         /* Grid View (Cards) */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {filteredItems.map((item) => {
-            const hasAlloc = !!item.allocatedAmount;
-            const util = hasAlloc
-              ? calculateBudgetUtilization(item.allocatedAmount!, item.spent)
-              : null;
-            const pct = util ? util.percentage : 0;
-            const isOver = util ? util.isOverBudget : false;
-            const isWarning = pct >= 75 && !isOver;
+          {processedItems.map((item) => {
+            const util = calculateBudgetUtilization(
+              item.allocatedAmount,
+              item.spent
+            );
+            const isOver = util.isOverBudget;
+            const isWarning = util.percentage >= 75 && !isOver;
 
             return (
               <Card
                 key={item.category.id}
                 onClick={() => handleRowClick(item)}
-                className="p-4 rounded-2xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-sm cursor-pointer transition-all space-y-3"
+                className="p-4 rounded-2xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs cursor-pointer transition-all space-y-3"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -356,12 +548,12 @@ export function CategoryBreakdown({
                         : "text-success"
                     }`}
                   >
-                    {hasAlloc ? `${pct}%` : "—"}
+                    {util.percentage}%
                   </span>
                 </div>
 
                 <Progress
-                  value={hasAlloc ? Math.min(pct, 100) : 0}
+                  value={Math.min(util.percentage, 100)}
                   indicatorClassName={
                     isOver
                       ? "bg-danger"
@@ -379,11 +571,7 @@ export function CategoryBreakdown({
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] text-text-secondary block">Limit</span>
-                    {hasAlloc ? (
-                      <MoneyDisplay amount={item.allocatedAmount!} className="font-medium text-text-secondary" />
-                    ) : (
-                      <span className="text-text-secondary">Overall</span>
-                    )}
+                    <MoneyDisplay amount={item.allocatedAmount} className="font-medium text-text-secondary" />
                   </div>
                 </div>
               </Card>

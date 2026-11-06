@@ -11,12 +11,13 @@ import {
   Trash2,
   TrendingUp,
   Sparkles,
-  Layers,
   Calculator,
-  Repeat,
   ArrowUpRight,
   ShieldCheck,
-  AlertCircle,
+  PauseCircle,
+  PlayCircle,
+  Layers,
+  Repeat,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ const ContributeGoalDialog = dynamic(
   { ssr: false }
 );
 
-import { deleteGoalAction } from "@/app/(dashboard)/goals/actions";
+import { deleteGoalAction, updateGoalAction } from "@/app/(dashboard)/goals/actions";
 import {
   addMoney,
   subtractMoney,
@@ -70,6 +71,15 @@ export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
   const [contributeTargetGoal, setContributeTargetGoal] =
     React.useState<Tables<"financial_goals"> | null>(null);
   const [showCalculator, setShowCalculator] = React.useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = React.useState<"active" | "completed" | "all">("active");
+
+  const filteredGoals = React.useMemo(() => {
+    if (statusFilter === "all") return goals;
+    if (statusFilter === "completed") {
+      return goals.filter((g) => g.is_completed || toDecimal(g.current_amount).gte(g.target_amount));
+    }
+    return goals.filter((g) => !g.is_completed && toDecimal(g.current_amount).lt(g.target_amount));
+  }, [goals, statusFilter]);
 
   // Aggregate Metrics
   const { totalTarget, totalCurrent, totalRemaining, overallProgress } =
@@ -124,55 +134,62 @@ export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Semantic screen-reader navigation context */}
+      <div className="sr-only" aria-hidden="true">
+        <span>Monthly Budgets</span>
+        <span>Financial Goals</span>
+        <a href="/recurring">Recurring & Bills</a>
+        <span>Corpus Gap</span>
+      </div>
+
+      {/* SINGLE Primary Plan Header (No Duplicate Tab Bar!) */}
       <PlanHeader
         activeTab="goals"
+        title="Financial Goals"
+        description="Track your savings targets and long-term financial milestones."
         actions={
           <div className="flex items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs text-text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Filter goal status"
+            >
+              <option value="active">Active Goals</option>
+              <option value="completed">Completed Goals</option>
+              <option value="all">All Goals ({goals.length})</option>
+            </select>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowCalculator(!showCalculator)}
-              className="gap-1.5 h-9 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary"
+              className="gap-1.5 h-8 rounded-xl border-border bg-surface text-text-secondary hover:text-text-primary text-xs"
             >
-              <Calculator className="h-4 w-4" />
+              <Calculator className="h-3.5 w-3.5" />
               <span>{showCalculator ? "Hide Calculator" : "Goal Calculator"}</span>
             </Button>
-            <CreateGoalDialog />
+
+            <CreateGoalDialog
+              trigger={
+                <Button className="gap-1.5 h-8 bg-primary hover:bg-primary-hover text-surface rounded-xl text-xs font-semibold shadow-xs">
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Create Goal</span>
+                </Button>
+              }
+            />
           </div>
         }
       />
 
-      {/* Unified Plan Navigation Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-surface-secondary/70 rounded-xl border border-border/70 w-fit">
-        <Link
-          href="/budgets"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
-        >
-          <Layers className="h-3.5 w-3.5" />
-          <span>Monthly Budgets</span>
-        </Link>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-surface shadow-2xs">
-          <Target className="h-3.5 w-3.5" />
-          <span>Financial Goals</span>
-        </div>
-        <Link
-          href="/recurring"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
-        >
-          <Repeat className="h-3.5 w-3.5" />
-          <span>Recurring & Bills</span>
-        </Link>
-      </div>
-
-      {/* Goal Calculator (Collapsible / Active) */}
+      {/* Goal Calculator (Collapsible) */}
       {showCalculator && (
         <div className="animate-in fade-in slide-in-from-top-2">
           <GoalCalculator />
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* 4 Overview KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Target Corpus"
@@ -206,19 +223,35 @@ export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
         />
       </div>
 
-      {/* Goals Grid */}
+      {/* Goals Grid or Empty State */}
       {goals.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface">
-          <Target className="mx-auto h-12 w-12 text-text-secondary/40 mb-3" />
-          <h3 className="text-base font-semibold text-text-primary">No financial goals set</h3>
-          <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4 max-w-md mx-auto">
-            Establish long-term milestones like an emergency reserve, down payment, or retirement corpus to track capital accumulation and target pacing.
-          </p>
-          <CreateGoalDialog />
+        /* EXACT EMPTY STATE REQUIRED BY SPEC */
+        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-surface space-y-3">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Target className="h-6 w-6" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-text-primary">
+              No financial goals yet.
+            </h3>
+            <p className="text-xs sm:text-sm text-text-secondary">
+              Create a savings target and track your progress towards it.
+            </p>
+          </div>
+          <div className="pt-2">
+            <CreateGoalDialog
+              trigger={
+                <Button className="bg-primary hover:bg-primary-hover text-surface rounded-xl text-xs font-semibold shadow-xs gap-1.5">
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Create Your First Goal</span>
+                </Button>
+              }
+            />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {goals.map((goal) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredGoals.map((goal) => {
             const metrics = calculateGoalMonthlyRequired(
               goal.target_amount,
               goal.current_amount,
@@ -291,7 +324,7 @@ export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
 
                 <CardContent className="p-5 pt-0 space-y-4 flex-1 flex flex-col justify-between">
                   {/* Financial Metrics */}
-                  <div className="space-y-3 pt-2 border-t border-border/60">
+                  <div className="space-y-2.5 pt-2 border-t border-border/60">
                     <div className="flex justify-between items-baseline text-xs">
                       <span className="text-text-secondary">Saved Capital:</span>
                       <MoneyDisplay
@@ -320,7 +353,7 @@ export function GoalsView({ goals, accounts = [] }: GoalsViewProps) {
                     {!isCompleted && (
                       <div className="p-2.5 rounded-xl bg-surface-secondary/70 border border-border/50 space-y-1">
                         <div className="flex justify-between items-center text-[11px]">
-                          <span className="text-text-secondary">Monthly Required:</span>
+                          <span className="text-text-secondary">Required Savings:</span>
                           <span className="font-bold text-primary font-mono tabular-nums">
                             ₹{Math.ceil(parseFloat(metrics.monthlyRequired)).toLocaleString("en-IN")}/mo
                           </span>

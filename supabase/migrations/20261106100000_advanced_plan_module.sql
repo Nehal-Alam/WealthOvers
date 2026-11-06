@@ -102,3 +102,4 @@ CREATE INDEX IF NOT EXISTS idx_budgets_user_period ON public.budgets(user_id, st
 CREATE INDEX IF NOT EXISTS idx_financial_goals_user_status ON public.financial_goals(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_recurring_txns_user_status ON public.recurring_transactions(user_id, is_active, next_occurrence_date);
 CREATE INDEX IF NOT EXISTS idx_bill_occurrences_user_date ON public.bill_occurrences(user_id, due_date, status);
+
