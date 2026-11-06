@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest) {
     path === "/manifest.json" ||
     path.startsWith("/images/") ||
     path.startsWith("/api/auth/callback") ||
+    path.startsWith("/api/v1/") ||
     path.startsWith("/_next") ||
     path.startsWith("/favicon.ico");
 

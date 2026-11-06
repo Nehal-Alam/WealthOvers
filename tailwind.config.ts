@@ -11,15 +11,15 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1.5rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1440px",
       },
     },
     extend: {
       colors: {
         border: {
-          DEFAULT: "hsl(var(--border))",
+          DEFAULT: "hsl(var(--input))",
           interactive: "hsl(var(--border-interactive))",
         },
         input: "hsl(var(--input))",
@@ -33,9 +33,10 @@ const config: Config = {
           soft: "hsl(var(--primary-soft))",
         },
         surface: {
-          DEFAULT: "hsl(var(--surface))",
-          secondary: "hsl(var(--surface-secondary))",
-          elevated: "hsl(var(--surface-elevated))",
+          DEFAULT: "hsl(var(--card))",
+          secondary: "hsl(var(--card-secondary))",
+          elevated: "hsl(var(--card-elevated))",
+          muted: "hsl(var(--muted))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -50,8 +51,8 @@ const config: Config = {
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "hsl(var(--ring))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -64,36 +65,57 @@ const config: Config = {
           secondary: "hsl(var(--card-secondary))",
           sunken: "hsl(var(--card-sunken))",
         },
+        // Bloomberg Financial Terminal Semantics
+        positive: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          muted: "hsl(var(--success) / 0.15)",
+        },
+        negative: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+          muted: "hsl(var(--danger) / 0.15)",
+        },
+        info: {
+          DEFAULT: "hsl(210 75% 64.7%)",
+          foreground: "hsl(210 33% 9.4%)",
+          muted: "hsl(210 75% 64.7% / 0.15)",
+        },
+        terminalAccent: {
+          DEFAULT: "#F0A52B",
+          gold: "#B77A18",
+        },
+        // Backward-compatible Brand & Action Colors
         brand: {
           forest: "#244B3C",
           sage: "#8BA58C",
           terracotta: "#C77A65",
-          amber: "#C39148",
+          amber: "#F0A52B",
           ivory: "#F7F7F0",
-          indigo: "#244B3C",
-          emerald: "#39805B",
-          coral: "#C77A65",
-          violet: "#8BA58C",
+          indigo: "#101820",
+          emerald: "#39B98A",
+          coral: "#EF6A68",
+          violet: "#62A6E8",
         },
         income: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
-          muted: "hsl(var(--success) / 0.12)",
+          muted: "hsl(var(--success) / 0.15)",
         },
         expense: {
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
-          muted: "hsl(var(--danger) / 0.12)",
+          muted: "hsl(var(--danger) / 0.15)",
         },
         investment: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-          muted: "hsl(var(--accent) / 0.12)",
+          DEFAULT: "hsl(var(--ring))",
+          foreground: "hsl(var(--primary-foreground))",
+          muted: "hsl(var(--ring) / 0.15)",
         },
         transfer: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          muted: "hsl(var(--primary) / 0.12)",
+          muted: "hsl(var(--primary) / 0.15)",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
@@ -124,8 +146,8 @@ const config: Config = {
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-down": "accordion-down 0.15s ease-out",
+        "accordion-up": "accordion-up 0.15s ease-out",
       },
     },
   },
@@ -133,4 +155,3 @@ const config: Config = {
 };
 
 export default config;
-

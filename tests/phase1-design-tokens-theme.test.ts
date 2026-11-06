@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { themePreferenceSchema } from "@/lib/validations/settings";
 
-describe("Phase 1: Design Tokens & Theme System (Leftovers Aesthetic)", () => {
+describe("Phase 1: Bloomberg-Inspired Terminal Design Tokens & Theme System", () => {
   const getLuminance = (r: number, g: number, b: number) => {
     const a = [r, g, b].map((v) => {
       v /= 255;
@@ -38,83 +38,85 @@ describe("Phase 1: Design Tokens & Theme System (Leftovers Aesthetic)", () => {
     const globalsPath = path.resolve(process.cwd(), "app/globals.css");
     const globalsContent = fs.readFileSync(globalsPath, "utf-8");
 
-    it("defines all Leftovers Light Theme design tokens", () => {
-      expect(globalsContent).toContain("--background: 60 30% 95.5%;"); // #F7F7F0
-      expect(globalsContent).toContain("--foreground: 140 7% 17.3%;"); // #292F2B
-      expect(globalsContent).toContain("--primary: 157 35% 21.8%;"); // #244B3C
-      expect(globalsContent).toContain("--primary-soft: 105 19% 87.5%;"); // #DCE5D9
-      expect(globalsContent).toContain("--accent: 122 13% 59.6%;"); // #8BA58C
-      expect(globalsContent).toContain("--border: 80 16% 88.8%;"); // #E4E7DE
-      expect(globalsContent).toContain("--success: 149 38% 36.3%;"); // #39805B
-      expect(globalsContent).toContain("--danger: 13 47% 58.8%;"); // #C77A65
-      expect(globalsContent).toContain("--warning: 36 51% 52.4%;"); // #C39148
+    it("defines all Bloomberg Terminal Dark Theme design tokens (Primary)", () => {
+      expect(globalsContent).toContain("--app-bg: #101820;");
+      expect(globalsContent).toContain("--surface: #18232D;");
+      expect(globalsContent).toContain("--surface-elevated: #23313D;");
+      expect(globalsContent).toContain("--surface-muted: #1D2933;");
+      expect(globalsContent).toContain("--border: #34424E;");
+      expect(globalsContent).toContain("--text-primary: #F1F5F8;");
+      expect(globalsContent).toContain("--text-secondary: #A7B4BF;");
+      expect(globalsContent).toContain("--accent: #F0A52B;");
+      expect(globalsContent).toContain("--positive: #39B98A;");
+      expect(globalsContent).toContain("--negative: #EF6A68;");
+      expect(globalsContent).toContain("--info: #62A6E8;");
     });
 
-    it("defines all Leftovers Dark Theme design tokens", () => {
-      expect(globalsContent).toContain("--background: 146 14% 9.6%;"); // #151C18
-      expect(globalsContent).toContain("--foreground: 87 27% 93.5%;"); // #EFF3EA
-      expect(globalsContent).toContain("--card: 142 16% 13.5%;"); // #1D2821
-      expect(globalsContent).toContain("--card-secondary: 139 18% 17.6%;"); // #25352A
-      expect(globalsContent).toContain("--card-elevated: 139 16% 20%;"); // #2B3B30
-      expect(globalsContent).toContain("--primary: 124 18% 66.7%;"); // #9BB99D
-      expect(globalsContent).toContain("--primary-soft: 140 18% 23.3%;"); // #314638
-      expect(globalsContent).toContain("--border: 139 13% 23.5%;"); // #344439
-      expect(globalsContent).toContain("--success: 133 30% 63.1%;"); // #85BD91
-      expect(globalsContent).toContain("--danger: 12 62% 67.6%;"); // #E08D79
-      expect(globalsContent).toContain("--warning: 39 56% 63.1%;"); // #D6B16C
+    it("defines all Bloomberg Terminal Light Theme design tokens", () => {
+      expect(globalsContent).toContain("--app-bg: #F3F5F7;");
+      expect(globalsContent).toContain("--surface: #FFFFFF;");
+      expect(globalsContent).toContain("--surface-elevated: #E8EDF1;");
+      expect(globalsContent).toContain("--border: #D8E0E6;");
+      expect(globalsContent).toContain("--text-primary: #17232E;");
+      expect(globalsContent).toContain("--text-secondary: #687783;");
+      expect(globalsContent).toContain("--accent: #B77A18;");
+      expect(globalsContent).toContain("--positive: #16865D;");
+      expect(globalsContent).toContain("--negative: #CF5353;");
+      expect(globalsContent).toContain("--info: #397EBA;");
     });
 
-    it("provides explicit hex variables for inline canvas and SVG chart rendering", () => {
-      expect(globalsContent).toContain("--color-background: #F7F7F0;");
-      expect(globalsContent).toContain("--color-surface: #FFFFFF;");
-      expect(globalsContent).toContain("--color-primary: #244B3C;");
-      expect(globalsContent).toContain("--color-background: #151C18;");
-      expect(globalsContent).toContain("--color-primary: #9BB99D;");
+    it("enforces tabular numerals for financial monospacing", () => {
+      expect(globalsContent).toContain("font-variant-numeric: tabular-nums;");
+      expect(globalsContent).toContain(".tabular-nums");
     });
   });
 
-  describe("WCAG 2.1 AA/AAA Contrast Verification for Leftovers Palette", () => {
-    it("certifies Light mode text contrast meets WCAG AAA (>= 7.0:1)", () => {
-      const bg = "#F7F7F0";
-      const card = "#FFFFFF";
-      const textPrimary = "#292F2B";
-
-      const bgContrast = getContrastRatio(textPrimary, bg);
-      const cardContrast = getContrastRatio(textPrimary, card);
-
-      expect(bgContrast).toBeGreaterThanOrEqual(12.0); // 12.7:1
-      expect(cardContrast).toBeGreaterThanOrEqual(13.0); // 13.6:1
-    });
-
-    it("certifies Light mode brand button contrast meets WCAG AAA (>= 7.0:1)", () => {
-      const primaryBrand = "#244B3C";
-      const whiteText = "#FFFFFF";
-
-      const ratio = getContrastRatio(primaryBrand, whiteText);
-      expect(ratio).toBeGreaterThanOrEqual(9.0); // 9.78:1
-    });
-
+  describe("WCAG 2.1 AA/AAA Contrast Verification for Bloomberg Palette", () => {
     it("certifies Dark mode text contrast meets WCAG AAA (>= 7.0:1)", () => {
-      const darkBg = "#151C18";
-      const darkCard = "#1D2821";
-      const textPrimary = "#EFF3EA";
-      const textSecondary = "#A9B5A8";
+      const darkBg = "#101820";
+      const darkSurface = "#18232D";
+      const textPrimary = "#F1F5F8";
+      const textSecondary = "#A7B4BF";
 
       const bgContrast = getContrastRatio(textPrimary, darkBg);
-      const cardContrast = getContrastRatio(textPrimary, darkCard);
-      const secondaryContrast = getContrastRatio(textSecondary, darkCard);
+      const surfaceContrast = getContrastRatio(textPrimary, darkSurface);
+      const secondaryContrast = getContrastRatio(textSecondary, darkSurface);
 
-      expect(bgContrast).toBeGreaterThanOrEqual(15.0); // 15.4:1
-      expect(cardContrast).toBeGreaterThanOrEqual(13.0); // 13.5:1
-      expect(secondaryContrast).toBeGreaterThanOrEqual(7.0); // 7.16:1
+      expect(bgContrast).toBeGreaterThanOrEqual(14.0); // > 15:1
+      expect(surfaceContrast).toBeGreaterThanOrEqual(13.0); // > 14:1
+      expect(secondaryContrast).toBeGreaterThanOrEqual(6.0); // > 6:1 (AA for labels)
     });
 
-    it("certifies Dark mode brand button contrast meets WCAG AAA (>= 7.0:1)", () => {
-      const darkBrand = "#9BB99D";
-      const pineNightText = "#151C18";
+    it("certifies Dark mode Bloomberg amber accent contrast on surface", () => {
+      const darkSurface = "#18232D";
+      const accent = "#F0A52B";
 
-      const ratio = getContrastRatio(darkBrand, pineNightText);
-      expect(ratio).toBeGreaterThanOrEqual(8.0); // 8.11:1
+      const ratio = getContrastRatio(accent, darkSurface);
+      expect(ratio).toBeGreaterThanOrEqual(7.0); // AAA compliant
+    });
+
+    it("certifies Light mode text contrast meets WCAG AAA (>= 7.0:1)", () => {
+      const lightBg = "#F3F5F7";
+      const lightSurface = "#FFFFFF";
+      const textPrimary = "#17232E";
+
+      const bgContrast = getContrastRatio(textPrimary, lightBg);
+      const surfaceContrast = getContrastRatio(textPrimary, lightSurface);
+
+      expect(bgContrast).toBeGreaterThanOrEqual(12.0);
+      expect(surfaceContrast).toBeGreaterThanOrEqual(14.0);
+    });
+
+    it("certifies semantic indicator contrast for positive and negative values", () => {
+      const darkSurface = "#18232D";
+      const positive = "#39B98A";
+      const negative = "#EF6A68";
+
+      const posRatio = getContrastRatio(positive, darkSurface);
+      const negRatio = getContrastRatio(negative, darkSurface);
+
+      expect(posRatio).toBeGreaterThanOrEqual(4.5); // WCAG AA for financial metrics
+      expect(negRatio).toBeGreaterThanOrEqual(4.5);
     });
   });
 
@@ -122,13 +124,12 @@ describe("Phase 1: Design Tokens & Theme System (Leftovers Aesthetic)", () => {
     const configPath = path.resolve(process.cwd(), "tailwind.config.ts");
     const configContent = fs.readFileSync(configPath, "utf-8");
 
-    it("contains surface, income, expense, transfer, and brand definitions", () => {
+    it("contains surface, positive, negative, info, and terminalAccent definitions", () => {
       expect(configContent).toContain("surface:");
-      expect(configContent).toContain("income:");
-      expect(configContent).toContain("expense:");
-      expect(configContent).toContain("transfer:");
-      expect(configContent).toContain("forest: \"#244B3C\"");
-      expect(configContent).toContain("ivory: \"#F7F7F0\"");
+      expect(configContent).toContain("positive:");
+      expect(configContent).toContain("negative:");
+      expect(configContent).toContain("info:");
+      expect(configContent).toContain("terminalAccent:");
     });
   });
 

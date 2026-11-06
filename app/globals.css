@@ -3,136 +3,158 @@
 @tailwind utilities;
 
 @layer base {
+  /* ==========================================================================
+     BLOOMBERG-INSPIRED FINANCIAL TERMINAL DESIGN SYSTEM (WEALTHOVERS V2)
+     ========================================================================== */
+
   :root {
-    /* WealthOvers Light Theme (LEFTOVERS-INSPIRED: WARM IVORY + FOREST GREEN + SAGE) */
-    --background: 60 30% 95.5%;         /* #F7F7F0 Warm Ivory Paper Canvas */
-    --foreground: 140 7% 17.3%;         /* #292F2B Deep Charcoal Text */
+    /* --- Bloomberg Light Theme (Daylight Financial Terminal) --- */
+    --app-bg: #F3F5F7;
+    --surface: #FFFFFF;
+    --surface-elevated: #E8EDF1;
+    --surface-muted: #E2E8EE;
+    --surface-secondary: #E8EDF1;
+    --border: #D8E0E6;
+    --border-interactive: #BCCAD4;
 
-    --card: 0 0% 100%;                 /* #FFFFFF Clean Card Surface */
-    --card-foreground: 140 7% 17.3%;    /* #292F2B */
-    --card-elevated: 0 0% 100%;        /* #FFFFFF */
-    --card-secondary: 93 21% 91.6%;    /* #E9EEE5 Soft Sage Green Surface */
-    --card-sunken: 93 21% 91.6%;       /* #E9EEE5 Inset / Form Input */
+    --text-primary: #17232E;
+    --text-secondary: #687783;
+    --text-muted: #8E9CA8;
 
-    --surface: 0 0% 100%;              /* #FFFFFF */
-    --surface-secondary: 93 21% 91.6%; /* #E9EEE5 */
-    --surface-elevated: 0 0% 100%;     /* #FFFFFF */
+    --accent: #B77A18;
+    --positive: #16865D;
+    --negative: #CF5353;
+    --info: #397EBA;
 
-    --popover: 0 0% 100%;              /* #FFFFFF Popover Surface */
-    --popover-foreground: 140 7% 17.3%;
+    /* Tailwind HSL Mapping for Component Primitives */
+    --background: 210 18% 96.1%;        /* #F3F5F7 */
+    --foreground: 209 33% 13.5%;        /* #17232E */
 
-    --primary: 157 35% 21.8%;          /* #244B3C Deep Forest Green Brand */
-    --primary-foreground: 0 0% 100%;   /* #FFFFFF */
-    --primary-hover: 158 37% 16.9%;    /* #1B3B2F Deep Hunter Green */
-    --primary-soft: 105 19% 87.5%;     /* #DCE5D9 Light Sage Tint */
+    --card: 0 0% 100%;                  /* #FFFFFF */
+    --card-foreground: 209 33% 13.5%;
+    --card-elevated: 207 23% 92.7%;     /* #E8EDF1 */
+    --card-secondary: 207 23% 92.7%;
+    --card-sunken: 210 18% 94%;
 
-    --secondary: 93 21% 91.6%;         /* #E9EEE5 Soft Sage */
-    --secondary-foreground: 140 7% 17.3%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 209 33% 13.5%;
 
-    --muted: 93 21% 91.6%;             /* #E9EEE5 Soft Sage */
-    --muted-foreground: 120 4% 46.9%;  /* #737C73 Charcoal Muted Text */
+    --primary: 209 33% 13.5%;           /* #17232E Terminal Slate Navy */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 209 35% 10%;
+    --primary-soft: 207 23% 92.7%;
 
-    --accent: 122 13% 59.6%;           /* #8BA58C Sage Accent */
-    --accent-foreground: 0 0% 100%;
+    --secondary: 207 23% 92.7%;         /* #E8EDF1 */
+    --secondary-foreground: 209 33% 13.5%;
 
-    --destructive: 13 47% 58.8%;       /* #C77A65 Terracotta / Expense Outflow */
+    --muted: 210 15% 91%;
+    --muted-foreground: 207 12% 46.1%;  /* #687783 */
+
+    --destructive: 0 57% 56.9%;         /* #CF5353 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 80 16% 88.8%;            /* #E4E7DE Warm Hairline Border */
-    --border-interactive: 85 14% 82%;  /* #D1D8C8 Focus / Hover Border */
-    --input: 80 16% 88.8%;             /* #E4E7DE Input Border */
-    --ring: 157 35% 21.8%;             /* #244B3C Forest Green Focus Ring */
+    --input: 206 21% 87.5%;             /* #D8E0E6 */
+    --ring: 37 77% 40.6%;               /* #B77A18 Accent Ring */
 
-    /* Semantic Financial Tokens */
-    --success: 149 38% 36.3%;          /* #39805B Forest Emerald / Income & Gains */
+    /* Semantic Financial Indicators */
+    --success: 158 72% 30.6%;           /* #16865D Positive Inflow */
     --success-foreground: 0 0% 100%;
-    --danger: 13 47% 58.8%;            /* #C77A65 Terracotta / Expenses & Losses */
+    --danger: 0 57% 56.9%;              /* #CF5353 Negative Outflow */
     --danger-foreground: 0 0% 100%;
-    --warning: 36 51% 52.4%;           /* #C39148 Warm Amber / Alerts & Pending */
+    --warning: 37 77% 40.6%;            /* #B77A18 Terminal Amber */
     --warning-foreground: 0 0% 100%;
 
-    /* Hex Tokens for Inline Style & SVG Chart References */
-    --color-background: #F7F7F0;
+    /* Hex Variables for Canvas, Recharts & SVG Telemetry */
+    --color-background: #F3F5F7;
     --color-surface: #FFFFFF;
-    --color-surface-secondary: #E9EEE5;
-    --color-surface-elevated: #FFFFFF;
-    --color-primary: #244B3C;
-    --color-primary-hover: #1B3B2F;
-    --color-primary-soft: #DCE5D9;
-    --color-accent: #8BA58C;
-    --color-text-primary: #292F2B;
-    --color-text-secondary: #737C73;
-    --color-border: #E4E7DE;
-    --color-success: #39805B;
-    --color-danger: #C77A65;
-    --color-warning: #C39148;
+    --color-surface-secondary: #E8EDF1;
+    --color-surface-elevated: #E8EDF1;
+    --color-primary: #17232E;
+    --color-primary-hover: #0E171E;
+    --color-primary-soft: #E8EDF1;
+    --color-accent: #B77A18;
+    --color-text-primary: #17232E;
+    --color-text-secondary: #687783;
+    --color-border: #D8E0E6;
+    --color-success: #16865D;
+    --color-danger: #CF5353;
+    --color-warning: #B77A18;
 
-    --radius: 0.875rem;                /* 14px Modern Restrained Radius */
+    --radius: 0.375rem;                 /* 6px Crisp Terminal Geometry */
   }
 
   .dark {
-    /* WealthOvers Dark Theme (LEFTOVERS-INSPIRED: PINE NIGHT + PALE SAGE + MOSS) */
-    --background: 146 14% 9.6%;        /* #151C18 Deep Pine Night Canvas */
-    --foreground: 87 27% 93.5%;        /* #EFF3EA Warm Off-White Primary Text */
+    /* --- Bloomberg Dark Theme — Primary Financial Terminal Canvas --- */
+    --app-bg: #101820;
+    --surface: #18232D;
+    --surface-elevated: #23313D;
+    --surface-muted: #1D2933;
+    --surface-secondary: #1D2933;
+    --border: #34424E;
+    --border-interactive: #465868;
 
-    --card: 142 16% 13.5%;             /* #1D2821 Deep Moss Card Surface */
-    --card-foreground: 87 27% 93.5%;   /* #EFF3EA */
-    --card-elevated: 139 16% 20%;      /* #2B3B30 Elevated Pine Surface */
-    --card-secondary: 139 18% 17.6%;   /* #25352A Soft Dark Sage Surface */
-    --card-sunken: 146 14% 7%;         /* Inset / Form Input */
+    --text-primary: #F1F5F8;
+    --text-secondary: #A7B4BF;
+    --text-muted: #6B7C8C;
 
-    --surface: 142 16% 13.5%;          /* #1D2821 */
-    --surface-secondary: 139 18% 17.6%;/* #25352A */
-    --surface-elevated: 139 16% 20%;   /* #2B3B30 */
+    --accent: #F0A52B;
+    --positive: #39B98A;
+    --negative: #EF6A68;
+    --info: #62A6E8;
 
-    --popover: 142 16% 13.5%;          /* #1D2821 Popover Surface */
-    --popover-foreground: 87 27% 93.5%;
+    /* Tailwind HSL Mapping for Component Primitives */
+    --background: 210 33% 9.4%;         /* #101820 */
+    --foreground: 206 30% 95.9%;        /* #F1F5F8 */
 
-    --primary: 124 18% 66.7%;          /* #9BB99D Pale Sage Primary Brand */
-    --primary-foreground: 146 14% 9.6%;/* #151C18 Pine Night Text on Sage */
-    --primary-hover: 125 18% 61.4%;    /* #8BAE8E Medium Sage Hover */
-    --primary-soft: 140 18% 23.3%;     /* #314638 Deep Pine Pill Tint */
+    --card: 209 30% 13.5%;              /* #18232D */
+    --card-foreground: 206 30% 95.9%;
+    --card-elevated: 208 27% 18.8%;     /* #23313D */
+    --card-secondary: 207 28% 15.7%;    /* #1D2933 */
+    --card-sunken: 210 33% 7.5%;
 
-    --secondary: 139 18% 17.6%;        /* #25352A Soft Dark Sage */
-    --secondary-foreground: 87 27% 93.5%;
+    --popover: 209 30% 13.5%;
+    --popover-foreground: 206 30% 95.9%;
 
-    --muted: 139 18% 17.6%;            /* #25352A */
-    --muted-foreground: 115 8% 68.4%;  /* #A9B5A8 Mist Green Secondary Text */
+    --primary: 37 87% 55.5%;            /* #F0A52B Bloomberg Terminal Amber */
+    --primary-foreground: 210 33% 9.4%;
+    --primary-hover: 37 90% 62%;
+    --primary-soft: 207 28% 15.7%;
 
-    --accent: 123 14% 48.8%;           /* #6B8E6D Sage Green Accent */
-    --accent-foreground: 87 27% 93.5%;
+    --secondary: 208 27% 18.8%;         /* #23313D */
+    --secondary-foreground: 206 30% 95.9%;
 
-    --destructive: 12 62% 67.6%;       /* #E08D79 Soft Coral Terracotta */
-    --destructive-foreground: 146 14% 9.6%;
+    --muted: 207 28% 15.7%;             /* #1D2933 */
+    --muted-foreground: 208 17% 70.2%;  /* #A7B4BF */
 
-    --border: 139 13% 23.5%;           /* #344439 Hairline Pine Border */
-    --border-interactive: 139 14% 30%; /* #3D4F42 */
-    --input: 139 13% 23.5%;
-    --ring: 124 18% 66.7%;             /* #9BB99D Pale Sage Focus Ring */
+    --destructive: 1 81% 67.3%;         /* #EF6A68 */
+    --destructive-foreground: 210 33% 9.4%;
 
-    /* Semantic Financial Tokens */
-    --success: 133 30% 63.1%;          /* #85BD91 Pale Forest Emerald */
-    --success-foreground: 146 14% 9.6%;
-    --danger: 12 62% 67.6%;            /* #E08D79 Soft Terracotta Outflow */
-    --danger-foreground: 146 14% 9.6%;
-    --warning: 39 56% 63.1%;           /* #D6B16C Warm Amber */
-    --warning-foreground: 146 14% 9.6%;
+    --input: 208 20% 25.5%;             /* #34424E */
+    --ring: 37 87% 55.5%;               /* #F0A52B Focus Ring */
 
-    /* Hex Tokens for Inline Style & SVG Chart References */
-    --color-background: #151C18;
-    --color-surface: #1D2821;
-    --color-surface-secondary: #25352A;
-    --color-surface-elevated: #2B3B30;
-    --color-primary: #9BB99D;
-    --color-primary-hover: #8BAE8E;
-    --color-primary-soft: #314638;
-    --color-accent: #6B8E6D;
-    --color-text-primary: #EFF3EA;
-    --color-text-secondary: #A9B5A8;
-    --color-border: #344439;
-    --color-success: #85BD91;
-    --color-danger: #E08D79;
-    --color-warning: #D6B16C;
+    /* Semantic Financial Indicators */
+    --success: 158 53% 47.5%;           /* #39B98A Positive Inflow / Profit */
+    --success-foreground: 210 33% 9.4%;
+    --danger: 1 81% 67.3%;              /* #EF6A68 Negative Outflow / Debt */
+    --danger-foreground: 210 33% 9.4%;
+    --warning: 37 87% 55.5%;            /* #F0A52B Terminal Amber Alert */
+    --warning-foreground: 210 33% 9.4%;
+
+    /* Hex Variables for Canvas, Recharts & SVG Telemetry */
+    --color-background: #101820;
+    --color-surface: #18232D;
+    --color-surface-secondary: #1D2933;
+    --color-surface-elevated: #23313D;
+    --color-primary: #F0A52B;
+    --color-primary-hover: #F2B34B;
+    --color-primary-soft: #23313D;
+    --color-accent: #F0A52B;
+    --color-text-primary: #F1F5F8;
+    --color-text-secondary: #A7B4BF;
+    --color-border: #34424E;
+    --color-success: #39B98A;
+    --color-danger: #EF6A68;
+    --color-warning: #F0A52B;
   }
 }
 
@@ -142,15 +164,45 @@
   }
   body {
     @apply bg-background text-foreground antialiased min-h-screen selection:bg-primary/20 selection:text-primary;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
     font-variant-numeric: tabular-nums;
     overflow-x: hidden;
   }
 }
 
-/* Fast subtle 120-180ms transitions for interactions */
+/* Tabular Numerals Utility */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Terminal Fast Interaction Transition */
 .transition-smooth {
-  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Terminal High-Density Data Grid styling */
+.terminal-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.terminal-grid th {
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-grid td {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Respect user reduced-motion preference */
@@ -163,20 +215,20 @@
   }
 }
 
-/* Custom sleek scrollbar for fintech look */
+/* Custom sleek terminal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--surface-muted);
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.25);
-  border-radius: 9999px;
+  background: var(--border);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.45);
+  background: var(--accent);
 }
 
 /* Mobile safe area padding utility */

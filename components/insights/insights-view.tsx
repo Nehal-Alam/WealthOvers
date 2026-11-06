@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   BarChart3,
   Calendar,
@@ -283,6 +284,16 @@ export function InsightsView({
           >
             {dateRange.label}
           </Badge>
+
+          <Link href="/ai-assistant">
+            <Button
+              size="sm"
+              className="h-9 gap-1.5 font-mono text-xs bg-terminalAccent hover:bg-terminalAccent/90 text-app-bg font-semibold rounded-xl"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI Terminal
+            </Button>
+          </Link>
         </div>
       </div>
 

@@ -96,6 +96,7 @@ const mobileDrawerSections: NavDrawerSection[] = [
   {
     title: "PLANNING & AUTOMATION",
     items: [
+      { title: "Subscriptions", href: "/subscriptions", icon: Target },
       { title: "Recurring Bills", href: "/recurring", icon: Calendar },
       { title: "Financial Goals", href: "/goals", icon: Target },
       { title: "Categorization Rules", href: "/categories", icon: FolderTree },

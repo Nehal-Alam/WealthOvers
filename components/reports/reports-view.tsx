@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as XLSX from "xlsx";
 import {
   FileSpreadsheet,
   Download,
@@ -142,10 +143,9 @@ export function ReportsView({
     });
   }, [accounts, investments, assets, loans, liabilities, creditCards]);
 
-  // CSV Export Generator
-  const handleExportCSV = () => {
-    let rows: string[][] = [];
-    let filename = `wealthovers-${selectedReport}-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  // Data Rows Generator for CSV & Excel
+  const getReportDataRows = (): (string | number)[][] => {
+    let rows: (string | number)[][] = [];
 
     if (selectedReport === "income" || selectedReport === "expense") {
       rows.push(["Date", "Description", "Category", "Account", "Type", "Amount", "Currency"]);
@@ -157,52 +157,52 @@ export function ReportsView({
       for (const t of filtered) {
         rows.push([
           t.transaction_date.slice(0, 10),
-          `"${(t.description || "").replace(/"/g, '""')}"`,
-          `"${t.category?.name || "Uncategorized"}"`,
-          `"${t.account?.name || "N/A"}"`,
+          t.description || "",
+          t.category?.name || "Uncategorized",
+          t.account?.name || "N/A",
           t.transaction_type,
-          t.amount,
+          Number(t.amount || 0),
           t.currency || "INR",
         ]);
       }
     } else if (selectedReport === "net_worth") {
       rows.push(["Item", "Classification", "Valuation / Amount", "Currency"]);
-      rows.push(["Liquid Accounts", "Asset", netWorthData.assetsBreakdown.liquidAccounts, "INR"]);
-      rows.push(["Investments", "Asset", netWorthData.assetsBreakdown.investments, "INR"]);
-      rows.push(["Tangible Assets", "Asset", netWorthData.assetsBreakdown.tangibleAssets, "INR"]);
-      rows.push(["Receivables (Money Lent)", "Asset", netWorthData.assetsBreakdown.receivables, "INR"]);
-      rows.push(["Total Assets", "Gross Asset Total", netWorthData.totalAssets, "INR"]);
-      rows.push(["Credit Card Dues", "Liability", netWorthData.liabilitiesBreakdown.creditCards, "INR"]);
-      rows.push(["Loans & Mortgages", "Liability", netWorthData.liabilitiesBreakdown.loans, "INR"]);
-      rows.push(["Borrowed Money", "Liability", netWorthData.liabilitiesBreakdown.borrowedMoney, "INR"]);
-      rows.push(["Other Debts", "Liability", netWorthData.liabilitiesBreakdown.otherDebts, "INR"]);
-      rows.push(["Total Liabilities", "Gross Liability Total", netWorthData.totalLiabilities, "INR"]);
-      rows.push(["Total Net Worth", "Equity", netWorthData.netWorth, "INR"]);
+      rows.push(["Liquid Accounts", "Asset", Number(netWorthData.assetsBreakdown.liquidAccounts), "INR"]);
+      rows.push(["Investments", "Asset", Number(netWorthData.assetsBreakdown.investments), "INR"]);
+      rows.push(["Tangible Assets", "Asset", Number(netWorthData.assetsBreakdown.tangibleAssets), "INR"]);
+      rows.push(["Receivables (Money Lent)", "Asset", Number(netWorthData.assetsBreakdown.receivables), "INR"]);
+      rows.push(["Total Assets", "Gross Asset Total", Number(netWorthData.totalAssets), "INR"]);
+      rows.push(["Credit Card Dues", "Liability", Number(netWorthData.liabilitiesBreakdown.creditCards), "INR"]);
+      rows.push(["Loans & Mortgages", "Liability", Number(netWorthData.liabilitiesBreakdown.loans), "INR"]);
+      rows.push(["Borrowed Money", "Liability", Number(netWorthData.liabilitiesBreakdown.borrowedMoney), "INR"]);
+      rows.push(["Other Debts", "Liability", Number(netWorthData.liabilitiesBreakdown.otherDebts), "INR"]);
+      rows.push(["Total Liabilities", "Gross Liability Total", Number(netWorthData.totalLiabilities), "INR"]);
+      rows.push(["Total Net Worth", "Equity", Number(netWorthData.netWorth), "INR"]);
     } else if (selectedReport === "investment") {
       rows.push(["Name", "Symbol", "Asset Type", "Broker", "Units", "Avg Buy Price", "Current Price", "Invested Amount", "Current Valuation"]);
       for (const inv of investments) {
         rows.push([
-          `"${inv.name.replace(/"/g, '""')}"`,
+          inv.name,
           inv.symbol || "",
           inv.asset_type,
           inv.broker_name,
-          String(inv.total_quantity),
-          String(inv.average_buy_price),
-          String(inv.current_nav_or_price),
-          String(inv.total_invested_amount),
-          String(inv.current_valuation),
+          Number(inv.total_quantity || 0),
+          Number(inv.average_buy_price || 0),
+          Number(inv.current_nav_or_price || 0),
+          Number(inv.total_invested_amount || 0),
+          Number(inv.current_valuation || 0),
         ]);
       }
     } else if (selectedReport === "loan") {
-      rows.push(["Lender / Borrower", "Type", "Principal", "Outstanding Balance", "Interest Rate", "EMI", "Maturity Date"]);
+      rows.push(["Lender / Borrower", "Type", "Principal", "Outstanding Balance", "Interest Rate (%)", "EMI", "Maturity Date"]);
       for (const l of loans) {
         rows.push([
-          `"${l.lender_or_borrower_name.replace(/"/g, '""')}"`,
+          l.lender_or_borrower_name,
           l.loan_type,
-          String(l.principal_amount),
-          String(l.outstanding_balance),
-          `${l.annual_interest_rate}%`,
-          String(l.monthly_emi),
+          Number(l.principal_amount || 0),
+          Number(l.outstanding_balance || 0),
+          Number(l.annual_interest_rate || 0),
+          Number(l.monthly_emi || 0),
           l.maturity_date,
         ]);
       }
@@ -212,17 +212,34 @@ export function ReportsView({
       for (const t of filteredTransactions) {
         rows.push([
           t.transaction_date.slice(0, 10),
-          `"${(t.description || "").replace(/"/g, '""')}"`,
-          `"${t.category?.name || "Uncategorized"}"`,
-          `"${t.account?.name || "N/A"}"`,
+          t.description || "",
+          t.category?.name || "Uncategorized",
+          t.account?.name || "N/A",
           t.transaction_type,
-          t.amount,
+          Number(t.amount || 0),
           t.currency || "INR",
         ]);
       }
     }
 
-    const csvContent = "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
+    return rows;
+  };
+
+  // CSV Export Generator
+  const handleExportCSV = () => {
+    const data = getReportDataRows();
+    const filename = `wealthovers-${selectedReport}-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      data
+        .map((row) =>
+          row
+            .map((val) =>
+              typeof val === "string" ? `"${val.replace(/"/g, '""')}"` : val
+            )
+            .join(",")
+        )
+        .join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -230,6 +247,16 @@ export function ReportsView({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Excel (.xlsx) Export Generator
+  const handleExportExcel = () => {
+    const data = getReportDataRows();
+    const filename = `wealthovers-${selectedReport}-report-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Financial Report");
+    XLSX.writeFile(wb, filename);
   };
 
   const REPORT_MENU: Array<{ id: ReportType; label: string; icon: any }> = [
@@ -271,6 +298,16 @@ export function ReportsView({
           >
             <Download className="h-3.5 w-3.5 text-primary" />
             <span>Export CSV</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-9 gap-1.5 border-border bg-surface text-text-primary hover:bg-surface-secondary text-xs rounded-xl"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Export Excel</span>
           </Button>
 
           <Button

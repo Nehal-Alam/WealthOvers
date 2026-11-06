@@ -1086,6 +1086,7 @@ export interface NetWorthCalculationInput {
     credit_limit?: number | string | Decimal;
     current_outstanding?: number | string | Decimal;
   }>;
+  exchangeRates?: Record<string, number>;
   asOfDate?: string | Date;
 }
 
@@ -1194,8 +1195,9 @@ export function calculateNetWorth(
       val = qty.times(price);
     }
 
+    const usdRate = (inputOrLiquid && inputOrLiquid.exchangeRates?.USD) || DEFAULT_USD_INR_RATE;
     if (inv.currency && inv.currency.toUpperCase() === "USD") {
-      val = val.times(DEFAULT_USD_INR_RATE);
+      val = val.times(usdRate);
     }
     totalInvestments = totalInvestments.plus(val);
   }

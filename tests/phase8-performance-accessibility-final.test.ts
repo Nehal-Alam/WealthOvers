@@ -7,38 +7,35 @@ describe("Phase 8: Performance, Accessibility & Final Release Verification", () 
   const tailwindConfigPath = path.join(process.cwd(), "tailwind.config.ts");
 
   describe("1. Complete Design Token System Integrity", () => {
-    it("verifies Light Theme design tokens match exact Leftovers specifications", () => {
+    it("verifies Light Theme design tokens match exact Bloomberg Terminal specifications", () => {
       const css = fs.readFileSync(globalsCssPath, "utf-8");
 
-      expect(css).toContain("--color-background: #F7F7F0;");
-      expect(css).toContain("--color-surface: #FFFFFF;");
-      expect(css).toContain("--color-surface-secondary: #E9EEE5;");
-      expect(css).toContain("--color-primary: #244B3C;");
-      expect(css).toContain("--color-primary-hover: #1B3B2F;");
-      expect(css).toContain("--color-primary-soft: #DCE5D9;");
-      expect(css).toContain("--color-accent: #8BA58C;");
-      expect(css).toContain("--color-text-primary: #292F2B;");
-      expect(css).toContain("--color-text-secondary: #737C73;");
-      expect(css).toContain("--color-border: #E4E7DE;");
-      expect(css).toContain("--color-success: #39805B;");
-      expect(css).toContain("--color-danger: #C77A65;");
-      expect(css).toContain("--color-warning: #C39148;");
+      expect(css).toContain("--app-bg: #F3F5F7;");
+      expect(css).toContain("--surface: #FFFFFF;");
+      expect(css).toContain("--surface-elevated: #E8EDF1;");
+      expect(css).toContain("--border: #D8E0E6;");
+      expect(css).toContain("--text-primary: #17232E;");
+      expect(css).toContain("--text-secondary: #687783;");
+      expect(css).toContain("--accent: #B77A18;");
+      expect(css).toContain("--positive: #16865D;");
+      expect(css).toContain("--negative: #CF5353;");
+      expect(css).toContain("--info: #397EBA;");
     });
 
-    it("verifies Dark Theme design tokens match exact Leftovers specifications", () => {
+    it("verifies Dark Theme design tokens match exact Bloomberg Terminal specifications (Primary)", () => {
       const css = fs.readFileSync(globalsCssPath, "utf-8");
 
-      expect(css).toContain("--color-background: #151C18;");
-      expect(css).toContain("--color-surface: #1D2821;");
-      expect(css).toContain("--color-surface-secondary: #25352A;");
-      expect(css).toContain("--color-primary: #9BB99D;");
-      expect(css).toContain("--color-primary-soft: #314638;");
-      expect(css).toContain("--color-text-primary: #EFF3EA;");
-      expect(css).toContain("--color-text-secondary: #A9B5A8;");
-      expect(css).toContain("--color-border: #344439;");
-      expect(css).toContain("--color-success: #85BD91;");
-      expect(css).toContain("--color-danger: #E08D79;");
-      expect(css).toContain("--color-warning: #D6B16C;");
+      expect(css).toContain("--app-bg: #101820;");
+      expect(css).toContain("--surface: #18232D;");
+      expect(css).toContain("--surface-elevated: #23313D;");
+      expect(css).toContain("--surface-muted: #1D2933;");
+      expect(css).toContain("--border: #34424E;");
+      expect(css).toContain("--text-primary: #F1F5F8;");
+      expect(css).toContain("--text-secondary: #A7B4BF;");
+      expect(css).toContain("--accent: #F0A52B;");
+      expect(css).toContain("--positive: #39B98A;");
+      expect(css).toContain("--negative: #EF6A68;");
+      expect(css).toContain("--info: #62A6E8;");
     });
 
     it("verifies Tailwind configuration exposes surface-secondary and primary-soft tokens", () => {
