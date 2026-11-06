@@ -22,16 +22,19 @@ import {
   Clock,
   Sparkles,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   HandCoins,
   Repeat,
   ArrowUpRight,
   Info,
+  ShieldAlert,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Tables } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MoneyDisplay } from "@/components/financial/money-display";
 import { useUIStore } from "@/stores/ui-store";
 import {
   addMoney,
@@ -83,6 +86,8 @@ export function MobileDashboardView({
     React.useState<DateDurationFilter>("this_month");
   const [activeOverviewTab, setActiveOverviewTab] =
     React.useState<OverviewTab>("income");
+  const [showAccountBreakdown, setShowAccountBreakdown] =
+    React.useState<boolean>(false);
   const [customStart, setCustomStart] = React.useState<string>("");
   const [customEnd, setCustomEnd] = React.useState<string>("");
   const [showCustomInputs, setShowCustomInputs] = React.useState<boolean>(false);
@@ -129,13 +134,22 @@ export function MobileDashboardView({
     totalExternalDebts,
     totalOwedToYou,
     totalYouOwe,
+    bankAccountsList,
+    cashAccountsList,
   } = React.useMemo(() => {
     let liquid = new Decimal(0);
     const activeAccounts = accounts.filter((a) => !a.is_archived);
+    const banks: Tables<"accounts">[] = [];
+    const cash: Tables<"accounts">[] = [];
 
     for (const a of activeAccounts) {
       if (a.account_type !== "credit_card" && a.account_type !== "loan_account") {
         liquid = liquid.plus(toDecimal(a.current_balance || 0));
+        if (["savings", "salary", "current"].includes(a.account_type)) {
+          banks.push(a);
+        } else {
+          cash.push(a);
+        }
       }
     }
 
@@ -158,10 +172,8 @@ export function MobileDashboardView({
       const principal = toDecimal(l.principal_amount || l.outstanding_balance || 0);
 
       if (l.loan_type === "loan_given" || l.loan_type === "lending") {
-        // Money lent to someone else: RECEIVABLE
         receivables = receivables.plus(bal);
       } else {
-        // Loan borrowed: LIABILITY
         borrowedPrincipal = borrowedPrincipal.plus(principal);
         outstandingLoans = outstandingLoans.plus(bal);
       }
@@ -185,6 +197,8 @@ export function MobileDashboardView({
       totalExternalDebts: extDebts.toNumber(),
       totalOwedToYou: receivables.toNumber(),
       totalYouOwe: totalOwe.toNumber(),
+      bankAccountsList: banks,
+      cashAccountsList: cash,
     };
   }, [accounts, creditCards, loans, liabilities]);
 
@@ -200,6 +214,8 @@ export function MobileDashboardView({
     dailySpendingAvg,
     largestExpenses,
     refundsTotal,
+    essentialExpensesTotal,
+    discretionaryExpensesTotal,
     periodIncomeTransactions,
     periodExpenseTransactions,
   } = React.useMemo(() => {
@@ -212,9 +228,18 @@ export function MobileDashboardView({
     let interestSum = new Decimal(0);
     let otherIncomeSum = new Decimal(0);
 
+    let essentialSum = new Decimal(0);
+    let discretionarySum = new Decimal(0);
+
     const categoryMap = new Map<string, { total: Decimal; count: number }>();
     const expTxList: any[] = [];
     const incTxList: any[] = [];
+
+    const ESSENTIAL_KEYWORDS = [
+      "grocery", "groceries", "food", "rent", "housing", "bill", "utility", "electric",
+      "water", "gas", "medical", "health", "medicine", "pharmacy", "fuel", "commute",
+      "transport", "education", "insurance"
+    ];
 
     for (const t of periodTransactions) {
       const amt = toDecimal(t.amount || 0);
@@ -243,6 +268,19 @@ export function MobileDashboardView({
         expTxList.push(t);
 
         const catName = t.category?.name || "Other Expenses";
+        const catLower = catName.toLowerCase();
+        const descLower = (t.description || "").toLowerCase();
+
+        const isEssential = ESSENTIAL_KEYWORDS.some(
+          (k) => catLower.includes(k) || descLower.includes(k)
+        );
+
+        if (isEssential) {
+          essentialSum = essentialSum.plus(amt);
+        } else {
+          discretionarySum = discretionarySum.plus(amt);
+        }
+
         const curr = categoryMap.get(catName) || { total: new Decimal(0), count: 0 };
         curr.total = curr.total.plus(amt);
         curr.count += 1;
@@ -293,6 +331,8 @@ export function MobileDashboardView({
       totalExpense: expenseSum.toNumber(),
       savingsRatePct: savingsPct,
       refundsTotal: refundSum.toNumber(),
+      essentialExpensesTotal: essentialSum.toNumber(),
+      discretionaryExpensesTotal: discretionarySum.toNumber(),
       incomeBreakdown: {
         salary: salarySum.toNumber(),
         business: businessSum.toNumber(),
@@ -343,16 +383,76 @@ export function MobileDashboardView({
     return sum;
   }, [upcomingRecurring]);
 
-  // Monthly Loan EMI total
-  const monthlyLoanEmiSum = React.useMemo(() => {
-    let sum = 0;
+  // Monthly Loan EMI total & Repaid / Interest calculations
+  const { monthlyLoanEmiSum, principalRepaidSum, interestPaidSum } = React.useMemo(() => {
+    let emiSum = 0;
+    let repaidSum = new Decimal(0);
+    let intSum = new Decimal(0);
+
     for (const l of loans) {
       if (l.loan_type !== "loan_given") {
-        sum += parseFloat(l.monthly_emi || 0);
+        emiSum += parseFloat(l.monthly_emi || 0);
+        const principal = toDecimal(l.principal_amount || l.outstanding_balance || 0);
+        const outstanding = toDecimal(l.outstanding_balance || 0);
+        if (principal.greaterThan(outstanding)) {
+          repaidSum = repaidSum.plus(principal.minus(outstanding));
+        }
+        // Approximate interest paid based on APR and elapsed term
+        const rate = parseFloat(l.annual_interest_rate || 0) / 100;
+        if (rate > 0 && principal.greaterThan(0)) {
+          intSum = intSum.plus(principal.times(rate * 0.5));
+        }
       }
     }
-    return sum;
+    return {
+      monthlyLoanEmiSum: emiSum,
+      principalRepaidSum: repaidSum.toNumber(),
+      interestPaidSum: Math.round(intSum.toNumber()),
+    };
   }, [loans]);
+
+  // Debt settled vs outstanding calculations
+  const { totalDebtSettled, totalDebtOutstanding, friendsFamilyDebt, privateDebts } =
+    React.useMemo(() => {
+      let settled = new Decimal(0);
+      let outstanding = new Decimal(0);
+      let ffDebt = new Decimal(0);
+      let privDebt = new Decimal(0);
+
+      for (const d of liabilities) {
+        const out = toDecimal(d.outstanding_amount || 0);
+        const tot = toDecimal(d.total_amount || d.outstanding_amount || 0);
+        outstanding = outstanding.plus(out);
+
+        if (tot.greaterThan(out)) {
+          settled = settled.plus(tot.minus(out));
+        }
+
+        const cat = (d.category || "").toLowerCase();
+        const name = (d.name || "").toLowerCase();
+        if (cat.includes("family") || cat.includes("friend") || name.includes("friend") || name.includes("family")) {
+          ffDebt = ffDebt.plus(out);
+        } else {
+          privDebt = privDebt.plus(out);
+        }
+      }
+
+      return {
+        totalDebtSettled: settled.toNumber(),
+        totalDebtOutstanding: outstanding.toNumber(),
+        friendsFamilyDebt: ffDebt.toNumber(),
+        privateDebts: privDebt.toNumber(),
+      };
+    }, [liabilities]);
+
+  // Account lookup helper map
+  const accountMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of accounts) {
+      map.set(a.id, a.name);
+    }
+    return map;
+  }, [accounts]);
 
   const PERIOD_OPTIONS: Array<{ id: DateDurationFilter; label: string }> = [
     { id: "this_month", label: "This Month" },
@@ -368,7 +468,7 @@ export function MobileDashboardView({
           1. MINIMAL MOBILE HEADER
       ────────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2.5">
           <div className="h-8 w-8 rounded-lg bg-terminalAccent/15 border border-terminalAccent/30 text-terminalAccent flex items-center justify-center font-mono font-bold text-sm">
             W
           </div>
@@ -387,7 +487,7 @@ export function MobileDashboardView({
           <Link
             href="/insights"
             className="h-9 w-9 rounded-full bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-text-primary active:scale-95 transition-all relative"
-            title="Notifications"
+            title="Notifications & Stats"
           >
             <Bell className="h-4 w-4" />
             <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-terminalAccent" />
@@ -488,11 +588,59 @@ export function MobileDashboardView({
                 })}`
               )}
             </div>
-            <p className="text-[11px] text-text-secondary mt-1 flex items-center gap-1">
-              <Info className="h-3 w-3 shrink-0" />
-              <span>Liquid bank & cash balances minus credit card obligations</span>
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-[11px] text-text-secondary flex items-center gap-1">
+                <Info className="h-3 w-3 shrink-0" />
+                <span>Liquid bank & cash balances minus credit card obligations</span>
+              </p>
+              <button
+                onClick={() => setShowAccountBreakdown(!showAccountBreakdown)}
+                className="text-[10px] font-mono font-medium text-terminalAccent hover:underline flex items-center gap-0.5 shrink-0 ml-1 cursor-pointer"
+              >
+                <span>{showAccountBreakdown ? "Hide" : "Breakdown"}</span>
+                {showAccountBreakdown ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Optional Balance Breakdown (Expandable) */}
+          {showAccountBreakdown && (
+            <div className="pt-2 border-t border-border/50 space-y-1.5 text-xs animate-in fade-in duration-150">
+              <span className="text-[10px] font-mono font-bold text-text-secondary uppercase block">
+                Eligible Liquid Accounts:
+              </span>
+              {bankAccountsList.map((acc) => (
+                <div key={acc.id} className="flex items-center justify-between py-0.5">
+                  <span className="text-text-secondary truncate max-w-[190px]">
+                    {acc.name} ({acc.institution_name || "Bank"})
+                  </span>
+                  <span className="font-mono text-text-primary tabular-nums font-medium">
+                    {isPrivacyMode ? "••••" : `₹${parseFloat(String(acc.current_balance || 0)).toLocaleString("en-IN")}`}
+                  </span>
+                </div>
+              ))}
+              {cashAccountsList.map((acc) => (
+                <div key={acc.id} className="flex items-center justify-between py-0.5">
+                  <span className="text-text-secondary truncate max-w-[190px]">{acc.name}</span>
+                  <span className="font-mono text-text-primary tabular-nums font-medium">
+                    {isPrivacyMode ? "••••" : `₹${parseFloat(String(acc.current_balance || 0)).toLocaleString("en-IN")}`}
+                  </span>
+                </div>
+              ))}
+              {totalCreditOutstanding > 0 && (
+                <div className="flex items-center justify-between py-0.5 text-negative pt-1 border-t border-border/30">
+                  <span className="text-negative font-medium">Credit Card Dues</span>
+                  <span className="font-mono tabular-nums font-bold">
+                    -{isPrivacyMode ? "••••" : `₹${totalCreditOutstanding.toLocaleString("en-IN")}`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Quick Balance Sheet Owe Indicators */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
@@ -682,9 +830,18 @@ export function MobileDashboardView({
 
             {/* Income Transactions History */}
             <Card className="bg-surface border-border p-4 rounded-xl space-y-2">
-              <span className="text-xs font-mono font-bold text-text-primary block">
-                Recent Inflows
-              </span>
+              <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                <span className="text-xs font-mono font-bold text-text-primary">
+                  Recent Income Transactions
+                </span>
+                <Link
+                  href="/transactions"
+                  className="text-[11px] font-mono text-terminalAccent hover:underline flex items-center gap-0.5"
+                >
+                  <span>View All</span>
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
               {periodIncomeTransactions.length === 0 ? (
                 <p className="text-xs text-text-secondary py-2 text-center">
                   No income entries recorded in this period.
@@ -698,7 +855,7 @@ export function MobileDashboardView({
                           {tx.description}
                         </p>
                         <p className="text-[10px] text-text-secondary font-mono">
-                          {format(new Date(tx.transaction_date), "dd MMM yyyy")}
+                          {format(new Date(tx.transaction_date), "dd MMM yyyy")} • {accountMap.get(tx.account_id) || "Account"}
                         </p>
                       </div>
                       <span className="font-mono font-bold text-positive tabular-nums">
@@ -737,6 +894,37 @@ export function MobileDashboardView({
               </div>
             </div>
 
+            {/* Essential vs Discretionary Expenses */}
+            <Card className="bg-surface border-border p-3.5 rounded-xl space-y-2">
+              <span className="text-xs font-mono font-bold text-text-primary block">
+                Essential vs Discretionary Spending
+              </span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2 rounded-lg bg-surface-elevated/70 border border-border/40">
+                  <span className="text-[10px] font-mono text-text-secondary block">
+                    ESSENTIAL
+                  </span>
+                  <span className="font-mono font-bold text-text-primary tabular-nums">
+                    ₹{essentialExpensesTotal.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[9px] text-text-secondary block">
+                    Bills, food, health
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-surface-elevated/70 border border-border/40">
+                  <span className="text-[10px] font-mono text-text-secondary block">
+                    DISCRETIONARY
+                  </span>
+                  <span className="font-mono font-bold text-text-primary tabular-nums">
+                    ₹{discretionaryExpensesTotal.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[9px] text-text-secondary block">
+                    Dining, leisure, shopping
+                  </span>
+                </div>
+              </div>
+            </Card>
+
             {/* Category Breakdown */}
             <Card className="bg-surface border-border p-4 rounded-xl space-y-3">
               <span className="text-xs font-mono font-bold text-text-primary block">
@@ -768,6 +956,25 @@ export function MobileDashboardView({
               )}
             </Card>
 
+            {/* Recurring Bills Monthly Sum */}
+            {recurringMonthlySum > 0 && (
+              <div className="p-3 bg-surface border border-border rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-text-secondary block">
+                    MONTHLY RECURRING COMMITMENT
+                  </span>
+                  <span className="text-sm font-mono font-bold text-text-primary tabular-nums">
+                    ₹{recurringMonthlySum.toLocaleString("en-IN")} / month
+                  </span>
+                </div>
+                <Link href="/recurring">
+                  <Button size="sm" variant="outline" className="h-7 text-xs font-mono">
+                    View Rules
+                  </Button>
+                </Link>
+              </div>
+            )}
+
             {/* Largest Expenses */}
             {largestExpenses.length > 0 && (
               <Card className="bg-surface border-border p-4 rounded-xl space-y-2">
@@ -782,7 +989,7 @@ export function MobileDashboardView({
                           {tx.description}
                         </p>
                         <p className="text-[10px] text-text-secondary font-mono">
-                          {format(new Date(tx.transaction_date), "dd MMM")}
+                          {format(new Date(tx.transaction_date), "dd MMM")} • {accountMap.get(tx.account_id) || "Account"}
                         </p>
                       </div>
                       <span className="font-mono font-bold text-negative tabular-nums">
@@ -793,6 +1000,45 @@ export function MobileDashboardView({
                 </div>
               </Card>
             )}
+
+            {/* Recent Expense Transactions */}
+            <Card className="bg-surface border-border p-4 rounded-xl space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                <span className="text-xs font-mono font-bold text-text-primary">
+                  Recent Expense Transactions
+                </span>
+                <Link
+                  href="/transactions"
+                  className="text-[11px] font-mono text-terminalAccent hover:underline flex items-center gap-0.5"
+                >
+                  <span>View All</span>
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+              {periodExpenseTransactions.length === 0 ? (
+                <p className="text-xs text-text-secondary py-2 text-center">
+                  No expense entries recorded in this period.
+                </p>
+              ) : (
+                <div className="divide-y divide-border/40 text-xs">
+                  {periodExpenseTransactions.map((tx) => (
+                    <div key={tx.id} className="py-2 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-text-primary truncate max-w-[180px]">
+                          {tx.description}
+                        </p>
+                        <p className="text-[10px] text-text-secondary font-mono">
+                          {format(new Date(tx.transaction_date), "dd MMM yyyy")} • {accountMap.get(tx.account_id) || "Account"}
+                        </p>
+                      </div>
+                      <span className="font-mono font-bold text-negative tabular-nums">
+                        -₹{parseFloat(tx.amount).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
         )}
 
@@ -813,19 +1059,48 @@ export function MobileDashboardView({
               </div>
               <div className="p-3 bg-surface border border-border rounded-xl">
                 <span className="text-[10px] font-mono text-text-secondary block">
+                  OUTSTANDING PRINCIPAL
+                </span>
+                <span className="text-sm font-mono font-bold text-negative tabular-nums">
+                  ₹{totalOutstandingLoans.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+
+            {/* Repaid vs Interest Paid */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 bg-surface border border-border rounded-xl">
+                <span className="text-[10px] font-mono text-text-secondary block">
+                  PRINCIPAL REPAID
+                </span>
+                <span className="font-mono font-bold text-positive tabular-nums">
+                  ₹{principalRepaidSum.toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="p-2.5 bg-surface border border-border rounded-xl">
+                <span className="text-[10px] font-mono text-text-secondary block">
                   MONTHLY EMI COMMITMENT
                 </span>
-                <span className="text-sm font-mono font-bold text-terminalAccent tabular-nums">
-                  ₹{monthlyLoanEmiSum.toLocaleString("en-IN")}
+                <span className="font-mono font-bold text-terminalAccent tabular-nums">
+                  ₹{monthlyLoanEmiSum.toLocaleString("en-IN")} / mo
                 </span>
               </div>
             </div>
 
             {/* Active Loans Cards */}
             <div className="space-y-2">
-              <span className="text-xs font-mono font-bold text-text-primary block">
-                Active Loans ({loans.filter((l) => l.loan_type !== "loan_given").length})
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-text-primary block">
+                  Active Loans ({loans.filter((l) => l.loan_type !== "loan_given").length})
+                </span>
+                <Link
+                  href="/loans"
+                  className="text-[11px] font-mono text-terminalAccent hover:underline flex items-center gap-0.5"
+                >
+                  <span>Manage</span>
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
               {loans.filter((l) => l.loan_type !== "loan_given").length === 0 ? (
                 <div className="p-4 bg-surface border border-dashed border-border rounded-xl text-center text-xs text-text-secondary">
                   No active loans recorded.
@@ -892,11 +1167,40 @@ export function MobileDashboardView({
               </Link>
             </div>
 
+            {/* Settled vs Outstanding breakdown */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 bg-surface border border-border rounded-xl">
+                <span className="text-[10px] font-mono text-text-secondary block">
+                  FRIENDS & FAMILY
+                </span>
+                <span className="font-mono font-bold text-negative tabular-nums">
+                  ₹{friendsFamilyDebt.toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="p-2.5 bg-surface border border-border rounded-xl">
+                <span className="text-[10px] font-mono text-text-secondary block">
+                  PRIVATE DEBTS
+                </span>
+                <span className="font-mono font-bold text-negative tabular-nums">
+                  ₹{privateDebts.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+
             {/* Creditor List */}
             <div className="space-y-2">
-              <span className="text-xs font-mono font-bold text-text-primary block">
-                Private & Personal Creditors ({liabilities.length})
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-text-primary block">
+                  Private & Personal Creditors ({liabilities.length})
+                </span>
+                <Link
+                  href="/loans?tab=debts"
+                  className="text-[11px] font-mono text-terminalAccent hover:underline flex items-center gap-0.5"
+                >
+                  <span>Settlement History</span>
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
               {liabilities.length === 0 ? (
                 <div className="p-4 bg-surface border border-dashed border-border rounded-xl text-center text-xs text-text-secondary">
                   No private debts recorded. Your external liabilities balance is zero.
@@ -927,6 +1231,96 @@ export function MobileDashboardView({
               )}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. RECENT TRANSACTIONS (MAX 5 ITEMS WITH VIEW ALL ACTION)
+      ────────────────────────────────────────────────────────────── */}
+      <div className="space-y-2.5 pt-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-terminalAccent" />
+            RECENT TRANSACTIONS
+          </h2>
+          <Link
+            href="/transactions"
+            className="text-[11px] font-mono font-medium text-terminalAccent hover:underline flex items-center gap-0.5"
+          >
+            <span>View All</span>
+            <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {masterTransactions.length === 0 ? (
+          <Card className="bg-surface border-dashed border-border p-6 rounded-xl text-center">
+            <p className="text-xs text-text-secondary">
+              No transactions recorded yet. Tap + below to add your first transaction.
+            </p>
+          </Card>
+        ) : (
+          <Card className="bg-surface border-border p-3 rounded-2xl shadow-2xs divide-y divide-border/40">
+            {masterTransactions.slice(0, 5).map((tx) => {
+              const isIncome = tx.transaction_type === "income" || tx.transaction_type === "refund";
+              const isTransfer = tx.transaction_type === "transfer";
+              const catName = tx.category?.name || "General";
+              const accountName = accountMap.get(tx.account_id) || "Account";
+
+              return (
+                <div
+                  key={tx.id}
+                  className="py-2.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                        isIncome
+                          ? "bg-positive/10 text-positive"
+                          : isTransfer
+                          ? "bg-info/10 text-info"
+                          : "bg-negative/10 text-negative"
+                      }`}
+                    >
+                      {isIncome ? (
+                        <TrendingUp className="h-4 w-4" />
+                      ) : isTransfer ? (
+                        <ArrowLeftRight className="h-4 w-4" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-text-primary truncate">
+                        {tx.merchant_or_person || tx.description}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-text-secondary font-mono mt-0.5">
+                        <span className="truncate max-w-[100px]">{catName}</span>
+                        <span>•</span>
+                        <span className="truncate max-w-[90px]">{accountName}</span>
+                        <span>•</span>
+                        <span>{format(new Date(tx.transaction_date), "dd MMM")}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`font-mono font-bold tabular-nums text-xs ${
+                        isIncome
+                          ? "text-positive"
+                          : isTransfer
+                          ? "text-text-primary"
+                          : "text-negative"
+                      }`}
+                    >
+                      {isIncome ? "+" : isTransfer ? "" : "-"}
+                      ₹{parseFloat(tx.amount).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
         )}
       </div>
     </div>

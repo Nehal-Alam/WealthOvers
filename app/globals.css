@@ -24,7 +24,20 @@
     --accent: #B77A18;
     --positive: #16865D;
     --negative: #CF5353;
+    --warning: #B77A18;
     --info: #397EBA;
+
+    /* Mobile Minimal Design Tokens */
+    --mobile-bg: #F5F6F8;
+    --mobile-surface: #FFFFFF;
+    --mobile-surface-secondary: #EDF0F3;
+    --mobile-text-primary: #18232D;
+    --mobile-text-secondary: #74808C;
+    --mobile-accent: #244B3C;
+    --mobile-positive: #16865D;
+    --mobile-negative: #D65353;
+    --mobile-warning: #B77A18;
+    --mobile-border: #E1E6EA;
 
     /* Tailwind HSL Mapping for Component Primitives */
     --background: 210 18% 96.1%;        /* #F3F5F7 */
@@ -65,19 +78,19 @@
     --warning-foreground: 0 0% 100%;
 
     /* Hex Variables for Canvas, Recharts & SVG Telemetry */
-    --color-background: #F3F5F7;
+    --color-background: #F5F6F8;
     --color-surface: #FFFFFF;
-    --color-surface-secondary: #E8EDF1;
-    --color-surface-elevated: #E8EDF1;
-    --color-primary: #17232E;
+    --color-surface-secondary: #EDF0F3;
+    --color-surface-elevated: #EDF0F3;
+    --color-primary: #18232D;
     --color-primary-hover: #0E171E;
-    --color-primary-soft: #E8EDF1;
-    --color-accent: #B77A18;
-    --color-text-primary: #17232E;
-    --color-text-secondary: #687783;
-    --color-border: #D8E0E6;
+    --color-primary-soft: #EDF0F3;
+    --color-accent: #244B3C;
+    --color-text-primary: #18232D;
+    --color-text-secondary: #74808C;
+    --color-border: #E1E6EA;
     --color-success: #16865D;
-    --color-danger: #CF5353;
+    --color-danger: #D65353;
     --color-warning: #B77A18;
 
     --radius: 0.375rem;                 /* 6px Crisp Terminal Geometry */
@@ -101,6 +114,17 @@
     --positive: #39B98A;
     --negative: #EF6A68;
     --info: #62A6E8;
+
+    /* Mobile Minimal Design Tokens */
+    --mobile-bg: #101820;
+    --mobile-surface: #18232D;
+    --mobile-surface-secondary: #23313D;
+    --mobile-text-primary: #F1F5F8;
+    --mobile-text-secondary: #A7B4BF;
+    --mobile-accent: #8EB6A2;
+    --mobile-positive: #39B98A;
+    --mobile-negative: #EF6A68;
+    --mobile-border: #34424E;
 
     /* Tailwind HSL Mapping for Component Primitives */
     --background: 210 33% 9.4%;         /* #101820 */
@@ -148,7 +172,7 @@
     --color-primary: #F0A52B;
     --color-primary-hover: #F2B34B;
     --color-primary-soft: #23313D;
-    --color-accent: #F0A52B;
+    --color-accent: #8EB6A2;
     --color-text-primary: #F1F5F8;
     --color-text-secondary: #A7B4BF;
     --color-border: #34424E;

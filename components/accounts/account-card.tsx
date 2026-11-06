@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
   Landmark,
   Wallet,
@@ -210,12 +211,19 @@ export function AccountCard({
 
         {/* Balance Section */}
         <div className="pt-2.5 border-t border-border/60 flex items-baseline justify-between gap-2">
-          <Badge
-            variant="outline"
-            className="text-[11px] font-medium bg-surface-secondary text-text-secondary border-border/80 px-2 py-0.5 rounded-lg"
-          >
-            {formatAccountType(account.account_type)}
-          </Badge>
+          <div className="flex flex-col gap-1">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-medium bg-surface-secondary text-text-secondary border-border/80 px-2 py-0.5 rounded-lg w-fit"
+            >
+              {formatAccountType(account.account_type)}
+            </Badge>
+            {account.updated_at && (
+              <span className="text-[10px] text-text-secondary font-mono">
+                Updated {format(new Date(account.updated_at), "dd MMM yyyy")}
+              </span>
+            )}
+          </div>
 
           <div className="text-right">
             <span className="text-[11px] text-text-secondary block font-medium">
@@ -226,8 +234,8 @@ export function AccountCard({
                 : "Available Balance"}
             </span>
             <span
-              className={`text-lg font-bold tabular-nums tracking-tight ${
-                isDebt ? "text-danger" : "text-text-primary"
+              className={`text-lg font-bold tabular-nums tracking-tight font-mono ${
+                isDebt ? "text-negative" : "text-text-primary"
               }`}
             >
               ₹{parseFloat(account.current_balance as any).toLocaleString("en-IN", {
@@ -236,6 +244,42 @@ export function AccountCard({
               })}
             </span>
           </div>
+        </div>
+
+        {/* Mobile Quick Action Strip (Transfer & History) */}
+        <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2">
+          {onViewHistory && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onViewHistory(account)}
+              className="h-7 text-[11px] font-mono text-terminalAccent hover:text-terminalAccent/80 p-0 flex items-center gap-1 cursor-pointer"
+            >
+              <Receipt className="h-3.5 w-3.5" />
+              <span>History</span>
+            </Button>
+          )}
+
+          {!account.is_archived && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsReconcileOpen(true)}
+                className="h-7 text-[11px] font-mono text-text-secondary hover:text-text-primary px-2 cursor-pointer"
+              >
+                Reconcile
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onTransfer(account)}
+                className="h-7 text-[11px] font-mono border-border px-2 cursor-pointer"
+              >
+                Transfer
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
 

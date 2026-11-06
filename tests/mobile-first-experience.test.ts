@@ -172,4 +172,69 @@ describe("Mobile-First Personal Finance Experience (V2 Redesign)", () => {
       expect(mobileSettingsCode).toContain("local");
     });
   });
+
+  describe("6. Enhanced Mobile Home Features & Strict No-Duplicate Invariant", () => {
+    it("features optional account balance breakdown toggle in available balance card", () => {
+      expect(mobileDashboardCode).toContain("showAccountBreakdown");
+      expect(mobileDashboardCode).toContain("Eligible Liquid Accounts:");
+      expect(mobileDashboardCode).toContain("Credit Card Dues");
+    });
+
+    it("includes Essential vs Discretionary expense breakdown inside Expense sub-tab", () => {
+      expect(mobileDashboardCode).toContain("Essential vs Discretionary Spending");
+      expect(mobileDashboardCode).toContain("ESSENTIAL");
+      expect(mobileDashboardCode).toContain("DISCRETIONARY");
+    });
+
+    it("displays the unified recent transactions section with max 5 items and View All link", () => {
+      expect(mobileDashboardCode).toContain("RECENT TRANSACTIONS");
+      expect(mobileDashboardCode).toContain("masterTransactions.slice(0, 5)");
+      expect(mobileDashboardCode).toContain('href="/transactions"');
+    });
+  });
+
+  describe("7. Stats Screen Architecture (4 Dedicated Sections & AI Limit)", () => {
+    const insightsViewPath = path.join(process.cwd(), "components/insights/insights-view.tsx");
+    const insightsViewCode = fs.readFileSync(insightsViewPath, "utf-8");
+
+    it("verifies the 4 dedicated stats sections exist cleanly on /insights", () => {
+      expect(insightsViewCode).toContain("1. FINANCIAL OVERVIEW");
+      expect(insightsViewCode).toContain("2. SPENDING ANALYTICS & VELOCITY");
+      expect(insightsViewCode).toContain("3. WEALTH ANALYTICS & ALLOCATION");
+      expect(insightsViewCode).toContain("4. Financial Insights & Anomaly Intelligence");
+    });
+
+    it("verifies Top Merchants, Daily Run Rate, and Spending Velocity are computed", () => {
+      expect(insightsViewCode).toContain("Top Merchants & Counterparties");
+      expect(insightsViewCode).toContain("Daily Burn Rate");
+      expect(insightsViewCode).toContain("Average Ticket Size");
+    });
+
+    it("verifies Wealth Analytics includes Net Worth, Asset Allocation, and Loan Amortization", () => {
+      expect(insightsViewCode).toContain("TOTAL NET WORTH");
+      expect(insightsViewCode).toContain("Asset Allocation");
+      expect(insightsViewCode).toContain("Liquid Bank & Cash");
+      expect(insightsViewCode).toContain("Loan Principal Amortized");
+    });
+
+    it("enforces initial maximum of 3 AI insight cards with Show More / Show Less action", () => {
+      expect(insightsViewCode).toContain("visibleInsights");
+      expect(insightsViewCode).toContain("showAllInsights");
+      expect(insightsViewCode).toContain("Show More");
+      expect(insightsViewCode).toContain("Show Less");
+    });
+  });
+
+  describe("8. Accounts Screen Transparency & Ledger History", () => {
+    const accountCardPath = path.join(process.cwd(), "components/accounts/account-card.tsx");
+    const accountCardCode = fs.readFileSync(accountCardPath, "utf-8");
+
+    it("displays last updated date and direct History trigger on AccountCard", () => {
+      expect(accountCardCode).toContain("Updated");
+      expect(accountCardCode).toContain("onViewHistory");
+      expect(accountCardCode).toContain("Reconcile");
+      expect(accountCardCode).toContain("Transfer");
+    });
+  });
 });
+
