@@ -44,10 +44,18 @@ const COLOR_PRESETS = [
 
 interface CreateAccountDialogProps {
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateAccountDialog({ trigger }: CreateAccountDialogProps) {
-  const [open, setOpen] = React.useState(false);
+export function CreateAccountDialog({
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: CreateAccountDialogProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const {

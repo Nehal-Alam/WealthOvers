@@ -76,6 +76,7 @@ const TransactionDetailModal = dynamic(
 import { TransactionTimeline } from "@/components/transactions/transaction-timeline";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { TransactionMobileFeed } from "@/components/transactions/transaction-mobile-feed";
+import { MobileActivityView } from "@/components/transactions/mobile-activity-view";
 import { MetricCard } from "@/components/financial/metric-card";
 import { addMoney, subtractMoney, calculateLedgerCashFlow } from "@/lib/calculations/financial";
 import {
@@ -423,7 +424,20 @@ export function TransactionLedger({
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Mobile Activity View (References 4 & 7) */}
+      <div className="block lg:hidden">
+        <MobileActivityView
+          transactions={transactions}
+          accounts={accounts}
+          categories={categories}
+          onEdit={setEditingTransaction}
+          onInspect={setInspectingTransaction}
+        />
+      </div>
+
+      {/* Desktop Bloomberg Terminal Ledger */}
+      <div className="hidden lg:block space-y-6">
+        {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-text-primary">
@@ -947,6 +961,7 @@ export function TransactionLedger({
           )}
         </>
       )}
+      </div>
 
       {/* Edit Transaction Modal */}
       <EditTransactionDialog

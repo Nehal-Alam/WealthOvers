@@ -89,6 +89,7 @@ import {
   filterTransactionsByDateRange,
 } from "@/lib/calculations/date-ranges";
 import Decimal from "decimal.js";
+import { MobileInsightsView } from "@/components/insights/mobile-insights-view";
 
 interface InsightsViewProps {
   transactions: any[];
@@ -390,7 +391,22 @@ export function InsightsView({
     : deterministicInsights.insights.slice(0, 3);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+    <>
+      {/* Mobile Insights View (References 1 & 2) */}
+      <div className="block lg:hidden">
+        <MobileInsightsView
+          transactions={transactions}
+          accounts={accounts}
+          categories={categories}
+          investments={investments}
+          assets={assets}
+          loans={loans}
+          liabilities={liabilities}
+        />
+      </div>
+
+      {/* Desktop Terminal Analytics */}
+      <div className="hidden lg:block space-y-6 max-w-6xl mx-auto pb-10">
       {/* ─────────────────────────────────────────────────────────────
           TOP HEADER & DURATION FILTER BAR
       ────────────────────────────────────────────────────────────── */}
@@ -849,6 +865,7 @@ export function InsightsView({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

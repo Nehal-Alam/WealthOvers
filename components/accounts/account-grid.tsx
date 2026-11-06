@@ -51,6 +51,7 @@ const AccountHistoryModal = dynamic(
 
 import { AccountCard } from "@/components/accounts/account-card";
 import { MetricCard } from "@/components/financial/metric-card";
+import { MobileAccountsView } from "@/components/accounts/mobile-accounts-view";
 import { subtractMoney, addMoney } from "@/lib/calculations/financial";
 
 interface AccountGridProps {
@@ -64,6 +65,7 @@ export function AccountGrid({ accounts, transactions = [] }: AccountGridProps) {
   const [historyAccount, setHistoryAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [transferSourceAccount, setTransferSourceAccount] = React.useState<Tables<"accounts"> | null>(null);
   const [isTransferOpen, setIsTransferOpen] = React.useState(false);
+  const [isCreateAccountOpen, setIsCreateAccountOpen] = React.useState(false);
 
   // Group accounts
   const activeAccounts = accounts.filter((a) => !a.is_archived);
@@ -108,8 +110,21 @@ export function AccountGrid({ accounts, transactions = [] }: AccountGridProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
+    <>
+      {/* Mobile Accounts View (References 6 & 8) */}
+      <div className="block lg:hidden">
+        <MobileAccountsView
+          accounts={accounts}
+          onOpenTransfer={handleOpenTransfer}
+          onOpenCreateAccount={() => setIsCreateAccountOpen(true)}
+          onOpenHistory={setHistoryAccount}
+          onOpenEdit={setEditingAccount}
+        />
+      </div>
+
+      {/* Desktop Terminal Accounts Grid */}
+      <div className="hidden lg:block space-y-6">
+        {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-text-primary">
@@ -327,6 +342,15 @@ export function AccountGrid({ accounts, transactions = [] }: AccountGridProps) {
           )}
         </div>
       )}
+      </div>
+
+      {/* Mobile Create Account Dialog */}
+      {isCreateAccountOpen && (
+        <CreateAccountDialog
+          open={isCreateAccountOpen}
+          onOpenChange={setIsCreateAccountOpen}
+        />
+      )}
 
       {/* Edit Account Modal */}
       <EditAccountDialog
@@ -350,6 +374,6 @@ export function AccountGrid({ accounts, transactions = [] }: AccountGridProps) {
         open={!!historyAccount}
         onOpenChange={(open) => !open && setHistoryAccount(null)}
       />
-    </div>
+    </>
   );
 }

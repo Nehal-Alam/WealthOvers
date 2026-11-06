@@ -126,6 +126,21 @@
     --mobile-negative: #EF6A68;
     --mobile-border: #34424E;
 
+    /* Mobile Reference Palette (Pure Pitch Black Aesthetic) */
+    --mobile-pitch-bg: #050505;
+    --mobile-pitch-surface: #151515;
+    --mobile-pitch-secondary: #202020;
+    --mobile-pitch-elevated: #292929;
+    --mobile-pitch-text: #F5F5F5;
+    --mobile-pitch-text-muted: #99999F;
+    --mobile-pitch-border: #303030;
+    --mobile-pitch-blue: #A8C7FA;
+    --mobile-pitch-income: #80D5AE;
+    --mobile-pitch-expense: #E58A91;
+    --mobile-pitch-warning: #E6BD70;
+    --mobile-pitch-rent: #D7B99F;
+    --mobile-pitch-investment: #83D4B3;
+
     /* Tailwind HSL Mapping for Component Primitives */
     --background: 210 33% 9.4%;         /* #101820 */
     --foreground: 206 30% 95.9%;        /* #F1F5F8 */

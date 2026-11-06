@@ -4,8 +4,8 @@
   "description": "Privacy-first personal finance platform for multi-account banking, precision budgeting, investment tracking, and Android transaction synchronization.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#090d16",
-  "theme_color": "#10b981",
+  "background_color": "#050505",
+  "theme_color": "#050505",
   "icons": [
     {
       "src": "/images/logo-dark.png",

@@ -85,6 +85,22 @@ const config: Config = {
           DEFAULT: "#F0A52B",
           gold: "#B77A18",
         },
+        // Mobile-First Reference Design Palette
+        mobile: {
+          bg: "#050505",
+          surface: "#151515",
+          secondary: "#202020",
+          elevated: "#292929",
+          primary: "#F5F5F5",
+          secondaryText: "#99999F",
+          border: "#303030",
+          blue: "#A8C7FA",
+          income: "#80D5AE",
+          expense: "#E58A91",
+          warning: "#E6BD70",
+          rent: "#D7B99F",
+          investment: "#83D4B3",
+        },
         // Backward-compatible Brand & Action Colors
         brand: {
           forest: "#244B3C",

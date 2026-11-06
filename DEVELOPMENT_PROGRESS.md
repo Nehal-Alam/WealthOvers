@@ -58,6 +58,20 @@
 3. **Repeated Component Rendering Strictly Prohibited:** Eliminated duplicate instances of Income Streams and Recent Inflows. Summary components now appear exactly once on their dedicated sub-tab or view.
 4. **AI & Analytics Space Optimization:** Moved heavy analytics out of Home to `/insights` (Stats). AI insight cards are capped at an initial maximum of 3 with a "Show More" / "Show Less" toggle.
 5. **Chart Demarcation:** Inflow/Outflow and Category charts moved from Home to `/insights`.
+
+---
+
+## 5. Native Mobile Experience Matching 10 Reference Screenshots (100% Complete)
+
+| Screen & Reference | Components Implemented | Design & Interaction Highlights | Status |
+| :--- | :--- | :--- | :---: |
+| **Keypad-First Transaction Composer** (Ref 3 & 10) | `mobile-keypad-composer.tsx`, `global-quick-transaction.tsx` | Pitch-black `#050505` backdrop, `Expense`/`Income` switcher, large tabular amount (`₹0`), `+ Add a note`, Account selector dropdown, quick date pills (`Yesterday`, `Today`, `Tomorrow`, Calendar), horizontal category chips with icons, and custom numeric keypad (`0-9`, `00`, `.`, `⌫`, and prominent pastel blue `#A8C7FA` `Add` button). | **COMPLETE** |
+| **Minimal Home Dashboard** (Ref 5, 8, 9) | `mobile-dashboard-view.tsx` | Time-based greeting ("Good morning/afternoon/evening"), current month/year, "Spent today" hero figure, Available Balance card with privacy toggle (`••••••••`), You Owe vs Owed to You indicators, Detected payments from Android companion with `✓` Approve and `✕` Dismiss, latest 5 Recent Transactions (`See All >`), and expandable Account breakdown bottom sheet. | **COMPLETE** |
+| **Floating 5-Position Bottom Dock** (Ref 1, 4, 5, 7, 9) | `mobile-nav.tsx` | Floating rounded dock (`#151515`/95 border `#303030` shadow-2xl) featuring: (1) Home, (2) Activity, (3) Central elevated `+` button in `#A8C7FA`, (4) Insights, and (5) Accounts with expandable "More Modules" bottom sheet. | **COMPLETE** |
+| **Activity Ledger** (Ref 4 & 7) | `mobile-activity-view.tsx`, `transaction-ledger.tsx` | Month switcher `< November 2026 >`, Spent this month card (`₹15,386 • 24 entries • 7 accounts`), segmented filter pills (`All` \| `Spent` \| `Income`), transactions grouped by date (`Today • ₹15,386`, `Yesterday • ₹1,200`), circular category icons, and search trigger. | **COMPLETE** |
+| **Insights & Interactive Calendar** (Ref 1 & 2) | `mobile-insights-view.tsx`, `insights-view.tsx` | Month switcher `< November 2026 >`, `Spending` \| `Income` toggle, "Spent in {Month}" card with 30-day vertical bar chart, contextual pace insight ("At this pace you'll spend..."), `Daily average` & `Biggest spend` KPIs, category donut breakdown with progress bars (Rent beige `#D7B99F`, Groceries teal `#83D4B3`, SIP green `#80D5AE`), and 7-column Interactive Monthly Calendar with spend intensity and date filtering. | **COMPLETE** |
+| **Accounts Screen** (Ref 6 & 8) | `mobile-accounts-view.tsx`, `account-grid.tsx` | Total across accounts hero card (`₹43,134.87`), accounts grouped by type (Cash, Banks, Credit Cards, Investments) with masked numbers and balances, and floating bottom action buttons (`⇄ Transfer` outline & `+ New account` solid `#A8C7FA`). | **COMPLETE** |
+| **PWA & Mobile Ergonomics** | `public/manifest.json`, `tailwind.config.ts`, `globals.css` | Pitch-black mobile tokens (`#050505`, `#151515`, `#202020`, `#303030`, `#A8C7FA`), `pb-safe` safe area inset padding, $\ge 44\text{ px}$ touch targets, standalone display, and mobile app icons. | **COMPLETE** |
 6. **Information Prioritization:** Surfaced immediate everyday financial answers: Available Balance, Income, Expense, "You Owe", and "Owed to You".
 7. **Elimination of Excessive Scrolling:** Simplified Home to a clean 3-part structure: Header + Available Balance & Summary Cards + 4 Segmented Sub-Tabs + Recent Transactions ($\le 5$).
 
