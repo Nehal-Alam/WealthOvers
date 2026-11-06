@@ -79,3 +79,4 @@ export function PlanNavigation({ activeTab, className }: PlanNavigationProps) {
     </nav>
   );
 }
+
