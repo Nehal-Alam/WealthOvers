@@ -6,6 +6,7 @@ import {
   Search,
   Filter,
   PlusCircle,
+  Plus,
   TrendingDown,
   TrendingUp,
   ArrowLeftRight,
@@ -96,6 +97,7 @@ export function TransactionLedger({
 }: TransactionLedgerProps) {
   const [editingTransaction, setEditingTransaction] = React.useState<any | null>(null);
   const [inspectingTransaction, setInspectingTransaction] = React.useState<any | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
   // View Mode: Timeline (Leftovers default) vs Table
   const [viewMode, setViewMode] = React.useState<"timeline" | "table">("timeline");
@@ -259,7 +261,7 @@ export function TransactionLedger({
   }, [filteredTransactions, currentPage, pageSize]);
 
   // Selection handlers
-  const handleToggleSelect = (id: string) => {
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -269,24 +271,25 @@ export function TransactionLedger({
       }
       return next;
     });
-  };
+  }, []);
 
   const allSelectedInPage =
     paginatedTransactions.length > 0 &&
     paginatedTransactions.every((t) => selectedIds.has(t.id));
 
-  const handleToggleSelectAll = () => {
+  const handleToggleSelectAll = React.useCallback(() => {
     const pageIds = paginatedTransactions.map((t) => t.id);
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (allSelectedInPage) {
+      const allSelected = pageIds.length > 0 && pageIds.every((id) => prev.has(id));
+      if (allSelected) {
         pageIds.forEach((id) => next.delete(id));
       } else {
         pageIds.forEach((id) => next.add(id));
       }
       return next;
     });
-  };
+  }, [paginatedTransactions]);
 
   // Bulk Operations
   const handleBulkCategoryChange = async (catId: string) => {
@@ -470,7 +473,14 @@ export function TransactionLedger({
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
 
-          <CreateTransactionDialog accounts={accounts} categories={categories} />
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Transaction</span>
+          </Button>
         </div>
       </div>
 
@@ -844,7 +854,14 @@ export function TransactionLedger({
           <p className="text-xs sm:text-sm text-text-secondary mt-1 mb-4">
             Try adjusting your filters, selecting a different date range, or record a new transaction.
           </p>
-          <CreateTransactionDialog accounts={accounts} categories={categories} />
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Transaction</span>
+          </Button>
         </div>
       ) : (
         <>
@@ -958,6 +975,16 @@ export function TransactionLedger({
           }
         }}
       />
+
+      {/* Lazily mounted Create Transaction Dialog */}
+      {isCreateOpen && (
+        <CreateTransactionDialog
+          accounts={accounts}
+          categories={categories}
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+        />
+      )}
     </div>
   );
 }

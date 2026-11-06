@@ -29,3 +29,4 @@
 | **Financial Insights** | `/insights` | Anomaly Detection Engine | Insight Metric Cards | `tests/phase6-financial-insights-reports.test.ts` | **Production Ready** |
 | **Android Sync Service** | `/devices`, `/api/v1`| `devices`, `sync_logs` | Truthful N/A Telemetry | `tests/data-import-automation.test.ts` | **Web API Ready (APK External)** |
 | **User Settings & Privacy** | `/settings` | Persistent Theme & Preferences | Privacy Blur Toggle | `tests/phase1-design-tokens-theme.test.ts` | **Production Ready** |
+

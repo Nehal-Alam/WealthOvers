@@ -42,3 +42,4 @@ Duration    ~14s
 25. `tests/recurring-dates.test.ts` (3 tests) — **PASSED**
 26. `tests/rls-isolation.test.ts` (3 tests) — **PASSED**
 27. `tests/transfer-workflow.test.ts` (3 tests) — **PASSED**
+

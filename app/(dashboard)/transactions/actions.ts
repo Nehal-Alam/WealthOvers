@@ -116,6 +116,35 @@ export async function reverseTransactionAction(input: ReverseTransactionInput): 
   }
 }
 
+export async function getLedgerEntriesAction(
+  transactionId: string
+): Promise<ActionResult<Tables<"ledger_entries">[]>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { data, error } = await supabase
+      .from("ledger_entries")
+      .select("*")
+      .eq("transaction_id", transactionId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Failed to fetch ledger entries";
+    return { success: false, error: errorMsg };
+  }
+}
+
 export async function updateTransactionAction(input: UpdateTransactionInput): Promise<ActionResult> {
   try {
     const validated = updateTransactionSchema.parse(input);
@@ -126,30 +155,24 @@ export async function updateTransactionAction(input: UpdateTransactionInput): Pr
       return { success: false, error: "Unauthorized. Please log in." };
     }
 
-    const amountNum = parseFloat(validated.amount);
+    const result = await FinancialTransactionService.updateFinancialTransaction(supabase, {
+      transactionId: validated.id,
+      userId: user.id,
+      amount: validated.amount,
+      accountId: validated.account_id,
+      destinationAccountId: validated.destination_account_id || null,
+      categoryId: validated.category_id || null,
+      subcategoryId: validated.subcategory_id || null,
+      transactionType: validated.transaction_type,
+      transactionDate: validated.transaction_date,
+      description: validated.description.trim(),
+      notes: validated.notes?.trim() || null,
+      referenceNumber: validated.reference_number?.trim() || null,
+      tags: validated.tags || [],
+    });
 
-    const { data, error } = await supabase
-      .from("transactions")
-      .update({
-        account_id: validated.account_id,
-        destination_account_id: validated.destination_account_id || null,
-        category_id: validated.category_id || null,
-        subcategory_id: validated.subcategory_id || null,
-        amount: amountNum,
-        transaction_type: validated.transaction_type,
-        transaction_date: new Date(validated.transaction_date).toISOString(),
-        description: validated.description.trim(),
-        notes: validated.notes?.trim() || null,
-        reference_number: validated.reference_number?.trim() || null,
-        tags: validated.tags || [],
-      })
-      .eq("id", validated.id)
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.error || "Failed to update transaction" };
     }
 
     revalidatePath("/transactions");
@@ -157,7 +180,8 @@ export async function updateTransactionAction(input: UpdateTransactionInput): Pr
     revalidatePath("/dashboard");
     revalidatePath("/budgets");
     revalidatePath("/reports");
-    return { success: true, message: "Transaction updated successfully", data };
+    revalidatePath("/net-worth");
+    return { success: true, message: result.message || "Transaction updated successfully", data: result.transaction };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to update transaction";
     return { success: false, error: errorMsg };
@@ -173,47 +197,9 @@ export async function deleteTransactionAction(id: string): Promise<ActionResult>
       return { success: false, error: "Unauthorized. Please log in." };
     }
 
-    // Fetch existing transaction and ledger entries to restore account balance
-    const { data: existingTx } = await supabase
-      .from("transactions")
-      .select("*, ledger_entries(*)")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (existingTx) {
-      const entries = (existingTx as any).ledger_entries as Tables<"ledger_entries">[] | undefined;
-      if (entries && entries.length > 0) {
-        for (const entry of entries) {
-          if (entry.account_id) {
-            const { data: acc } = await supabase
-              .from("accounts")
-              .select("id, current_balance")
-              .eq("id", entry.account_id)
-              .single();
-            if (acc) {
-              const curBal = toDecimal(acc.current_balance);
-              const amt = toDecimal(entry.amount);
-              // Reversing: if debited (money added), subtract; if credited (money deducted), add back
-              const restoredBal = entry.entry_type === "debit" ? curBal.minus(amt) : curBal.plus(amt);
-              await supabase
-                .from("accounts")
-                .update({ current_balance: restoredBal.toNumber(), updated_at: new Date().toISOString() })
-                .eq("id", acc.id);
-            }
-          }
-        }
-      }
-    }
-
-    const { error } = await supabase
-      .from("transactions")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-
-    if (error) {
-      return { success: false, error: error.message };
+    const result = await FinancialTransactionService.deleteFinancialTransaction(supabase, id, user.id);
+    if (!result.success) {
+      return { success: false, error: result.error || "Failed to delete transaction" };
     }
 
     revalidatePath("/transactions");
@@ -222,7 +208,7 @@ export async function deleteTransactionAction(id: string): Promise<ActionResult>
     revalidatePath("/budgets");
     revalidatePath("/reports");
     revalidatePath("/net-worth");
-    return { success: true, message: "Transaction deleted and account balance restored successfully" };
+    return { success: true, message: result.message || "Transaction deleted and account balance restored successfully" };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to delete transaction";
     return { success: false, error: errorMsg };
@@ -245,33 +231,38 @@ export async function createSplitTransactionAction(
     }
 
     const isoDate = new Date(validated.transaction_date).toISOString();
-    const splitRows = validated.splits.map((s, idx) => ({
-      user_id: user.id,
-      account_id: validated.account_id,
-      destination_account_id: null,
-      category_id: s.category_id || null,
-      subcategory_id: s.subcategory_id || null,
-      amount: parseFloat(s.amount),
-      currency: validated.currency,
-      transaction_type: validated.transaction_type,
-      transaction_date: isoDate,
-      description: s.description.trim() || `${validated.parent_description} (Split ${idx + 1}/${validated.splits.length})`,
-      notes: validated.notes
+    const splitGroupId = crypto.randomUUID();
+    const createdTransactions = [];
+
+    for (let idx = 0; idx < validated.splits.length; idx++) {
+      const s = validated.splits[idx];
+      const desc = s.description.trim() || `${validated.parent_description} (Split ${idx + 1}/${validated.splits.length})`;
+      const notes = validated.notes
         ? `${validated.notes.trim()} | Split of: ${validated.parent_description}`
-        : `Split of: ${validated.parent_description} (Total: ${validated.currency} ${validated.total_amount})`,
-      reference_number: validated.reference_number?.trim() || null,
-      tags: ["split"],
-      source: "manual" as const,
-      is_reviewed: true,
-    }));
+        : `Split of: ${validated.parent_description} (Total: ${validated.currency} ${validated.total_amount})`;
 
-    const { data, error } = await supabase
-      .from("transactions")
-      .insert(splitRows)
-      .select();
+      const result = await FinancialTransactionService.createFinancialTransaction(supabase, {
+        userId: user.id,
+        accountId: validated.account_id,
+        amount: s.amount,
+        currency: validated.currency,
+        transactionType: validated.transaction_type,
+        transactionDate: isoDate,
+        description: desc,
+        notes: notes,
+        categoryId: s.category_id || undefined,
+        subcategoryId: s.subcategory_id || undefined,
+        referenceNumber: validated.reference_number?.trim() || undefined,
+        transferGroupId: splitGroupId,
+        tags: ["split"],
+      });
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (!result.success) {
+        return { success: false, error: `Failed creating split ${idx + 1}: ${result.error}` };
+      }
+      if (result.transaction) {
+        createdTransactions.push(result.transaction);
+      }
     }
 
     revalidatePath("/transactions");
@@ -279,10 +270,11 @@ export async function createSplitTransactionAction(
     revalidatePath("/dashboard");
     revalidatePath("/budgets");
     revalidatePath("/reports");
+    revalidatePath("/net-worth");
     return {
       success: true,
-      message: `Successfully created ${splitRows.length} split transactions totaling ${validated.currency} ${validated.total_amount}`,
-      data,
+      message: `Successfully created ${validated.splits.length} split transactions totaling ${validated.currency} ${validated.total_amount} with balanced double-entry ledger postings`,
+      data: createdTransactions,
     };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Failed to create split transaction";

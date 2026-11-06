@@ -25,3 +25,4 @@
 
 * **Status:** CSV and tabular imports are fully functional with column mapping and deduplication (`lib/parsers/csv-parser.ts`).
 * **Constraint:** Password-protected or scanned image PDFs require OCR and password entry, which may fall back to manual verification or CSV export from the user's net banking portal.
+

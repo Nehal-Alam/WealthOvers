@@ -144,7 +144,19 @@ export function DashboardClient({
     return "Good evening";
   }, []);
 
-  // 1. Consolidated Real-Time Balance Sheet & Financial Calculations
+  // 1. Centralized Authoritative Net Worth Calculation
+  const netWorthSummary = React.useMemo(() => {
+    return calculateNetWorth({
+      accounts,
+      investments,
+      assets,
+      loans,
+      liabilities,
+      creditCards,
+    });
+  }, [accounts, investments, assets, loans, liabilities, creditCards]);
+
+  // 1.5. Consolidated Real-Time Balance Sheet & Financial Calculations
   const balanceSheet = React.useMemo(() => {
     const liquidBalances: string[] = [];
     const creditBalances: string[] = [];
@@ -212,6 +224,11 @@ export function DashboardClient({
 
     return {
       ...ratios,
+      netWorth: netWorthSummary.netWorth,
+      totalAssets: netWorthSummary.totalAssets,
+      totalLiabilities: netWorthSummary.totalLiabilities,
+      totalLiquid: netWorthSummary.assetsBreakdown.liquidAccounts,
+      debtToAssetRatio: netWorthSummary.debtToAssetRatio,
       liquidBalances,
       creditBalances,
       monthlyInflow: inflow,
@@ -228,19 +245,8 @@ export function DashboardClient({
     precomputedSummary,
     monthTransactions,
     recentTransactions,
+    netWorthSummary,
   ]);
-
-  // 1.5. Centralized Authoritative Net Worth & Investment P&L
-  const netWorthSummary = React.useMemo(() => {
-    return calculateNetWorth({
-      accounts,
-      investments,
-      assets,
-      loans,
-      liabilities,
-      creditCards,
-    });
-  }, [accounts, investments, assets, loans, liabilities, creditCards]);
 
   const investmentStats = React.useMemo(() => {
     let invested = new Decimal(0);

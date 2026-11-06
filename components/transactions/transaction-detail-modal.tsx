@@ -39,7 +39,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoneyDisplay } from "@/components/financial/money-display";
-import { reverseTransactionAction } from "@/app/(dashboard)/transactions/actions";
+import { reverseTransactionAction, getLedgerEntriesAction } from "@/app/(dashboard)/transactions/actions";
 import { getTransactionDisplayInfo } from "@/lib/calculations/financial";
 import { Tables } from "@/types/database";
 
@@ -61,11 +61,30 @@ export function TransactionDetailModal({
   const [isReversing, setIsReversing] = React.useState(false);
   const [reversalReason, setReversalReason] = React.useState("");
   const [showReversalPrompt, setShowReversalPrompt] = React.useState(false);
+  const [fetchedLedgerEntries, setFetchedLedgerEntries] = React.useState<Tables<"ledger_entries">[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open && transaction?.id && (!transaction.ledger_entries || transaction.ledger_entries.length === 0)) {
+      setIsLoadingEntries(true);
+      getLedgerEntriesAction(transaction.id)
+        .then((res) => {
+          if (res.success && res.data) {
+            setFetchedLedgerEntries(res.data);
+          }
+        })
+        .finally(() => setIsLoadingEntries(false));
+    } else {
+      setFetchedLedgerEntries([]);
+    }
+  }, [open, transaction?.id, transaction?.ledger_entries]);
 
   if (!transaction) return null;
 
   const displayInfo = getTransactionDisplayInfo(transaction);
-  const ledgerEntries = transaction.ledger_entries || [];
+  const ledgerEntries = (transaction.ledger_entries && transaction.ledger_entries.length > 0)
+    ? transaction.ledger_entries
+    : fetchedLedgerEntries;
 
   // Check double-entry balance:
   let totalDebits = 0;

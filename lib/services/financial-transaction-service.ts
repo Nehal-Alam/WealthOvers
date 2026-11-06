@@ -53,6 +53,22 @@ export interface CreateFinancialTransactionInput {
   status?: string;
 }
 
+export interface UpdateFinancialTransactionInput {
+  transactionId: string;
+  userId: string;
+  amount: number | string;
+  accountId: string;
+  destinationAccountId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  transactionType: TransactionType;
+  transactionDate?: string | Date;
+  description: string;
+  notes?: string | null;
+  referenceNumber?: string | null;
+  tags?: string[];
+}
+
 export interface FinancialTransactionResult {
   success: boolean;
   message?: string;
@@ -1053,5 +1069,291 @@ export class FinancialTransactionService {
       totalMoneyOut: totalOut.toNumber(),
       rows,
     };
+  }
+
+  /**
+   * Updates an existing financial transaction, properly reversing prior balance and ledger effects
+   * and posting updated double-entry ledger entries and atomic balance adjustments.
+   */
+  static async updateFinancialTransaction(
+    supabase: SupabaseClient<Database>,
+    input: UpdateFinancialTransactionInput
+  ): Promise<FinancialTransactionResult> {
+    try {
+      const amountDec = toDecimal(input.amount);
+      if (amountDec.lessThanOrEqualTo(0)) {
+        return { success: false, error: "Transaction amount must be strictly greater than zero." };
+      }
+
+      // 1. Fetch existing transaction with its ledger entries
+      const { data: existingTx, error: fetchErr } = await supabase
+        .from("transactions")
+        .select("*, ledger_entries(*)")
+        .eq("id", input.transactionId)
+        .eq("user_id", input.userId)
+        .single();
+
+      if (fetchErr || !existingTx) {
+        return { success: false, error: "Existing transaction not found or access denied." };
+      }
+
+      const existingAmount = toDecimal(existingTx.amount);
+      const isFinancialChange =
+        !existingAmount.equals(amountDec) ||
+        existingTx.account_id !== input.accountId ||
+        (existingTx.destination_account_id || null) !== (input.destinationAccountId || null) ||
+        existingTx.transaction_type !== input.transactionType;
+
+      if (isFinancialChange) {
+        // A. Revert old balance effects from existing ledger entries
+        const oldEntries = (existingTx as any).ledger_entries as Tables<"ledger_entries">[] | undefined;
+        if (oldEntries && oldEntries.length > 0) {
+          for (const entry of oldEntries) {
+            if (entry.account_id) {
+              const { data: acc } = await supabase
+                .from("accounts")
+                .select("id, current_balance")
+                .eq("id", entry.account_id)
+                .single();
+              if (acc) {
+                const curBal = toDecimal(acc.current_balance);
+                const entAmt = toDecimal(entry.amount);
+                // Reversal: if debited (asset increased), subtract; if credited (asset decreased), add back
+                const restoredBal = entry.entry_type === "debit" ? curBal.minus(entAmt) : curBal.plus(entAmt);
+                await supabase
+                  .from("accounts")
+                  .update({ current_balance: restoredBal.toNumber(), updated_at: new Date().toISOString() })
+                  .eq("id", acc.id);
+              }
+            }
+          }
+        }
+
+        // B. Delete old ledger entries
+        await supabase
+          .from("ledger_entries")
+          .delete()
+          .eq("transaction_id", input.transactionId);
+
+        // C. Fetch new source (and destination if transfer) accounts
+        const { data: sourceAccount, error: srcErr } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("id", input.accountId)
+          .eq("user_id", input.userId)
+          .single();
+
+        if (srcErr || !sourceAccount) {
+          return { success: false, error: "New source account not found or access denied." };
+        }
+
+        let destAccount: Tables<"accounts"> | null = null;
+        if (input.transactionType === "transfer") {
+          if (!input.destinationAccountId || input.destinationAccountId === input.accountId) {
+            return { success: false, error: "Transfers require a distinct destination account." };
+          }
+          const { data: destAcc, error: destErr } = await supabase
+            .from("accounts")
+            .select("*")
+            .eq("id", input.destinationAccountId)
+            .eq("user_id", input.userId)
+            .single();
+          if (destErr || !destAcc) {
+            return { success: false, error: "Destination account not found or access denied." };
+          }
+          destAccount = destAcc;
+        }
+
+        // D. Update transaction record
+        const txDateStr = input.transactionDate
+          ? new Date(input.transactionDate).toISOString()
+          : existingTx.transaction_date;
+
+        const { data: updatedTx, error: updateErr } = await supabase
+          .from("transactions")
+          .update({
+            amount: amountDec.toNumber(),
+            account_id: input.accountId,
+            destination_account_id: input.destinationAccountId || null,
+            category_id: input.categoryId || null,
+            subcategory_id: input.subcategoryId || null,
+            transaction_type: input.transactionType,
+            transaction_date: txDateStr,
+            description: input.description.trim(),
+            notes: input.notes?.trim() || null,
+            reference_number: input.referenceNumber?.trim() || null,
+            tags: input.tags || [],
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", input.transactionId)
+          .eq("user_id", input.userId)
+          .select()
+          .single();
+
+        if (updateErr || !updatedTx) {
+          return { success: false, error: updateErr?.message || "Failed to update transaction record." };
+        }
+
+        // E. Build and insert new balanced ledger entries
+        const newLedgerItems = this.buildStandardLedgerEntries(
+          {
+            userId: input.userId,
+            accountId: input.accountId,
+            destinationAccountId: input.destinationAccountId || undefined,
+            transactionType: input.transactionType,
+            amount: amountDec.toNumber(),
+            description: input.description,
+            currency: sourceAccount.currency || "INR",
+          },
+          sourceAccount,
+          destAccount
+        );
+
+        const rowsToInsert = newLedgerItems.map((item) => ({
+          transaction_id: updatedTx.id,
+          user_id: input.userId,
+          account_id: item.accountId || null,
+          entity_type: item.entityType,
+          entity_id: item.entityId || null,
+          entry_type: item.entryType,
+          amount: toDecimal(item.amount).toNumber(),
+          currency: item.currency || updatedTx.currency,
+          description: item.description || updatedTx.description,
+        }));
+
+        const { data: insertedEntries, error: ledgerErr } = await supabase
+          .from("ledger_entries")
+          .insert(rowsToInsert)
+          .select();
+
+        if (ledgerErr) {
+          return { success: false, error: `Failed to insert updated ledger entries: ${ledgerErr.message}` };
+        }
+
+        // F. Apply updated balance adjustments to accounts
+        await this.applyBalanceAdjustments(
+          supabase,
+          {
+            userId: input.userId,
+            accountId: input.accountId,
+            destinationAccountId: input.destinationAccountId || undefined,
+            transactionType: input.transactionType,
+            amount: amountDec.toNumber(),
+            description: input.description,
+          },
+          sourceAccount,
+          destAccount,
+          amountDec
+        );
+
+        return {
+          success: true,
+          message: "Transaction and double-entry ledger updated successfully.",
+          transaction: updatedTx,
+          ledgerEntries: insertedEntries || [],
+        };
+      } else {
+        // Only metadata changed (no financial / balance impact)
+        const txDateStr = input.transactionDate
+          ? new Date(input.transactionDate).toISOString()
+          : existingTx.transaction_date;
+
+        const { data: updatedTx, error: updateErr } = await supabase
+          .from("transactions")
+          .update({
+            category_id: input.categoryId || null,
+            subcategory_id: input.subcategoryId || null,
+            transaction_date: txDateStr,
+            description: input.description.trim(),
+            notes: input.notes?.trim() || null,
+            reference_number: input.referenceNumber?.trim() || null,
+            tags: input.tags || [],
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", input.transactionId)
+          .eq("user_id", input.userId)
+          .select()
+          .single();
+
+        if (updateErr || !updatedTx) {
+          return { success: false, error: updateErr?.message || "Failed to update transaction." };
+        }
+
+        return {
+          success: true,
+          message: "Transaction updated successfully.",
+          transaction: updatedTx,
+          ledgerEntries: (existingTx as any).ledger_entries || [],
+        };
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update financial transaction";
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Deletes a financial transaction, atomically restoring account balances from ledger entries.
+   */
+  static async deleteFinancialTransaction(
+    supabase: SupabaseClient<Database>,
+    transactionId: string,
+    userId: string
+  ): Promise<FinancialTransactionResult> {
+    try {
+      const { data: existingTx, error: fetchErr } = await supabase
+        .from("transactions")
+        .select("*, ledger_entries(*)")
+        .eq("id", transactionId)
+        .eq("user_id", userId)
+        .single();
+
+      if (fetchErr || !existingTx) {
+        return { success: false, error: "Transaction not found or access denied." };
+      }
+
+      // Revert account balances based on ledger entries
+      const entries = (existingTx as any).ledger_entries as Tables<"ledger_entries">[] | undefined;
+      if (entries && entries.length > 0) {
+        for (const entry of entries) {
+          if (entry.account_id) {
+            const { data: acc } = await supabase
+              .from("accounts")
+              .select("id, current_balance")
+              .eq("id", entry.account_id)
+              .single();
+            if (acc) {
+              const curBal = toDecimal(acc.current_balance);
+              const entAmt = toDecimal(entry.amount);
+              // Reversal: if debited (money added), subtract; if credited (money deducted), add back
+              const restoredBal = entry.entry_type === "debit" ? curBal.minus(entAmt) : curBal.plus(entAmt);
+              await supabase
+                .from("accounts")
+                .update({ current_balance: restoredBal.toNumber(), updated_at: new Date().toISOString() })
+                .eq("id", acc.id);
+            }
+          }
+        }
+      }
+
+      // Delete master transaction (cascades to ledger_entries)
+      const { error: delErr } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", transactionId)
+        .eq("user_id", userId);
+
+      if (delErr) {
+        return { success: false, error: delErr.message };
+      }
+
+      return {
+        success: true,
+        message: "Transaction deleted and account balance restored successfully.",
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete financial transaction";
+      return { success: false, error: msg };
+    }
   }
 }

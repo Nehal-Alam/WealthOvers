@@ -27,3 +27,4 @@
 * No production migration has dropped user tables or truncated financial records.
 * All data migrations enforce backward-compatibility with nullable foreign keys and safe defaults.
 * PostgREST schema cache is automatically reloaded after DDL changes via `NOTIFY pgrst, 'reload schema'`.
+

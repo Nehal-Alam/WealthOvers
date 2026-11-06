@@ -94,3 +94,4 @@ $$\text{Safe-to-Spend Today} = \frac{\text{Remaining Safe Pool}}{\max(1, \text{D
 
 If no explicit budget is set:
 $$\text{Remaining Safe Pool} = \max\left(0, \text{Liquid Cash} - \sum \text{Credit Card Dues} - \sum \text{Upcoming Bills}\right)$$
+

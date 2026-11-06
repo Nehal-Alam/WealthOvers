@@ -52,6 +52,10 @@ export function UploadStatementCard({ accounts, onParsed }: UploadStatementCardP
       toast.error("Please select a statement file");
       return;
     }
+    if (selectedFile.size > 4.5 * 1024 * 1024) {
+      toast.error("File exceeds the 4.5 MB serverless limit. Please export a narrower date range or use CSV format.");
+      return;
+    }
     if (!selectedAccountId) {
       toast.error("Please select an account for this statement");
       return;

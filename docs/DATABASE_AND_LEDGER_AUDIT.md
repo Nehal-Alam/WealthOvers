@@ -108,3 +108,4 @@ To achieve sub-10ms query execution across high-volume transaction ledgers, the 
 4. `idx_ledger_entries_txn_id` on `public.ledger_entries(transaction_id)`: Enables instantaneous double-entry join queries.
 5. `idx_sip_schedules_user_due` on `public.sip_schedules(user_id, next_due_date)`: Accelerates automated SIP execution cron routines.
 6. `idx_bill_occurrences_user_due` on `public.bill_occurrences(user_id, due_date, status)`: Powers the Planning Calendar and Upcoming Bills dashboard widgets.
+

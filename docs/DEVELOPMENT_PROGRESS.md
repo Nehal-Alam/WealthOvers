@@ -19,32 +19,42 @@
 | **Phase 7** | Leftovers design system polish, responsive navigation, accessible forms | Agent D | **COMPLETE** | `components/ui/*`, `components/plan/plan-navigation.tsx`, `tests/phase1-design-tokens-theme.test.ts` (10 passed) |
 | **Phase 8** | Next.js bundle tree-shaking, RLS multi-tenant audit, sub-second query latency | Agent F | **COMPLETE** | `npm run build` (32 routes static/dynamic compiled), `tests/rls-isolation.test.ts` (3 passed) |
 | **Phase 9** | Comprehensive automated testing, regression suites, production signoff | Agent E & A | **COMPLETE** | Full Vitest suite: 26 files, 221 tests passed (100%), remote git push |
+| **Phase 10** | Multi-Agent Architectural Audit & Master Improvement Plan (Phases 1-5 Execution) | Principal Architect & Specialist Agents | **COMPLETE** | Full double-entry ledger unification, Drizzle connection singleton, `React.cache()` deduplication, on-demand ledger loading, net worth harmonization, 4.5 MB serverless limit guardrail, CI/CD pipeline, and 28 test files / 239 tests passed (100%) |
 
 ---
 
 ## 2. Recent Critical Bug Fixes & Visual Defect Resolutions
 
-1. **Loan Section Interactivity (`/loans`)**:
-   - Fixed foreign key query in server loader, eliminating the 500 error boundary.
-   - Built [`LoanTransactionsModal`](file:///Users/nehalalam/Coding/Project/WealthOvers/components/loans/loan-transactions-modal.tsx) for loan cards, visualizing initial principal vs. cumulative repayments.
-   - Built [`EditLoanDialog`](file:///Users/nehalalam/Coding/Project/WealthOvers/components/loans/edit-loan-dialog.tsx) and [`EditLoanPaymentDialog`](file:///Users/nehalalam/Coding/Project/WealthOvers/components/loans/edit-loan-payment-dialog.tsx) for editing terms or correcting payment amounts with atomic balance recalculation.
-2. **Systematic Investment Plan (SIP) Schema Cache**:
-   - Dispatched `NOTIFY pgrst, 'reload schema'` to PostgREST on remote Supabase project `dxvfgzqtvnpjwdibuhrh`.
-   - Verified automated execution pipeline allocating units based on current NAV and debiting bank accounts with balanced double entries.
-3. **Activity & Transactions Cash Flow Accuracy (`/transactions`)**:
-   - Reclassified bank-funded SIP and investment buy transactions from neutral transfers to true cash outflows (`direction: "outflow"`, display sign `-`).
-   - Resolved cash flow reporting: Outflow accurately totals direct expenses + investment deductions ($₹112 + ₹1,600 = ₹1,712$).
+1. **Double-Entry Ledger Unification (`/transactions`)**:
+   - Refactored `updateTransactionAction` and `deleteTransactionAction` to route through authoritative `FinancialTransactionService`.
+   - Added debit/credit delta reversal and re-posting to guarantee zero account balance divergence upon transaction edit or deletion.
+   - Refactored split transactions to generate balanced double-entry ledger items grouped under `transferGroupId`.
+2. **Serverless Connection Pooling Singleton (`lib/db/index.ts`)**:
+   - Implemented a `globalThis` singleton for Drizzle/postgres-js client to prevent PostgreSQL connection exhaustion in Next.js serverless functions.
+   - Configured `DIRECT_URL` (port 5432) for schema migrations alongside pooled `DATABASE_URL` (port 6543).
+3. **Waterfall Elimination & Server-Side Query Deduplication**:
+   - Built `lib/data/cached-queries.ts` leveraging `React.cache()` to share profile, accounts, and categories queries across `layout.tsx` and child pages.
+   - Parallelized the 6-month historical expense queries in `app/(dashboard)/plan/page.tsx` within `Promise.all`.
+   - Stripped heavy `ledger_entries(*)` from initial SSR payload of `/transactions`, reducing initial document weight from ~1.5MB to lightweight records, with on-demand fetching via `getLedgerEntriesAction`.
+4. **Authoritative Net Worth Harmonization (`/dashboard`)**:
+   - Harmonized dashboard balance sheet with authoritative `calculateNetWorth` formula: correctly crediting `loan_given` as an asset receivable and deducting credit card balances.
+5. **Serverless Payload Guardrail & CI/CD Automation**:
+   - Added 4.5 MB file size limit enforcement on statement import (`/import`) to prevent unhandled 413 Vercel payload crashes.
+   - Implemented GitHub Actions CI workflow (`.github/workflows/ci.yml`) enforcing Node 22, typecheck, lint, and Vitest testing on all branches.
+   - Added `vercel.json` with 60s function maxDuration for compute-intensive financial routes.
 
 ---
 
 ## 3. Definition of Done Compliance Checklist
 
 * [x] **UI Functional:** All 17 financial modules render without layout shifts or missing components.
-* [x] **Database Integrated:** Direct Supabase queries with strict RLS policies (`auth.uid() = user_id`).
-* [x] **Calculations Verified:** 28-digit precision Decimal.js arithmetic across all ledger balance aggregations.
+* [x] **Database Integrated:** Direct Supabase queries with strict RLS policies (`auth.uid() = user_id`) and Drizzle connection pooling singleton.
+* [x] **Calculations Verified:** 28-digit precision Decimal.js arithmetic across all ledger balance aggregations and net worth calculations.
+* [x] **Double-Entry Unified:** All creation, updates, splits, and deletions strictly maintain debit = credit balance invariant.
 * [x] **Persistence Verified:** All created budgets, goals, recurring bills, loans, and SIPs persist across page reloads.
-* [x] **Security Verified:** 0 cross-tenant data access; service-role keys shielded.
+* [x] **Security Verified:** 0 cross-tenant data access; service-role keys shielded; 4.5 MB upload wall enforced.
 * [x] **Error States Handled:** Granular empty states and toast notifications on all server actions.
-* [x] **Tests Passing:** 221/221 tests passing across 26 test suites.
+* [x] **Tests Passing:** 239/239 tests passing across 28 test suites (100% pass rate).
+* [x] **Code Quality:** 0 TypeScript errors (`tsc --noEmit`), 0 ESLint warnings (`next lint`).
 * [x] **No Regressions:** Full Next.js production build succeeds for all 32 App Router routes.
 

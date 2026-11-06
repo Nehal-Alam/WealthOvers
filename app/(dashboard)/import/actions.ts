@@ -49,6 +49,17 @@ export async function uploadAndParseStatementAction(
     let fileFormat = (formData.get("fileFormat") as string | null) || "csv";
 
     if (!file) {
+      return { success: false, error: "No statement file uploaded" };
+    }
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      return {
+        success: false,
+        error: "File size exceeds the 4.5 MB serverless execution limit. Please export a narrower date range or use CSV format.",
+      };
+    }
+
+    if (!file) {
       return { success: false, error: "Please select a statement file to upload" };
     }
 

@@ -39,7 +39,7 @@ export default async function DevicesPage() {
       .limit(50),
     supabase
       .from("accounts")
-      .select("id, user_id, account_name, account_type, currency, current_balance, is_archived, created_at, updated_at")
+      .select("id, user_id, name, account_type, currency, current_balance, is_archived, created_at, updated_at")
       .eq("user_id", user.id)
       .eq("is_archived", false),
     supabase

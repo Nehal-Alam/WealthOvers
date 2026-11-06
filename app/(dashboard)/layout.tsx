@@ -1,6 +1,7 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/supabase/server";
+import { getCachedProfile, getCachedAccounts, getCachedCategories } from "@/lib/data/cached-queries";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -19,32 +20,12 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const supabase = await createClient();
-
-  // Concurrently fetch profile, accounts, and categories for global shell & quick actions
-  const [profileResult, accountsResult, categoriesResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, avatar_url")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("accounts")
-      .select("id, name, color, account_type, current_balance, currency, institution_name, is_archived, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("categories")
-      .select("id, name, color, icon, type, subcategories(id, name, category_id)")
-      .eq("user_id", user.id)
-      .order("name", { ascending: true }),
+  // Concurrently fetch profile, accounts, and categories via request-cached queries
+  const [profile, accounts, categories] = await Promise.all([
+    getCachedProfile(user.id),
+    getCachedAccounts(user.id),
+    getCachedCategories(user.id),
   ]);
-
-  const profile = profileResult.data as Pick<Tables<"profiles">, "full_name" | "avatar_url"> | null;
-  const accounts = (accountsResult.data || []) as Tables<"accounts">[];
-  const categories = (categoriesResult.data || []) as (Tables<"categories"> & {
-    subcategories?: Tables<"subcategories">[];
-  })[];
 
   const userData = {
     email: user.email,

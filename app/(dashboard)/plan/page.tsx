@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
+import { getCachedAccounts, getCachedCategories } from "@/lib/data/cached-queries";
 import { Tables } from "@/types/database";
 import { BudgetView } from "@/components/budgets/budget-view";
 import { GoalsView } from "@/components/goals/goals-view";
@@ -36,17 +37,21 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
 
   const supabase = await createClient();
 
-  // Concurrently fetch all planning components in parallel
+  // Deterministic 6-month window for parallel transaction fetching
+  const sixMonthsAgo = new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1).toISOString();
+
+  // Concurrently fetch all planning components and cached accounts/categories in parallel
   const [
     budgetsResult,
     goalsResult,
     recurringResult,
     occurrencesResult,
-    accountsResult,
-    categoriesResult,
+    accounts,
+    categories,
     loansResult,
     creditCardsResult,
     sipsResult,
+    expensesResult,
   ] = await Promise.all([
     supabase
       .from("budgets")
@@ -103,18 +108,8 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
       .eq("user_id", user.id)
       .order("due_date", { ascending: true }),
 
-    supabase
-      .from("accounts")
-      .select("id, name, institution_name, currency, current_balance, is_archived")
-      .eq("user_id", user.id)
-      .eq("is_archived", false)
-      .order("name", { ascending: true }),
-
-    supabase
-      .from("categories")
-      .select("id, name, color, icon, type")
-      .eq("user_id", user.id)
-      .order("name", { ascending: true }),
+    getCachedAccounts(user.id),
+    getCachedCategories(user.id),
 
     supabase
       .from("loans")
@@ -133,14 +128,20 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
       .select("id, name, amount, deduction_day, next_execution_date, is_active")
       .eq("user_id", user.id)
       .eq("is_active", true),
+
+    supabase
+      .from("transactions")
+      .select("id, description, amount, category_id, transaction_date, account_id, account:accounts(name)")
+      .eq("user_id", user.id)
+      .eq("transaction_type", "expense")
+      .gte("transaction_date", sixMonthsAgo)
+      .order("transaction_date", { ascending: false }),
   ]);
 
   const rawBudgets = (budgetsResult.data || []) as any[];
   const goals = (goalsResult.data || []) as any[];
   const recurringRules = (recurringResult.data || []) as any[];
   const occurrences = (occurrencesResult.data || []) as any[];
-  const accounts = (accountsResult.data || []) as Tables<"accounts">[];
-  const categories = (categoriesResult.data || []) as Tables<"categories">[];
   const loans = loansResult.data || [];
   const creditCards = creditCardsResult.data || [];
   const sips = sipsResult.data || [];
@@ -153,9 +154,9 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
     }
   }
 
-  // Batch-fetch transaction expenses for budgets
+  // Pre-fetched transactions in parallel
+  let periodTransactions: any[] = expensesResult.data || [];
   let budgetsWithSpending: any[] = [];
-  let periodTransactions: any[] = [];
 
   if (rawBudgets.length > 0) {
     let minStartDate = rawBudgets[0].start_date;
@@ -165,16 +166,20 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
       if (b.end_date > maxEndDate) maxEndDate = b.end_date;
     }
 
-    const { data: allExpenses } = await supabase
-      .from("transactions")
-      .select("id, description, amount, category_id, transaction_date, account_id, account:accounts(name)")
-      .eq("user_id", user.id)
-      .eq("transaction_type", "expense")
-      .gte("transaction_date", minStartDate)
-      .lte("transaction_date", `${maxEndDate}T23:59:59.999Z`)
-      .order("transaction_date", { ascending: false });
-
-    periodTransactions = allExpenses || [];
+    // Only fallback to a dedicated query if budgets require dates prior to our 6-month prefetch window
+    if (minStartDate < sixMonthsAgo.slice(0, 10)) {
+      const { data: olderExpenses } = await supabase
+        .from("transactions")
+        .select("id, description, amount, category_id, transaction_date, account_id, account:accounts(name)")
+        .eq("user_id", user.id)
+        .eq("transaction_type", "expense")
+        .gte("transaction_date", minStartDate)
+        .lte("transaction_date", `${maxEndDate}T23:59:59.999Z`)
+        .order("transaction_date", { ascending: false });
+      if (olderExpenses) {
+        periodTransactions = olderExpenses;
+      }
+    }
 
     budgetsWithSpending = rawBudgets.map((b) => {
       const spentByCategory: Record<string, string> = {};

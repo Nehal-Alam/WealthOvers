@@ -57,7 +57,7 @@ export function AccountHistoryModal({
     return transactions
       .filter((t) => t.account_id === account.id || t.destination_account_id === account.id)
       .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
-  }, [transactions, account?.id]);
+  }, [transactions, account]);
 
   // 2. Compute accurate Running Balances from baseline
   // Running Balance = Previous Balance + Money In - Money Out
@@ -129,7 +129,7 @@ export function AccountHistoryModal({
       totalOut,
       computedClosing: currentBalance,
     };
-  }, [accountTxns, account?.id]);
+  }, [accountTxns, account]);
 
   // 3. Filter rows by search and direction
   const displayRows = React.useMemo(() => {

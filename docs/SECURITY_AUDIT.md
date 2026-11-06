@@ -55,3 +55,4 @@ The Next.js production build (`next.config.mjs`) injects standard security heade
 * `Referrer-Policy: strict-origin-when-cross-origin`
 * `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 * Secure HTTPS transport enforced in production via Vercel Edge Network.
+

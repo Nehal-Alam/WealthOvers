@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient, getAuthenticatedUser } from "@/lib/supabase/server";
+import { getCachedAccounts, getCachedCategories } from "@/lib/data/cached-queries";
 import { Tables } from "@/types/database";
 import { TransactionLedger } from "@/components/transactions/transaction-ledger";
 
@@ -18,8 +19,8 @@ export default async function TransactionsPage() {
 
   const supabase = await createClient();
 
-  // Parallelize initial transaction batch, accounts, and categories (eliminates sequential waterfall)
-  const [transactionsResult, accountsResult, categoriesResult] = await Promise.all([
+  // Parallelize initial transaction batch with request-cached accounts and categories
+  const [transactionsResult, accounts, categories] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -32,30 +33,18 @@ export default async function TransactionsPage() {
         account:accounts!transactions_account_id_fkey(id, name, institution_name, color),
         destination_account:accounts!transactions_destination_account_id_fkey(id, name, institution_name),
         category:categories(id, name, color, icon),
-        subcategory:subcategories(id, name),
-        ledger_entries(*)
+        subcategory:subcategories(id, name)
       `
       )
       .eq("user_id", user.id)
       .order("transaction_date", { ascending: false })
-      .limit(1000),
+      .limit(300),
 
-    supabase
-      .from("accounts")
-      .select("id, name, institution_name, color, is_archived, currency, current_balance, account_type")
-      .eq("user_id", user.id)
-      .order("name", { ascending: true }),
-
-    supabase
-      .from("categories")
-      .select("id, name, color, icon, subcategories(id, name)")
-      .eq("user_id", user.id)
-      .order("name", { ascending: true }),
+    getCachedAccounts(user.id),
+    getCachedCategories(user.id),
   ]);
 
   const transactions = (transactionsResult.data || []) as any[];
-  const accounts = (accountsResult.data || []) as Tables<"accounts">[];
-  const categories = (categoriesResult.data || []) as any[];
 
   return (
     <div className="space-y-6">
