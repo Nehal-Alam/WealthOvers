@@ -56,7 +56,7 @@ export function MobileNav() {
           FLOATING BOTTOM NAVIGATION DOCK (References 1, 4, 5, 7, 9)
       ────────────────────────────────────────────────────────────── */}
       <nav
-        className="lg:hidden fixed bottom-3 left-3 right-3 max-w-md mx-auto z-40 h-16 rounded-full border border-[#303030] bg-[#151515]/95 backdrop-blur-xl flex items-center justify-around px-2 pb-safe shadow-2xl transition-all select-none"
+        className="lg:hidden fixed bottom-3 left-3 right-3 max-w-md mx-auto z-40 h-16 rounded-full border border-mobile-border bg-mobile-surface/95 backdrop-blur-xl flex items-center justify-around px-2 pb-safe shadow-2xl transition-all select-none"
         aria-label="Mobile navigation"
       >
         {/* 1. HOME */}
@@ -66,14 +66,14 @@ export function MobileNav() {
           className={cn(
             "flex flex-col items-center justify-center min-h-[44px] min-w-[48px] py-1 gap-1 text-[11px] font-medium transition-all rounded-full",
             isHomeActive
-              ? "text-[#A8C7FA] font-bold"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "text-mobile-accent font-bold"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           <Home
             className={cn(
               "h-5 w-5 transition-transform",
-              isHomeActive && "scale-110 text-[#A8C7FA]"
+              isHomeActive && "scale-110 text-mobile-accent"
             )}
           />
           <span>Home</span>
@@ -86,14 +86,14 @@ export function MobileNav() {
           className={cn(
             "flex flex-col items-center justify-center min-h-[44px] min-w-[48px] py-1 gap-1 text-[11px] font-medium transition-all rounded-full",
             isActivityActive
-              ? "text-[#A8C7FA] font-bold"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "text-mobile-accent font-bold"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           <Receipt
             className={cn(
               "h-5 w-5 transition-transform",
-              isActivityActive && "scale-110 text-[#A8C7FA]"
+              isActivityActive && "scale-110 text-mobile-accent"
             )}
           />
           <span>Activity</span>
@@ -102,7 +102,7 @@ export function MobileNav() {
         {/* 3. CENTRAL ELEVATED ADD BUTTON (+) - Keypad First (References 3 & 10) */}
         <button
           onClick={() => openQuickTransaction("expense")}
-          className="relative -top-4 h-12 w-12 rounded-full bg-terminalAccent hover:bg-[#A8C7FA]/90 text-[#050505] flex items-center justify-center shadow-lg shadow-[#A8C7FA]/25 hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-[#A8C7FA] cursor-pointer z-50 border-2 border-[#151515]"
+          className="relative -top-4 h-12 w-12 rounded-full bg-terminalAccent bg-mobile-accent hover:bg-mobile-accent/90 text-background flex items-center justify-center shadow-lg shadow-mobile-accent/25 hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-mobile-accent cursor-pointer z-50 border-2 border-mobile-surface"
           aria-label="QUICK ADD TRANSACTION"
           title="QUICK ADD TRANSACTION"
         >
@@ -117,14 +117,14 @@ export function MobileNav() {
           className={cn(
             "flex flex-col items-center justify-center min-h-[44px] min-w-[48px] py-1 gap-1 text-[11px] font-medium transition-all rounded-full",
             isInsightsActive
-              ? "text-[#A8C7FA] font-bold"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "text-mobile-accent font-bold"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           <PieChart
             className={cn(
               "h-5 w-5 transition-transform",
-              isInsightsActive && "scale-110 text-[#A8C7FA]"
+              isInsightsActive && "scale-110 text-mobile-accent"
             )}
           />
           <span>Insights</span>
@@ -138,14 +138,14 @@ export function MobileNav() {
           className={cn(
             "flex flex-col items-center justify-center min-h-[44px] min-w-[48px] py-1 gap-1 text-[11px] font-medium transition-all rounded-full",
             isAccountsActive
-              ? "text-[#A8C7FA] font-bold"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "text-mobile-accent font-bold"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           <Landmark
             className={cn(
               "h-5 w-5 transition-transform",
-              isAccountsActive && "scale-110 text-[#A8C7FA]"
+              isAccountsActive && "scale-110 text-mobile-accent"
             )}
           />
           <span>Accounts</span>
@@ -179,18 +179,18 @@ export function MobileNav() {
 
           <SheetContent
             side="bottom"
-            className="rounded-t-3xl p-5 bg-[#151515] border-t border-[#303030] text-[#F5F5F5] max-w-md mx-auto max-h-[85vh] overflow-y-auto"
+            className="rounded-t-3xl p-5 bg-mobile-surface border-t border-mobile-border text-mobile-primary max-w-md mx-auto max-h-[85vh] overflow-y-auto"
           >
             <SheetHeader className="pb-3 text-left">
-              <SheetTitle className="text-base font-bold text-[#F5F5F5] font-mono tracking-tight flex items-center justify-between">
+              <SheetTitle className="text-base font-bold text-mobile-primary font-mono tracking-tight flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#A8C7FA]" />
+                  <span className="h-2 w-2 rounded-full bg-mobile-accent" />
                   WEALTHOVERS MODULES
                 </span>
                 <Link
                   href="/settings"
                   onClick={() => setMoreDrawerOpen(false)}
-                  className="text-xs text-[#A8C7FA] hover:underline font-normal flex items-center gap-1"
+                  className="text-xs text-mobile-accent hover:underline font-normal flex items-center gap-1"
                 >
                   <Settings className="h-3.5 w-3.5" />
                   <span>Settings</span>
@@ -202,21 +202,21 @@ export function MobileNav() {
               <Link
                 href="/accounts"
                 onClick={() => setMoreDrawerOpen(false)}
-                className="flex items-center gap-2.5 p-3 rounded-2xl border border-[#303030] bg-[#202020]/60 hover:bg-[#202020] transition-colors"
+                className="flex items-center gap-2.5 p-3 rounded-2xl border border-mobile-border bg-mobile-secondary/60 hover:bg-mobile-secondary transition-colors"
               >
-                <div className="h-9 w-9 rounded-xl bg-[#A8C7FA]/15 text-[#A8C7FA] flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-mobile-accent/15 text-mobile-accent flex items-center justify-center shrink-0">
                   <Landmark className="h-4 w-4" />
                 </div>
                 <div className="truncate">
-                  <p className="font-semibold text-xs text-[#F5F5F5]">Accounts</p>
-                  <p className="text-[10px] text-[#99999F]">Bank, Cash, Wallets</p>
+                  <p className="font-semibold text-xs text-mobile-primary">Accounts</p>
+                  <p className="text-[10px] text-mobile-secondaryText">Bank, Cash, Wallets</p>
                 </div>
               </Link>
 
               <Link
                 href="/net-worth"
                 onClick={() => setMoreDrawerOpen(false)}
-                className="flex items-center gap-2.5 p-3 rounded-2xl border border-[#303030] bg-[#202020]/60 hover:bg-[#202020] transition-colors"
+                className="flex items-center gap-2.5 p-3 rounded-2xl border border-mobile-border bg-mobile-secondary/60 hover:bg-mobile-secondary transition-colors"
               >
                 <div className="h-9 w-9 rounded-xl bg-[#80D5AE]/15 text-[#80D5AE] flex items-center justify-center shrink-0">
                   <Scale className="h-4 w-4" />

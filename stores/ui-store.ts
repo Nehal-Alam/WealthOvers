@@ -23,6 +23,10 @@ interface UIState {
   openQuickTransaction: (type?: "expense" | "income" | "transfer") => void;
   closeQuickTransaction: () => void;
 
+  // Active Account Selector Filter (Home & Activity synced, "all" | account_id)
+  selectedAccountId: string;
+  setSelectedAccountId: (accountId: string) => void;
+
   // Dashboard widget customization
   dashboardWidgets: Record<string, boolean>;
   toggleDashboardWidget: (widgetId: string) => void;
@@ -52,6 +56,10 @@ export const useUIStore = create<UIState>()(
       openQuickTransaction: (type = "expense") =>
         set({ isQuickTransactionOpen: true, quickTransactionType: type }),
       closeQuickTransaction: () => set({ isQuickTransactionOpen: false }),
+
+      selectedAccountId: "all",
+      setSelectedAccountId: (accountId: string) =>
+        set({ selectedAccountId: accountId || "all" }),
 
       dashboardWidgets: {
         netWorthTrend: true,
@@ -87,6 +95,7 @@ export const useUIStore = create<UIState>()(
         isPrivacyMode: state.isPrivacyMode,
         isSidebarOpen: state.isSidebarOpen,
         dashboardWidgets: state.dashboardWidgets,
+        selectedAccountId: state.selectedAccountId,
       }),
     }
   )

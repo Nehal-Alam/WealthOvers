@@ -28,11 +28,26 @@ import {
   Wallet,
   CreditCard,
   Building,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/types/database";
 import { createTransactionAction } from "@/app/(dashboard)/transactions/actions";
+import {
+  createCategoryAction,
+  createTagAction,
+  getUserTagsAction,
+} from "@/app/(dashboard)/categories/actions";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface MobileKeypadComposerProps {
   accounts: Tables<"accounts">[];
@@ -96,7 +111,6 @@ export function MobileKeypadComposer({
   // Date selection state
   const today = React.useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = React.useState<string>(format(today, "yyyy-MM-dd"));
-  const [customDatePickerOpen, setCustomDatePickerOpen] = React.useState<boolean>(false);
 
   const dateOptions = React.useMemo(() => {
     const yesterday = subDays(today, 1);
@@ -111,14 +125,34 @@ export function MobileKeypadComposer({
   // Categories filtered by type
   const relevantCategories = React.useMemo(() => {
     if (transactionType === "transfer") return [];
-    const list = categories.filter((c) => {
+    return categories.filter((c) => {
       const type = (c as any).type;
       return !type || type === transactionType;
     });
-    return list;
   }, [categories, transactionType]);
 
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
+
+  // Custom Tags
+  const [availableTags, setAvailableTags] = React.useState<Tables<"tags">[]>([]);
+  const [selectedTagNames, setSelectedTagNames] = React.useState<string[]>([]);
+
+  // Quick inline creation states
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = React.useState(false);
+  const [newCatName, setNewCatName] = React.useState("");
+  const [isQuickAddTagOpen, setIsQuickAddTagOpen] = React.useState(false);
+  const [newTagName, setNewTagName] = React.useState("");
+
+  // Load user tags on open
+  React.useEffect(() => {
+    if (open) {
+      getUserTagsAction().then((res) => {
+        if (res.success && res.data) {
+          setAvailableTags(res.data);
+        }
+      });
+    }
+  }, [open]);
 
   // Sync default type when opened
   React.useEffect(() => {
@@ -128,6 +162,7 @@ export function MobileKeypadComposer({
       setNote("");
       setShowNoteInput(false);
       setSelectedDate(format(new Date(), "yyyy-MM-dd"));
+      setSelectedTagNames([]);
       if (activeAccounts.length > 0 && !selectedAccountId) {
         setSelectedAccountId(activeAccounts[0].id);
       }
@@ -168,15 +203,65 @@ export function MobileKeypadComposer({
     if (amountStr === "0") {
       setAmountStr(key);
     } else {
-      // Limit to 2 decimal places
       if (amountStr.includes(".")) {
         const decimals = amountStr.split(".")[1] || "";
         if (decimals.length >= 2) return;
       }
-      // Max 10 digits
       if (amountStr.length < 11) {
         setAmountStr(amountStr + key);
       }
+    }
+  };
+
+  const handleToggleTag = (tagName: string) => {
+    setSelectedTagNames((prev) =>
+      prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]
+    );
+  };
+
+  const handleQuickCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    try {
+      const res = await createCategoryAction({
+        name: newCatName.trim(),
+        type: transactionType === "transfer" ? "transfer" : transactionType,
+        color: "#376FE5",
+        icon: "Folder",
+      });
+      if (res.success && res.data) {
+        toast.success(`Category "${newCatName}" created!`);
+        setSelectedCategoryId((res.data as any).id);
+        setNewCatName("");
+        setIsQuickAddCategoryOpen(false);
+      } else {
+        toast.error(res.error || "Failed to create category");
+      }
+    } catch {
+      toast.error("Error creating category");
+    }
+  };
+
+  const handleQuickCreateTag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    try {
+      const cleanName = newTagName.trim().replace(/^#/, "");
+      const res = await createTagAction({
+        name: cleanName,
+        color: "#376FE5",
+      });
+      if (res.success && res.data) {
+        toast.success(`Tag #${cleanName} created!`);
+        setAvailableTags((prev) => [...prev, res.data as Tables<"tags">]);
+        setSelectedTagNames((prev) => [...prev, cleanName]);
+        setNewTagName("");
+        setIsQuickAddTagOpen(false);
+      } else {
+        toast.error(res.error || "Failed to create tag");
+      }
+    } catch {
+      toast.error("Error creating tag");
     }
   };
 
@@ -222,7 +307,7 @@ export function MobileKeypadComposer({
         transaction_date: selectedDate,
         description: desc,
         notes: note.trim() || null,
-        tags: [],
+        tags: selectedTagNames,
       });
 
       if (res.success) {
@@ -242,172 +327,192 @@ export function MobileKeypadComposer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-[#050505] text-[#F5F5F5] animate-in fade-in zoom-in-95 duration-150 overflow-hidden select-none"
+      className="fixed inset-0 z-50 flex flex-col bg-mobile-bg text-mobile-primary animate-in fade-in zoom-in-95 duration-150 overflow-hidden select-none"
       role="dialog"
       aria-modal="true"
-      aria-label="Transaction Entry"
+      aria-label="Add Transaction"
     >
       {/* ─────────────────────────────────────────────────────────────
-          1. TOP BAR: CLOSE BUTTON & EXPENSE / INCOME SWITCHER
+          1. TOP NAVIGATION BAR (Close, Type Selector, Note Trigger)
       ────────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <div className="px-4 pt-safe pt-3 pb-2 flex items-center justify-between gap-2 border-b border-mobile-border">
         {/* Close Button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="h-10 w-10 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-all cursor-pointer"
+          className="h-10 w-10 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-all cursor-pointer"
           aria-label="Close composer"
         >
           <X className="h-5 w-5" />
         </button>
 
-        {/* Expense / Income / Transfer Segmented Switch */}
-        <div className="flex items-center p-1 bg-[#151515] border border-[#303030] rounded-full">
+        {/* 3-State Segmented Pill Switcher (Expense | Income | Transfer) */}
+        <div className="flex items-center p-1 bg-mobile-surface border border-mobile-border rounded-full">
           <button
-            type="button"
             onClick={() => setTransactionType("expense")}
             className={cn(
-              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer",
+              "px-3.5 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer",
               transactionType === "expense"
-                ? "bg-[#202020] text-[#F5F5F5] shadow-xs"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-expense text-white font-bold shadow-xs"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Expense
           </button>
           <button
-            type="button"
             onClick={() => setTransactionType("income")}
             className={cn(
-              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer",
+              "px-3.5 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer",
               transactionType === "income"
-                ? "bg-[#202020] text-[#80D5AE] shadow-xs"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-income text-white font-bold shadow-xs"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Income
           </button>
+          <button
+            onClick={() => setTransactionType("transfer")}
+            className={cn(
+              "px-3.5 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer",
+              transactionType === "transfer"
+                ? "bg-mobile-accent text-white font-bold shadow-xs"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
+            )}
+          >
+            Transfer
+          </button>
         </div>
 
-        {/* Spacer for symmetry */}
-        <div className="w-10" />
+        {/* Note / Tag toggle icon */}
+        <button
+          onClick={() => setShowNoteInput(!showNoteInput)}
+          className={cn(
+            "h-10 w-10 rounded-full border border-mobile-border flex items-center justify-center transition-all cursor-pointer",
+            showNoteInput || note
+              ? "bg-mobile-accent text-background"
+              : "bg-mobile-surface text-mobile-secondaryText hover:text-mobile-primary"
+          )}
+          title="Add note / merchant"
+        >
+          <Tag className="h-4 w-4" />
+        </button>
       </div>
 
+      {/* Optional Note / Merchant Input */}
+      {showNoteInput && (
+        <div className="px-4 py-2 bg-mobile-surface/80 border-b border-mobile-border animate-in slide-in-from-top-2 duration-150">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add note, payee, or description..."
+            className="w-full bg-mobile-secondary border border-mobile-border rounded-xl px-3 py-2 text-xs font-mono text-mobile-primary placeholder:text-mobile-secondaryText focus:outline-none focus:border-mobile-accent"
+            autoFocus
+          />
+        </div>
+      )}
+
       {/* ─────────────────────────────────────────────────────────────
-          2. HERO TABULAR AMOUNT DISPLAY & NOTE INPUT
+          2. LARGE DISPLAY AMOUNT HERO
       ────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-2 min-h-[120px]">
-        {/* Amount */}
-        <div className="flex items-baseline justify-center gap-1.5">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-3 min-h-[110px]">
+        <div className="flex items-baseline justify-center gap-1.5 font-mono">
           <span
             className={cn(
-              "text-3xl sm:text-4xl font-bold transition-colors font-mono",
-              transactionType === "income"
-                ? "text-[#80D5AE]"
-                : transactionType === "transfer"
-                ? "text-[#A8C7FA]"
-                : "text-[#F5F5F5]"
+              "text-3xl font-light",
+              transactionType === "expense"
+                ? "text-mobile-expense"
+                : transactionType === "income"
+                ? "text-mobile-income"
+                : "text-mobile-accent"
             )}
           >
             ₹
           </span>
           <span
             className={cn(
-              "text-5xl sm:text-6xl font-extrabold tracking-tight tabular-nums transition-colors font-mono",
-              transactionType === "income"
-                ? "text-[#80D5AE]"
-                : transactionType === "transfer"
-                ? "text-[#A8C7FA]"
-                : "text-[#F5F5F5]"
+              "text-5xl sm:text-6xl font-extrabold tracking-tight tabular-nums",
+              amountStr === "0" ? "text-mobile-secondaryText" : "text-mobile-primary"
             )}
           >
             {amountStr}
           </span>
         </div>
 
-        {/* Note / Description */}
-        <div className="mt-3 w-full max-w-xs flex justify-center">
-          {showNoteInput ? (
-            <input
-              type="text"
-              autoFocus
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="What was this for?"
-              className="w-full bg-[#151515] border border-[#303030] rounded-full px-4 py-1.5 text-xs text-center text-[#F5F5F5] placeholder-[#99999F] focus:outline-none focus:border-[#A8C7FA]"
-            />
+        {/* Selected Category or Transfer label */}
+        <div className="mt-1 text-xs font-mono text-mobile-secondaryText flex items-center gap-1">
+          {transactionType === "transfer" ? (
+            <span>
+              Transfer {selectedAccount?.name} → {selectedDestAccount?.name}
+            </span>
+          ) : selectedCategoryId ? (
+            <span className="text-mobile-accent font-semibold">
+              {categories.find((c) => c.id === selectedCategoryId)?.name}
+            </span>
           ) : (
-            <button
-              onClick={() => setShowNoteInput(true)}
-              className="text-xs text-[#99999F] hover:text-[#F5F5F5] bg-[#151515]/60 hover:bg-[#151515] border border-[#303030] px-3.5 py-1.5 rounded-full transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <span>+ Add a note</span>
-            </button>
+            <span className="italic">Tap a category below</span>
           )}
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. CONTROLS ROW: ACCOUNT SELECTOR PILL & ACTION ICONS
+          3. COMPACT ACCOUNT PICKER CHIPS
       ────────────────────────────────────────────────────────────── */}
-      <div className="px-4 py-2 border-t border-[#202020] bg-[#050505]/50 flex items-center justify-between gap-2 relative">
-        {/* Account Selector Pill */}
+      <div className="px-4 py-2 border-t border-mobile-border bg-mobile-bg/50 flex items-center justify-between gap-2 relative">
+        {/* Source Account Button */}
         <div className="relative">
           <button
             onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-            className="flex items-center gap-2 bg-[#151515] border border-[#303030] hover:border-[#404040] rounded-full px-3 py-1.5 text-xs text-[#F5F5F5] font-medium transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 bg-mobile-surface border border-mobile-border rounded-full px-3 py-1.5 text-xs text-mobile-primary font-medium cursor-pointer"
           >
-            <Landmark className="h-3.5 w-3.5 text-[#A8C7FA]" />
-            <span className="truncate max-w-[120px]">{selectedAccount?.name || "Select Account"}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-[#99999F]" />
+            <div className="h-4 w-4 rounded-full bg-mobile-secondary flex items-center justify-center text-mobile-accent shrink-0">
+              {selectedAccount?.account_type === "cash" ? (
+                <Wallet className="h-3 w-3" />
+              ) : selectedAccount?.account_type === "credit_card" ? (
+                <CreditCard className="h-3 w-3" />
+              ) : (
+                <Landmark className="h-3 w-3" />
+              )}
+            </div>
+            <span className="font-mono">{selectedAccount?.name || "Account"}</span>
+            <ChevronDown className="h-3 w-3 text-mobile-secondaryText" />
           </button>
 
-          {/* Account Picker Dropdown Menu (Reference 10) */}
+          {/* Account Dropdown */}
           {isAccountMenuOpen && (
-            <div className="absolute left-0 bottom-full mb-2 w-56 bg-[#151515] border border-[#303030] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 max-h-60 overflow-y-auto">
-              <span className="text-[10px] font-mono uppercase text-[#99999F] px-2 py-1 block">
-                Choose Account
+            <div className="absolute left-0 bottom-full mb-2 w-56 bg-mobile-surface border border-mobile-border rounded-2xl shadow-2xl p-2 z-50 max-h-60 overflow-y-auto">
+              <span className="text-[10px] font-mono uppercase text-mobile-secondaryText px-2 py-1 block">
+                Select Account
               </span>
-              {activeAccounts.map((acc) => {
-                const isSelected = acc.id === selectedAccountId;
-                return (
-                  <button
-                    key={acc.id}
-                    onClick={() => {
-                      setSelectedAccountId(acc.id);
-                      setIsAccountMenuOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer text-left",
-                      isSelected
-                        ? "bg-[#202020] text-[#A8C7FA] font-bold"
-                        : "text-[#F5F5F5] hover:bg-[#202020]/60"
-                    )}
-                  >
-                    <div className="truncate">
-                      <p className="truncate">{acc.name}</p>
-                      <p className="text-[10px] text-[#99999F] font-mono">{acc.institution_name || "Bank"}</p>
-                    </div>
-                    {isSelected && <Check className="h-4 w-4 text-[#A8C7FA] shrink-0 ml-2" />}
-                  </button>
-                );
-              })}
+              {activeAccounts.map((acc) => (
+                <button
+                  key={acc.id}
+                  onClick={() => {
+                    setSelectedAccountId(acc.id);
+                    setIsAccountMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-mobile-primary hover:bg-mobile-secondary text-left cursor-pointer"
+                >
+                  <span className="truncate">{acc.name}</span>
+                  {acc.id === selectedAccountId && <Check className="h-4 w-4 text-mobile-accent" />}
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Transfer Destination (Only visible if transfer mode) */}
+        {/* Transfer Destination Account Picker */}
         {transactionType === "transfer" && (
           <div className="relative">
             <button
               onClick={() => setIsDestAccountMenuOpen(!isDestAccountMenuOpen)}
-              className="flex items-center gap-1.5 bg-[#151515] border border-[#303030] rounded-full px-3 py-1.5 text-xs text-[#A8C7FA] font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-mobile-surface border border-mobile-border rounded-full px-3 py-1.5 text-xs text-mobile-accent font-medium cursor-pointer"
             >
               <span>To: {selectedDestAccount?.name || "Account"}</span>
               <ChevronDown className="h-3 w-3" />
             </button>
             {isDestAccountMenuOpen && (
-              <div className="absolute right-0 bottom-full mb-2 w-56 bg-[#151515] border border-[#303030] rounded-2xl shadow-2xl p-2 z-50 max-h-60 overflow-y-auto">
-                <span className="text-[10px] font-mono uppercase text-[#99999F] px-2 py-1 block">
+              <div className="absolute right-0 bottom-full mb-2 w-56 bg-mobile-surface border border-mobile-border rounded-2xl shadow-2xl p-2 z-50 max-h-60 overflow-y-auto">
+                <span className="text-[10px] font-mono uppercase text-mobile-secondaryText px-2 py-1 block">
                   Transfer Destination
                 </span>
                 {activeAccounts.map((acc) => (
@@ -417,10 +522,10 @@ export function MobileKeypadComposer({
                       setSelectedDestAccountId(acc.id);
                       setIsDestAccountMenuOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-[#F5F5F5] hover:bg-[#202020] text-left cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-mobile-primary hover:bg-mobile-secondary text-left cursor-pointer"
                   >
                     <span className="truncate">{acc.name}</span>
-                    {acc.id === selectedDestAccountId && <Check className="h-4 w-4 text-[#A8C7FA]" />}
+                    {acc.id === selectedDestAccountId && <Check className="h-4 w-4 text-mobile-accent" />}
                   </button>
                 ))}
               </div>
@@ -433,30 +538,14 @@ export function MobileKeypadComposer({
           <button
             onClick={() => setTransactionType(transactionType === "transfer" ? "expense" : "transfer")}
             className={cn(
-              "h-8 w-8 rounded-full border border-[#303030] flex items-center justify-center transition-all cursor-pointer",
+              "h-8 w-8 rounded-full border border-mobile-border flex items-center justify-center transition-all cursor-pointer",
               transactionType === "transfer"
-                ? "bg-[#A8C7FA] text-[#050505]"
-                : "bg-[#151515] text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-accent text-background"
+                : "bg-mobile-surface text-mobile-secondaryText hover:text-mobile-primary"
             )}
             title="Transfer between accounts"
           >
             <ArrowLeftRight className="h-3.5 w-3.5" />
-          </button>
-
-          <button
-            onClick={() => toast.info("Split transaction mode available")}
-            className="h-8 w-8 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] transition-all cursor-pointer"
-            title="Split transaction"
-          >
-            <Split className="h-3.5 w-3.5" />
-          </button>
-
-          <button
-            onClick={() => toast.info("Receipt photo attach")}
-            className="h-8 w-8 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] transition-all cursor-pointer"
-            title="Attach receipt"
-          >
-            <Camera className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -474,8 +563,8 @@ export function MobileKeypadComposer({
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1",
                 isSelected
-                  ? "bg-[#A8C7FA] text-[#050505] font-bold shadow-xs"
-                  : "bg-[#151515] border border-[#303030] text-[#99999F] hover:text-[#F5F5F5]"
+                  ? "bg-mobile-accent text-background font-bold shadow-xs"
+                  : "bg-mobile-surface border border-mobile-border text-mobile-secondaryText hover:text-mobile-primary"
               )}
             >
               <span>{opt.label}</span>
@@ -489,16 +578,26 @@ export function MobileKeypadComposer({
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="bg-[#151515] border border-[#303030] rounded-full px-2.5 py-1 text-xs text-[#99999F] font-mono cursor-pointer"
+          className="bg-mobile-surface border border-mobile-border rounded-full px-2.5 py-1 text-xs text-mobile-secondaryText font-mono cursor-pointer"
           title="Pick custom date"
         />
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. HORIZONTAL CATEGORY SELECTOR CHIPS
+          5. CATEGORIES & TAGS SELECTOR CHIPS (+ Add Category & + Add Tag)
       ────────────────────────────────────────────────────────────── */}
       {transactionType !== "transfer" && (
-        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar border-b border-[#202020]">
+        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar border-b border-mobile-border/80">
+          {/* Quick Add Category Chip */}
+          <button
+            onClick={() => setIsQuickAddCategoryOpen(true)}
+            className="px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 bg-mobile-surface border border-dashed border-mobile-border text-mobile-accent hover:bg-mobile-secondary shrink-0"
+            title="Create new category"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Category</span>
+          </button>
+
           {relevantCategories.slice(0, 10).map((cat) => {
             const isSelected = selectedCategoryId === cat.id;
             return (
@@ -506,10 +605,10 @@ export function MobileKeypadComposer({
                 key={cat.id}
                 onClick={() => setSelectedCategoryId(isSelected ? null : cat.id)}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0",
                   isSelected
-                    ? "bg-[#202020] text-[#A8C7FA] border border-[#A8C7FA]/50 font-bold"
-                    : "bg-[#151515] border border-[#303030] text-[#99999F] hover:text-[#F5F5F5]"
+                    ? "bg-mobile-secondary text-mobile-accent border border-mobile-accent/50 font-bold"
+                    : "bg-mobile-surface border border-mobile-border text-mobile-secondaryText hover:text-mobile-primary"
                 )}
               >
                 {getCategoryIcon(cat.name)}
@@ -517,36 +616,65 @@ export function MobileKeypadComposer({
               </button>
             );
           })}
+
+          {/* Quick Add Tag Chip */}
+          <button
+            onClick={() => setIsQuickAddTagOpen(true)}
+            className="px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 bg-mobile-surface border border-dashed border-mobile-border text-mobile-income hover:bg-mobile-secondary shrink-0 ml-1"
+            title="Create new tag"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Tag</span>
+          </button>
+
+          {/* User Tag Chips */}
+          {availableTags.map((t) => {
+            const isSelected = selectedTagNames.includes(t.name);
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleToggleTag(t.name)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-mono font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 shrink-0",
+                  isSelected
+                    ? "bg-mobile-income/20 text-mobile-income border border-mobile-income/50 font-bold"
+                    : "bg-mobile-surface border border-mobile-border text-mobile-secondaryText hover:text-mobile-primary"
+                )}
+              >
+                <span>#{t.name}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          6. NUMERIC KEYPAD WITH PROMINENT ADD BUTTON (References 3 & 10)
+          6. NUMERIC KEYPAD WITH PROMINENT ADD BUTTON
       ────────────────────────────────────────────────────────────── */}
-      <div className="p-4 bg-[#050505] pb-safe">
+      <div className="p-4 bg-mobile-bg pb-safe">
         <div className="grid grid-cols-4 gap-2.5 max-w-sm mx-auto">
           {/* Row 1 */}
           <button
             onClick={() => handleKeypadPress("1")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             1
           </button>
           <button
             onClick={() => handleKeypadPress("2")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             2
           </button>
           <button
             onClick={() => handleKeypadPress("3")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             3
           </button>
           <button
             onClick={() => handleKeypadPress("backspace")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-[#99999F] hover:text-[#E58A91] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-mobile-secondaryText hover:text-mobile-expense flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             aria-label="Backspace"
           >
             <Delete className="h-6 w-6" />
@@ -555,81 +683,78 @@ export function MobileKeypadComposer({
           {/* Row 2 */}
           <button
             onClick={() => handleKeypadPress("4")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             4
           </button>
           <button
             onClick={() => handleKeypadPress("5")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             5
           </button>
           <button
             onClick={() => handleKeypadPress("6")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             6
           </button>
           <button
             onClick={() => handleKeypadPress(".")}
-            className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-bold text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-bold text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
           >
             .
           </button>
 
-          {/* Row 3 & 4 Grid: Digits on left 3 columns, Tall Blue Add button on right */}
+          {/* Row 3 & 4 Grid: Digits on left 3 columns, Tall Action button on right */}
           <div className="col-span-3 grid grid-cols-3 gap-2.5">
             <button
               onClick={() => handleKeypadPress("7")}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             >
               7
             </button>
             <button
               onClick={() => handleKeypadPress("8")}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             >
               8
             </button>
             <button
               onClick={() => handleKeypadPress("9")}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             >
               9
             </button>
 
             <button
               onClick={() => handleKeypadPress("00")}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-xl font-mono font-medium text-[#99999F] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-xl font-mono font-medium text-mobile-secondaryText flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             >
               00
             </button>
             <button
               onClick={() => handleKeypadPress("0")}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-2xl font-mono font-medium text-[#F5F5F5] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-2xl font-mono font-medium text-mobile-primary flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs border border-mobile-border/40"
             >
               0
             </button>
             <button
-              onClick={() => {
-                // Clear
-                setAmountStr("0");
-              }}
-              className="h-14 rounded-2xl bg-[#151515] hover:bg-[#202020] text-xs font-mono font-semibold text-[#99999F] flex items-center justify-center active:scale-95 transition-all cursor-pointer uppercase"
+              onClick={() => setAmountStr("0")}
+              className="h-14 rounded-2xl bg-mobile-surface hover:bg-mobile-secondary text-xs font-mono font-semibold text-mobile-secondaryText flex items-center justify-center active:scale-95 transition-all cursor-pointer uppercase shadow-xs border border-mobile-border/40"
             >
               C
             </button>
           </div>
 
-          {/* Large Prominent Blue Add Button (Reference 3 & 10) */}
+          {/* Large Prominent Action Add Button */}
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="h-[120px] rounded-2xl bg-[#A8C7FA] hover:bg-[#A8C7FA]/90 text-[#050505] flex flex-col items-center justify-center gap-1 font-bold shadow-lg shadow-[#A8C7FA]/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="h-[120px] rounded-2xl bg-mobile-accent hover:bg-mobile-accent/90 text-background flex flex-col items-center justify-center gap-1 font-bold shadow-lg shadow-mobile-accent/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? (
-              <Loader2 className="h-6 w-6 animate-spin text-[#050505]" />
+              <Loader2 className="h-6 w-6 animate-spin text-background" />
             ) : (
               <>
                 <Check className="h-6 w-6 stroke-[3]" />
@@ -639,6 +764,60 @@ export function MobileKeypadComposer({
           </button>
         </div>
       </div>
+
+      {/* Quick Add Category Dialog */}
+      <Dialog open={isQuickAddCategoryOpen} onOpenChange={setIsQuickAddCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleQuickCreateCategory}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-mono">Quick Add Category</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Category name (e.g. Groceries, Gym)"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsQuickAddCategoryOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm">
+                Create & Select
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Tag Dialog */}
+      <Dialog open={isQuickAddTagOpen} onOpenChange={setIsQuickAddTagOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleQuickCreateTag}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-mono">Quick Add Tag</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Tag name (e.g. vacation, diwali)"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsQuickAddTagOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm">
+                Create & Select
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

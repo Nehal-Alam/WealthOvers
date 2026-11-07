@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { format, subMonths, isSameMonth, isSameDay, isThisMonth } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import {
   TrendingUp,
   TrendingDown,
@@ -13,23 +13,14 @@ import {
   Eye,
   EyeOff,
   Bell,
-  ArrowRight,
-  Calendar,
-  AlertCircle,
-  CheckCircle2,
-  PieChart,
-  Percent,
   Clock,
-  Sparkles,
   ChevronRight,
   ChevronDown,
   ChevronUp,
   HandCoins,
-  Repeat,
   ArrowUpRight,
   Info,
   ShieldCheck,
-  ArrowLeftRight,
   Settings as SettingsIcon,
   Check,
   X,
@@ -44,6 +35,7 @@ import {
   Coins,
   Briefcase,
   Tag,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/types/database";
@@ -51,12 +43,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useUIStore } from "@/stores/ui-store";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AccountSelector } from "@/components/accounts/account-selector";
 import {
-  addMoney,
-  subtractMoney,
   calculateSavingsRate,
   toDecimal,
-  getTransactionDisplayInfo,
 } from "@/lib/calculations/financial";
 import {
   DateDurationFilter,
@@ -135,21 +126,18 @@ export function MobileDashboardView({
   creditCards = [],
   precomputedSummary,
 }: MobileDashboardViewProps) {
-  const { isPrivacyMode, togglePrivacyMode, openQuickTransaction } = useUIStore();
+  const {
+    isPrivacyMode,
+    togglePrivacyMode,
+    selectedAccountId,
+    setSelectedAccountId,
+  } = useUIStore();
 
-  // Period Filter State (defaults to "this_month")
-  const [selectedDuration, setSelectedDuration] =
-    React.useState<DateDurationFilter>("this_month");
-  const [activeOverviewTab, setActiveOverviewTab] =
-    React.useState<OverviewTab>("income");
-  const [showAccountBreakdown, setShowAccountBreakdown] =
-    React.useState<boolean>(false);
-  const [customStart, setCustomStart] = React.useState<string>("");
-  const [customEnd, setCustomEnd] = React.useState<string>("");
-  const [showCustomInputs, setShowCustomInputs] = React.useState<boolean>(false);
+  const [activeOverviewTab, setActiveOverviewTab] = React.useState<OverviewTab>("income");
+  const [showAccountBreakdown, setShowAccountBreakdown] = React.useState<boolean>(false);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
 
-  // Time-based greeting helper (Reference 5)
+  // Time-based greeting helper
   const greeting = React.useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -158,10 +146,15 @@ export function MobileDashboardView({
     return "Good night";
   }, []);
 
-  // Period date boundaries
   const dateRange = React.useMemo(() => {
-    return getDateRangeFromFilter(selectedDuration);
-  }, [selectedDuration]);
+    return getDateRangeFromFilter("this_month");
+  }, []);
+
+  // Selected Account Object (or null for All Accounts)
+  const selectedAccount = React.useMemo(() => {
+    if (selectedAccountId === "all") return null;
+    return accounts.find((a) => a.id === selectedAccountId) || null;
+  }, [selectedAccountId, accounts]);
 
   // Master transaction pool (combines allTransactions and recentTransactions)
   const masterTransactions = React.useMemo(() => {
@@ -175,21 +168,23 @@ export function MobileDashboardView({
     );
   }, [allTransactions, recentTransactions]);
 
-  // Filtered transactions for the selected period
+  // Filtered transactions by selected account
+  const accountMasterTransactions = React.useMemo(() => {
+    if (!selectedAccount) return masterTransactions;
+    return masterTransactions.filter((t) => {
+      if (t.account_id === selectedAccount.id) return true;
+      if (t.destination_account_id === selectedAccount.id) return true;
+      return false;
+    });
+  }, [masterTransactions, selectedAccount]);
+
+  // Period transactions for current month
   const periodTransactions = React.useMemo(() => {
-    if (selectedDuration === "custom" && customStart && customEnd) {
-      const s = new Date(customStart);
-      const e = new Date(customEnd);
-      return masterTransactions.filter((t) => {
-        const d = new Date(t.transaction_date);
-        return d >= s && d <= e;
-      });
-    }
-    return filterTransactionsByDateRange(masterTransactions, dateRange);
-  }, [masterTransactions, selectedDuration, dateRange, customStart, customEnd]);
+    return filterTransactionsByDateRange(accountMasterTransactions, dateRange);
+  }, [accountMasterTransactions, dateRange]);
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 1. POINT-IN-TIME BALANCE SHEET METRICS (Never filtered by period)
+  // 1. BALANCE SHEET METRICS
   // ──────────────────────────────────────────────────────────────────────────
   const {
     totalAvailableBalance,
@@ -262,17 +257,33 @@ export function MobileDashboardView({
     };
   }, [accounts, creditCards, loans, liabilities]);
 
-  // Today's spending calculation (Reference 5)
+  // Today's spending calculation
   const spentToday = React.useMemo(() => {
     const now = new Date();
     let sum = new Decimal(0);
-    for (const t of masterTransactions) {
-      if (isSameDay(new Date(t.transaction_date), now) && t.transaction_type === "expense") {
-        sum = sum.plus(toDecimal(t.amount || 0));
+    for (const t of accountMasterTransactions) {
+      if (isSameDay(new Date(t.transaction_date), now)) {
+        if (selectedAccount) {
+          // If viewing specific account, count expenses debited or transfer out
+          if (t.transaction_type === "expense" && t.account_id === selectedAccount.id) {
+            sum = sum.plus(toDecimal(t.amount || 0));
+          } else if (
+            t.transaction_type === "transfer" &&
+            t.account_id === selectedAccount.id &&
+            t.destination_account_id !== selectedAccount.id
+          ) {
+            sum = sum.plus(toDecimal(t.amount || 0));
+          }
+        } else {
+          // Consolidated: only expenses count
+          if (t.transaction_type === "expense") {
+            sum = sum.plus(toDecimal(t.amount || 0));
+          }
+        }
       }
     }
     return sum.toNumber();
-  }, [masterTransactions]);
+  }, [accountMasterTransactions, selectedAccount]);
 
   // ──────────────────────────────────────────────────────────────────────────
   // 2. PERIOD FLOW METRICS (Income, Expense, Savings Rate)
@@ -284,10 +295,39 @@ export function MobileDashboardView({
 
       for (const t of periodTransactions) {
         const amt = toDecimal(t.amount || 0);
-        if (t.transaction_type === "income" || t.transaction_type === "refund") {
-          income = income.plus(amt);
-        } else if (t.transaction_type === "expense") {
-          expense = expense.plus(amt);
+        if (selectedAccount) {
+          // Account-specific accounting invariants:
+          if (
+            t.account_id === selectedAccount.id &&
+            (t.transaction_type === "income" || t.transaction_type === "refund")
+          ) {
+            income = income.plus(amt);
+          } else if (
+            t.transaction_type === "transfer" &&
+            t.destination_account_id === selectedAccount.id &&
+            t.account_id !== selectedAccount.id
+          ) {
+            income = income.plus(amt); // Transfer in is a credit
+          } else if (
+            t.account_id === selectedAccount.id &&
+            t.transaction_type === "expense"
+          ) {
+            expense = expense.plus(amt);
+          } else if (
+            t.transaction_type === "transfer" &&
+            t.account_id === selectedAccount.id &&
+            t.destination_account_id !== selectedAccount.id
+          ) {
+            expense = expense.plus(amt); // Transfer out is a debit
+          }
+        } else {
+          // Consolidated accounting invariant:
+          // Transfers NEVER count as income or expense!
+          if (t.transaction_type === "income" || t.transaction_type === "refund") {
+            income = income.plus(amt);
+          } else if (t.transaction_type === "expense") {
+            expense = expense.plus(amt);
+          }
         }
       }
 
@@ -299,23 +339,21 @@ export function MobileDashboardView({
         totalPeriodExpense: expense.toNumber(),
         periodSavingsRate: Math.round(savingsPct),
       };
-    }, [periodTransactions]);
+    }, [periodTransactions, selectedAccount]);
 
   // ──────────────────────────────────────────────────────────────────────────
   // 3. SUB-TAB BREAKDOWN CALCULATIONS
   // ──────────────────────────────────────────────────────────────────────────
-  // A. Income Breakdown
+  // Income Breakdown
   const incomeBreakdown = React.useMemo(() => {
     let salary = new Decimal(0);
     let business = new Decimal(0);
     let interest = new Decimal(0);
     let refunds = new Decimal(0);
     let other = new Decimal(0);
-    const incomeTxs: any[] = [];
 
     for (const t of periodTransactions) {
       if (t.transaction_type === "income" || t.transaction_type === "refund") {
-        incomeTxs.push(t);
         const amt = toDecimal(t.amount || 0);
         const catName = (t.category?.name || "").toLowerCase();
 
@@ -339,11 +377,10 @@ export function MobileDashboardView({
       interest: interest.toNumber(),
       refunds: refunds.toNumber(),
       other: other.toNumber(),
-      transactions: incomeTxs,
     };
   }, [periodTransactions]);
 
-  // B. Expense Breakdown
+  // Expense Breakdown
   const expenseBreakdown = React.useMemo(() => {
     const catMap = new Map<string, Decimal>();
     let essential = new Decimal(0);
@@ -394,11 +431,10 @@ export function MobileDashboardView({
       essential: essential.toNumber(),
       discretionary: discretionary.toNumber(),
       dailyAverage: dailyAvg,
-      transactions: expenseTxs,
     };
   }, [periodTransactions, dateRange, totalPeriodExpense]);
 
-  // Detected payments: Pending transactions (from Android SMS sync or unreviewed)
+  // Detected payments: Pending unreviewed transactions
   const detectedPayments = React.useMemo(() => {
     return masterTransactions.filter((t) => t.is_reviewed === false).slice(0, 5);
   }, [masterTransactions]);
@@ -443,36 +479,48 @@ export function MobileDashboardView({
     }
   };
 
+  // Active balance display logic (Individual Account vs All Accounts)
+  const isIndividualAccount = !!selectedAccount;
+  const isCreditCardAccount = selectedAccount?.account_type === "credit_card";
+  const displayBalanceAmount = isIndividualAccount
+    ? parseFloat(String(selectedAccount?.current_balance || 0))
+    : totalAvailableBalance;
+
   return (
-    <div className="lg:hidden flex flex-col space-y-4 max-w-md mx-auto pb-24 text-[#F5F5F5] select-none">
+    <div className="lg:hidden flex flex-col space-y-4 max-w-md mx-auto pb-24 text-mobile-primary select-none">
       {/* ─────────────────────────────────────────────────────────────
-          1. HEADER: TIME-BASED GREETING, MONTH & ICONS (Reference 5)
+          1. SINGLE CLEAN MOBILE HEADER (Theme Toggle + Actions + Profile)
       ────────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-2 px-1">
         <div>
-          <span className="text-[11px] text-[#99999F] font-mono tracking-wider block">
+          <span className="text-[11px] text-mobile-secondaryText font-mono tracking-wider block">
             {greeting}, {userName.split(" ")[0]}
           </span>
-          <h1 className="text-xl font-bold tracking-tight text-[#F5F5F5] font-mono">
+          <h1 className="text-xl font-bold tracking-tight text-mobile-primary font-mono">
             {format(new Date(), "MMMM yyyy")}
           </h1>
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Theme Toggle (Light / Dark) */}
+          <div className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary transition-all">
+            <ThemeToggle />
+          </div>
+
           {/* Notification Icon */}
           <Link
             href="/insights"
-            className="h-9 w-9 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-all relative cursor-pointer"
+            className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-all relative cursor-pointer"
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#A8C7FA]" />
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-mobile-accent" />
           </Link>
 
           {/* Settings Shortcut */}
           <Link
             href="/settings"
-            className="h-9 w-9 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-all cursor-pointer"
+            className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-all cursor-pointer"
             title="Settings"
           >
             <SettingsIcon className="h-4 w-4" />
@@ -481,7 +529,7 @@ export function MobileDashboardView({
           {/* Profile Access */}
           <Link
             href="/settings"
-            className="h-9 w-9 rounded-full bg-[#202020] border border-[#303030] text-[#A8C7FA] flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all"
+            className="h-9 w-9 rounded-full bg-mobile-secondary border border-mobile-border text-mobile-accent flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all"
             title="Profile"
           >
             {userName.slice(0, 2).toUpperCase()}
@@ -490,18 +538,36 @@ export function MobileDashboardView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. SPENT TODAY HERO SECTION (Reference 5)
+          2. COMPACT ACCOUNT SELECTOR (Home & Activity Synced)
+      ────────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-1">
+        <AccountSelector accounts={accounts} />
+
+        {selectedAccountId !== "all" && (
+          <button
+            onClick={() => setSelectedAccountId("all")}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-mobile-secondary text-mobile-accent text-[11px] font-mono border border-mobile-border hover:bg-mobile-secondary/80 transition-all cursor-pointer"
+            title="Reset to All Accounts"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>All Accounts</span>
+          </button>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          3. SPENT TODAY HERO SECTION
       ────────────────────────────────────────────────────────────── */}
       <div className="px-1 py-1 space-y-0.5">
-        <span className="text-[11px] text-[#99999F] uppercase tracking-wider font-mono">
-          Spent today
+        <span className="text-[11px] text-mobile-secondaryText uppercase tracking-wider font-mono">
+          {isIndividualAccount ? `Spent today (${selectedAccount?.name})` : "Spent today"}
         </span>
-        <div className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#F5F5F5] font-mono tabular-nums">
+        <div className="text-4xl sm:text-5xl font-extrabold tracking-tight text-mobile-primary font-mono tabular-nums">
           {isPrivacyMode ? "••••" : `₹${spentToday.toLocaleString("en-IN")}`}
         </div>
         <Link
           href="/budgets"
-          className="text-xs text-[#99999F] hover:text-[#A8C7FA] transition-colors flex items-center gap-1 font-mono pt-0.5"
+          className="text-xs text-mobile-secondaryText hover:text-mobile-accent transition-colors flex items-center gap-1 font-mono pt-0.5"
         >
           <span>
             {activeBudget && activeBudget.total_amount
@@ -513,22 +579,34 @@ export function MobileDashboardView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. ACCOUNT SUMMARY CARD WITH EXPANDABLE BREAKDOWN (Reference 5 & 8)
+          4. AVAILABLE BALANCE CARD
       ────────────────────────────────────────────────────────────── */}
-      <Card className="bg-[#151515] border-[#303030] rounded-3xl overflow-hidden shadow-xl">
+      <Card className="bg-mobile-surface border-mobile-border rounded-3xl overflow-hidden shadow-xl">
         <CardContent className="p-4 space-y-4">
-          {/* Card Top: Card Icon, Active Accounts Count & Total Balance */}
+          {/* Card Top */}
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-2xl bg-[#202020] border border-[#303030] flex items-center justify-center text-[#A8C7FA]">
-                <CreditCard className="h-5 w-5" />
+              <div className="h-10 w-10 rounded-2xl bg-mobile-secondary border border-mobile-border flex items-center justify-center text-mobile-accent">
+                {isCreditCardAccount ? (
+                  <CreditCard className="h-5 w-5 text-mobile-expense" />
+                ) : isIndividualAccount ? (
+                  <Landmark className="h-5 w-5" />
+                ) : (
+                  <CreditCard className="h-5 w-5" />
+                )}
               </div>
               <div>
-                <span className="text-[11px] text-[#99999F] font-mono block">
-                  {accounts.filter((a) => !a.is_archived).length} Active Accounts
+                <span className="text-[11px] text-mobile-secondaryText font-mono block">
+                  {isIndividualAccount
+                    ? selectedAccount?.institution_name || selectedAccount?.account_type.toUpperCase()
+                    : `${accounts.filter((a) => !a.is_archived).length} Active Accounts`}
                 </span>
-                <span className="text-xs font-bold font-mono text-[#F5F5F5] uppercase tracking-wide">
-                  TOTAL AVAILABLE BALANCE
+                <span className="text-xs font-bold font-mono text-mobile-primary uppercase tracking-wide">
+                  {isCreditCardAccount
+                    ? `${selectedAccount?.name.toUpperCase()} DUES`
+                    : isIndividualAccount
+                    ? `${selectedAccount?.name.toUpperCase()} BALANCE`
+                    : "TOTAL AVAILABLE BALANCE"}
                 </span>
               </div>
             </div>
@@ -536,16 +614,20 @@ export function MobileDashboardView({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={togglePrivacyMode}
-                className="h-8 w-8 rounded-full bg-[#202020] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] transition-colors cursor-pointer"
+                className="h-8 w-8 rounded-full bg-mobile-secondary border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary transition-colors cursor-pointer"
                 title={isPrivacyMode ? "Show balances" : "Hide balances"}
                 aria-label="Toggle privacy"
               >
-                {isPrivacyMode ? <EyeOff className="h-4 w-4 text-[#A8C7FA]" /> : <Eye className="h-4 w-4" />}
+                {isPrivacyMode ? (
+                  <EyeOff className="h-4 w-4 text-mobile-accent" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
 
               <button
                 onClick={() => setShowAccountBreakdown(true)}
-                className="text-xs font-mono text-[#A8C7FA] hover:underline flex items-center gap-0.5 px-2 py-1 bg-[#202020] rounded-full border border-[#303030] cursor-pointer"
+                className="text-xs font-mono text-mobile-accent hover:underline flex items-center gap-0.5 px-2.5 py-1 bg-mobile-secondary rounded-full border border-mobile-border cursor-pointer"
               >
                 <span>Accounts</span>
                 <ChevronRight className="h-3 w-3" />
@@ -555,70 +637,81 @@ export function MobileDashboardView({
 
           {/* Large Available Balance Figure */}
           <div>
-            <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#F5F5F5] font-mono tabular-nums">
+            <div
+              className={cn(
+                "text-3xl sm:text-4xl font-extrabold tracking-tight font-mono tabular-nums",
+                isCreditCardAccount ? "text-mobile-expense" : "text-mobile-primary"
+              )}
+            >
               {isPrivacyMode ? (
                 "••••••••"
               ) : (
-                `₹${totalAvailableBalance.toLocaleString("en-IN", {
+                `₹${displayBalanceAmount.toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`
               )}
             </div>
-            <p className="text-[11px] text-[#99999F] mt-1 flex items-center gap-1 font-mono">
+            <p className="text-[11px] text-mobile-secondaryText mt-1 flex items-center gap-1 font-mono">
               <Info className="h-3 w-3 shrink-0" />
-              <span>Liquid bank & cash balances minus credit card obligations</span>
+              <span>
+                {isIndividualAccount
+                  ? `Active account: ${selectedAccount?.name}`
+                  : "Liquid bank & cash balances minus credit card obligations"}
+              </span>
             </p>
           </div>
 
-          {/* Quick Balance Sheet Owe Indicators */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#303030]">
-            <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-              <span className="text-[10px] font-mono text-[#99999F] uppercase block">
-                YOU OWE
-              </span>
-              <span className="text-xs font-mono font-bold text-[#E58A91] tabular-nums">
-                {isPrivacyMode ? "••••" : `₹${totalYouOwe.toLocaleString("en-IN")}`}
-              </span>
-              <span className="text-[9px] text-[#99999F] block">
-                Loans + private debts
-              </span>
-            </div>
+          {/* Balance Sheet Owe Indicators (Only on consolidated view) */}
+          {!isIndividualAccount && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-mobile-border">
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">
+                  YOU OWE
+                </span>
+                <span className="text-xs font-mono font-bold text-mobile-expense tabular-nums">
+                  {isPrivacyMode ? "••••" : `₹${totalYouOwe.toLocaleString("en-IN")}`}
+                </span>
+                <span className="text-[9px] text-mobile-secondaryText block">
+                  Loans + credit dues
+                </span>
+              </div>
 
-            <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-              <span className="text-[10px] font-mono text-[#99999F] uppercase block">
-                OWED TO YOU
-              </span>
-              <span className="text-xs font-mono font-bold text-[#80D5AE] tabular-nums">
-                {isPrivacyMode ? "••••" : `₹${totalOwedToYou.toLocaleString("en-IN")}`}
-              </span>
-              <span className="text-[9px] text-[#99999F] block">
-                Money lent to others
-              </span>
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">
+                  OWED TO YOU
+                </span>
+                <span className="text-xs font-mono font-bold text-mobile-income tabular-nums">
+                  {isPrivacyMode ? "••••" : `₹${totalOwedToYou.toLocaleString("en-IN")}`}
+                </span>
+                <span className="text-[9px] text-mobile-secondaryText block">
+                  Money lent to others
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Card Bottom: Monthly Spend & Monthly Income (Reference 5) */}
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#303030] text-xs font-mono">
+          {/* Card Bottom: Monthly Spend & Monthly Income */}
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-mobile-border text-xs font-mono">
             <div>
-              <span className="text-[10px] text-[#99999F] block uppercase">
+              <span className="text-[10px] text-mobile-secondaryText block uppercase">
                 TOTAL EXPENSE
               </span>
-              <span className="text-sm font-bold text-[#E58A91] tabular-nums">
+              <span className="text-sm font-bold text-mobile-expense tabular-nums">
                 {isPrivacyMode ? "••••" : `₹${totalPeriodExpense.toLocaleString("en-IN")}`}
               </span>
-              <span className="text-[10px] text-[#99999F] block">This Period</span>
+              <span className="text-[10px] text-mobile-secondaryText block">This Month</span>
             </div>
 
             <div>
-              <span className="text-[10px] text-[#99999F] block uppercase">
+              <span className="text-[10px] text-mobile-secondaryText block uppercase">
                 TOTAL INCOME
               </span>
-              <span className="text-sm font-bold text-[#80D5AE] tabular-nums">
+              <span className="text-sm font-bold text-mobile-income tabular-nums">
                 {isPrivacyMode ? "••••" : `₹${totalPeriodIncome.toLocaleString("en-IN")}`}
               </span>
-              <span className="text-[10px] text-[#80D5AE] block">
-                {periodSavingsRate > 0 ? `${periodSavingsRate}% saved` : "This Period"}
+              <span className="text-[10px] text-mobile-income block">
+                {periodSavingsRate > 0 ? `${periodSavingsRate}% saved` : "This Month"}
               </span>
             </div>
           </div>
@@ -626,28 +719,28 @@ export function MobileDashboardView({
       </Card>
 
       {/* ─────────────────────────────────────────────────────────────
-          4. FINANCIAL OVERVIEW: 4 SUB-TABS (Income, Expense, Loans, Debt)
+          5. FINANCIAL OVERVIEW: 4 SUB-TABS (Income, Expense, Loans, Debt)
       ────────────────────────────────────────────────────────────── */}
-      <div className="space-y-3 pt-2">
+      <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-mono font-bold text-[#F5F5F5] uppercase tracking-wider flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-[#A8C7FA]" />
+          <h2 className="text-xs font-mono font-bold text-mobile-primary uppercase tracking-wider flex items-center gap-1.5">
+            <Layers className="h-3.5 w-3.5 text-mobile-accent" />
             FINANCIAL OVERVIEW
           </h2>
-          <span className="text-[10px] font-mono text-[#99999F]">
+          <span className="text-[10px] font-mono text-mobile-secondaryText">
             {dateRange.label}
           </span>
         </div>
 
         {/* 4 Segmented Sub-Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-[#151515] border border-[#303030] rounded-2xl text-xs font-medium">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-mobile-surface border border-mobile-border rounded-2xl text-xs font-medium">
           <button
             onClick={() => setActiveOverviewTab("income")}
             className={cn(
               "py-1.5 text-center rounded-xl transition-all font-mono",
               activeOverviewTab === "income"
-                ? "bg-[#202020] text-[#80D5AE] font-bold shadow-xs border border-[#303030]"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-secondary text-mobile-income font-bold shadow-xs border border-mobile-border"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Income
@@ -657,8 +750,8 @@ export function MobileDashboardView({
             className={cn(
               "py-1.5 text-center rounded-xl transition-all font-mono",
               activeOverviewTab === "expense"
-                ? "bg-[#202020] text-[#E58A91] font-bold shadow-xs border border-[#303030]"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-secondary text-mobile-expense font-bold shadow-xs border border-mobile-border"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Expense
@@ -668,8 +761,8 @@ export function MobileDashboardView({
             className={cn(
               "py-1.5 text-center rounded-xl transition-all font-mono",
               activeOverviewTab === "loans"
-                ? "bg-[#202020] text-[#E6BD70] font-bold shadow-xs border border-[#303030]"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-secondary text-mobile-warning font-bold shadow-xs border border-mobile-border"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Loans
@@ -679,8 +772,8 @@ export function MobileDashboardView({
             className={cn(
               "py-1.5 text-center rounded-xl transition-all font-mono",
               activeOverviewTab === "debt"
-                ? "bg-[#202020] text-[#A8C7FA] font-bold shadow-xs border border-[#303030]"
-                : "text-[#99999F] hover:text-[#F5F5F5]"
+                ? "bg-mobile-secondary text-mobile-accent font-bold shadow-xs border border-mobile-border"
+                : "text-mobile-secondaryText hover:text-mobile-primary"
             )}
           >
             Debt
@@ -689,51 +782,49 @@ export function MobileDashboardView({
 
         {/* SUB-TAB 1: INCOME */}
         {activeOverviewTab === "income" && (
-          <div className="space-y-3 bg-[#151515] border border-[#303030] rounded-3xl p-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#303030]">
-              <span className="text-xs font-mono text-[#99999F]">Total Received</span>
-              <span className="text-base font-bold font-mono text-[#80D5AE] tabular-nums">
-                ₹{incomeBreakdown.salary + incomeBreakdown.business + incomeBreakdown.interest + incomeBreakdown.refunds + incomeBreakdown.other > 0
-                  ? (incomeBreakdown.salary + incomeBreakdown.business + incomeBreakdown.interest + incomeBreakdown.refunds + incomeBreakdown.other).toLocaleString("en-IN")
-                  : totalPeriodIncome.toLocaleString("en-IN")}
+          <div className="space-y-3 bg-mobile-surface border border-mobile-border rounded-3xl p-4">
+            <div className="flex items-center justify-between pb-2 border-b border-mobile-border">
+              <span className="text-xs font-mono text-mobile-secondaryText">Total Received</span>
+              <span className="text-base font-bold font-mono text-mobile-income tabular-nums">
+                ₹{totalPeriodIncome.toLocaleString("en-IN")}
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1">
-                <span className="text-[#99999F]">Salary / Wages</span>
-                <span className="font-mono font-medium text-[#F5F5F5] tabular-nums">
+                <span className="text-mobile-secondaryText">Salary / Wages</span>
+                <span className="font-mono font-medium text-mobile-primary tabular-nums">
                   ₹{incomeBreakdown.salary.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-[#99999F]">Business & Freelance</span>
-                <span className="font-mono font-medium text-[#F5F5F5] tabular-nums">
+                <span className="text-mobile-secondaryText">Business & Freelance</span>
+                <span className="font-mono font-medium text-mobile-primary tabular-nums">
                   ₹{incomeBreakdown.business.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-[#99999F]">Interest & Dividends</span>
-                <span className="font-mono font-medium text-[#F5F5F5] tabular-nums">
+                <span className="text-mobile-secondaryText">Interest & Dividends</span>
+                <span className="font-mono font-medium text-mobile-primary tabular-nums">
                   ₹{incomeBreakdown.interest.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="flex justify-between py-1 items-center">
-                <span className="text-[#99999F] flex items-center gap-1.5">
+                <span className="text-mobile-secondaryText flex items-center gap-1.5">
                   Refunds & Cashbacks
-                  <Badge variant="outline" className="text-[9px] font-mono border-[#80D5AE]/40 text-[#80D5AE] px-1 py-0">
+                  <Badge variant="outline" className="text-[9px] font-mono border-mobile-income/40 text-mobile-income px-1 py-0">
                     REFUND
                   </Badge>
                 </span>
-                <span className="font-mono font-medium text-[#80D5AE] tabular-nums">
+                <span className="font-mono font-medium text-mobile-income tabular-nums">
                   ₹{incomeBreakdown.refunds.toLocaleString("en-IN")}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-[#303030] flex items-center justify-between text-[11px] text-[#99999F] font-mono">
+            <div className="pt-2 border-t border-mobile-border flex items-center justify-between text-[11px] text-mobile-secondaryText font-mono">
               <span>Month-over-month Comparison</span>
-              <span className="text-[#80D5AE] font-bold flex items-center gap-0.5">
+              <span className="text-mobile-income font-bold flex items-center gap-0.5">
                 +4.2% MoM
               </span>
             </div>
@@ -742,37 +833,37 @@ export function MobileDashboardView({
 
         {/* SUB-TAB 2: EXPENSE */}
         {activeOverviewTab === "expense" && (
-          <div className="space-y-3 bg-[#151515] border border-[#303030] rounded-3xl p-4">
-            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-[#303030]">
-              <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-                <span className="text-[10px] font-mono text-[#99999F] uppercase block">DAILY AVERAGE</span>
-                <span className="text-sm font-mono font-bold text-[#E58A91] tabular-nums">
+          <div className="space-y-3 bg-mobile-surface border border-mobile-border rounded-3xl p-4">
+            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-mobile-border">
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">DAILY AVERAGE</span>
+                <span className="text-sm font-mono font-bold text-mobile-expense tabular-nums">
                   ₹{Math.round(expenseBreakdown.dailyAverage).toLocaleString("en-IN")}
                 </span>
               </div>
-              <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-                <span className="text-[10px] font-mono text-[#99999F] uppercase block">BUDGET USED</span>
-                <span className="text-sm font-mono font-bold text-[#A8C7FA] tabular-nums">
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">BUDGET USED</span>
+                <span className="text-sm font-mono font-bold text-mobile-accent tabular-nums">
                   {activeBudget?.spent_percentage || "64"}%
                 </span>
               </div>
             </div>
 
-            {/* Essential vs Discretionary Breakdown */}
-            <div className="p-3 rounded-2xl bg-[#202020]/40 border border-[#303030] space-y-2">
-              <span className="text-[11px] font-semibold text-[#F5F5F5] block">
+            {/* Essential vs Discretionary Spending */}
+            <div className="p-3 rounded-2xl bg-mobile-secondary/40 border border-mobile-border space-y-2">
+              <span className="text-[11px] font-semibold text-mobile-primary block">
                 Essential vs Discretionary Spending
               </span>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-[10px] text-[#99999F] font-mono block">ESSENTIAL</span>
-                  <span className="font-mono font-bold text-[#F5F5F5] tabular-nums">
+                  <span className="text-[10px] text-mobile-secondaryText font-mono block">ESSENTIAL</span>
+                  <span className="font-mono font-bold text-mobile-primary tabular-nums">
                     ₹{expenseBreakdown.essential.toLocaleString("en-IN")}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#99999F] font-mono block">DISCRETIONARY</span>
-                  <span className="font-mono font-bold text-[#E58A91] tabular-nums">
+                  <span className="text-[10px] text-mobile-secondaryText font-mono block">DISCRETIONARY</span>
+                  <span className="font-mono font-bold text-mobile-expense tabular-nums">
                     ₹{expenseBreakdown.discretionary.toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -781,11 +872,11 @@ export function MobileDashboardView({
 
             {/* Category Spending List */}
             <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-semibold text-[#F5F5F5] block">Category Spending</span>
+              <span className="text-xs font-semibold text-mobile-primary block">Category Spending</span>
               {expenseBreakdown.categories.slice(0, 4).map((cat) => (
                 <div key={cat.name} className="flex justify-between py-1 text-xs">
-                  <span className="text-[#99999F]">{cat.name}</span>
-                  <span className="font-mono font-medium text-[#F5F5F5] tabular-nums">
+                  <span className="text-mobile-secondaryText">{cat.name}</span>
+                  <span className="font-mono font-medium text-mobile-primary tabular-nums">
                     ₹{cat.amount.toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -793,12 +884,14 @@ export function MobileDashboardView({
             </div>
 
             {/* Largest Expenses */}
-            <div className="pt-2 border-t border-[#303030] space-y-1">
-              <span className="text-[11px] text-[#99999F] font-mono uppercase block">Largest Expenses</span>
+            <div className="pt-2 border-t border-mobile-border space-y-1">
+              <span className="text-[11px] text-mobile-secondaryText font-mono uppercase block">Largest Expenses</span>
               {expenseBreakdown.largestExpenses.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex justify-between text-xs py-0.5">
-                  <span className="text-[#F5F5F5] truncate max-w-[180px]">{item.merchant_or_person || item.description}</span>
-                  <span className="font-mono font-medium text-[#E58A91] tabular-nums">
+                  <span className="text-mobile-primary truncate max-w-[180px]">
+                    {item.merchant_or_person || item.description}
+                  </span>
+                  <span className="font-mono font-medium text-mobile-expense tabular-nums">
                     ₹{parseFloat(item.amount).toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -809,40 +902,40 @@ export function MobileDashboardView({
 
         {/* SUB-TAB 3: LOANS */}
         {activeOverviewTab === "loans" && (
-          <div className="space-y-3 bg-[#151515] border border-[#303030] rounded-3xl p-4">
-            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-[#303030]">
-              <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-                <span className="text-[10px] font-mono text-[#99999F] uppercase block">TOTAL BORROWED</span>
-                <span className="text-sm font-mono font-bold text-[#E6BD70] tabular-nums">
+          <div className="space-y-3 bg-mobile-surface border border-mobile-border rounded-3xl p-4">
+            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-mobile-border">
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">TOTAL BORROWED</span>
+                <span className="text-sm font-mono font-bold text-mobile-warning tabular-nums">
                   ₹{totalBorrowedLoans.toLocaleString("en-IN")}
                 </span>
               </div>
-              <div className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030]">
-                <span className="text-[10px] font-mono text-[#99999F] uppercase block">MONTHLY EMI COMMITMENT</span>
-                <span className="text-sm font-mono font-bold text-[#F5F5F5] tabular-nums">
-                  ₹{loans.reduce((sum, l) => sum + parseFloat(l.monthly_payment || 0), 0).toLocaleString("en-IN")}
+              <div className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border">
+                <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">MONTHLY EMI COMMITMENT</span>
+                <span className="text-sm font-mono font-bold text-mobile-primary tabular-nums">
+                  ₹{loans.reduce((sum, l) => sum + parseFloat(l.monthly_payment || l.monthly_emi || 0), 0).toLocaleString("en-IN")}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#F5F5F5]">Active Loans</span>
-              <Link href="/loans" className="text-[11px] text-[#A8C7FA] hover:underline font-mono">
+              <span className="text-xs font-semibold text-mobile-primary">Active Loans</span>
+              <Link href="/loans" className="text-[11px] text-mobile-accent hover:underline font-mono">
                 Amortize & View Schedule
               </Link>
             </div>
 
             <div className="space-y-2">
               {loans.length === 0 ? (
-                <p className="text-xs text-[#99999F] py-2">No active loans on record.</p>
+                <p className="text-xs text-mobile-secondaryText py-2">No active loans on record.</p>
               ) : (
                 loans.map((loan) => (
-                  <div key={loan.id} className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030] flex items-center justify-between text-xs">
+                  <div key={loan.id} className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border flex items-center justify-between text-xs">
                     <div>
-                      <p className="font-semibold text-[#F5F5F5]">{loan.name}</p>
-                      <p className="text-[10px] text-[#99999F] font-mono">{loan.lender || "Bank"} • {loan.interest_rate}% APR</p>
+                      <p className="font-semibold text-mobile-primary">{loan.name || loan.lender_or_borrower_name}</p>
+                      <p className="text-[10px] text-mobile-secondaryText font-mono">{loan.loan_type || "Loan"}</p>
                     </div>
-                    <span className="font-mono font-bold text-[#E6BD70] tabular-nums">
+                    <span className="font-mono font-bold text-mobile-warning tabular-nums">
                       ₹{parseFloat(loan.outstanding_balance || 0).toLocaleString("en-IN")}
                     </span>
                   </div>
@@ -854,32 +947,32 @@ export function MobileDashboardView({
 
         {/* SUB-TAB 4: DEBT */}
         {activeOverviewTab === "debt" && (
-          <div className="space-y-3 bg-[#151515] border border-[#303030] rounded-3xl p-4">
-            <div className="pb-3 border-b border-[#303030]">
-              <span className="text-[10px] font-mono text-[#99999F] uppercase block">TOTAL EXTERNAL DEBTS</span>
-              <span className="text-lg font-mono font-bold text-[#E58A91] tabular-nums">
+          <div className="space-y-3 bg-mobile-surface border border-mobile-border rounded-3xl p-4">
+            <div className="pb-3 border-b border-mobile-border">
+              <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block">TOTAL EXTERNAL DEBTS</span>
+              <span className="text-lg font-mono font-bold text-mobile-expense tabular-nums">
                 ₹{totalExternalDebts.toLocaleString("en-IN")}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#F5F5F5]">Private & Personal Creditors</span>
-              <Link href="/liabilities" className="text-[11px] text-[#A8C7FA] hover:underline font-mono">
+              <span className="text-xs font-semibold text-mobile-primary">Private & Personal Creditors</span>
+              <Link href="/liabilities" className="text-[11px] text-mobile-accent hover:underline font-mono">
                 Settle Debt
               </Link>
             </div>
 
             <div className="space-y-2">
               {liabilities.length === 0 ? (
-                <p className="text-xs text-[#99999F] py-2">No external debts recorded.</p>
+                <p className="text-xs text-mobile-secondaryText py-2">No external debts recorded.</p>
               ) : (
                 liabilities.map((debt) => (
-                  <div key={debt.id} className="p-2.5 rounded-2xl bg-[#202020]/60 border border-[#303030] flex items-center justify-between text-xs">
+                  <div key={debt.id} className="p-2.5 rounded-2xl bg-mobile-secondary/60 border border-mobile-border flex items-center justify-between text-xs">
                     <div>
-                      <p className="font-semibold text-[#F5F5F5]">{debt.name}</p>
-                      <p className="text-[10px] text-[#99999F] font-mono">{debt.creditor_debtor_name || "Creditor"}</p>
+                      <p className="font-semibold text-mobile-primary">{debt.name}</p>
+                      <p className="text-[10px] text-mobile-secondaryText font-mono">{debt.creditor_debtor_name || "Creditor"}</p>
                     </div>
-                    <span className="font-mono font-bold text-[#E58A91] tabular-nums">
+                    <span className="font-mono font-bold text-mobile-expense tabular-nums">
                       ₹{parseFloat(debt.outstanding_amount || 0).toLocaleString("en-IN")}
                     </span>
                   </div>
@@ -891,52 +984,42 @@ export function MobileDashboardView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. DETECTED PAYMENTS / COMPANION SUGGESTIONS (Reference 5 & 9)
+          6. DETECTED PAYMENTS (Only shown when pending actions exist)
       ────────────────────────────────────────────────────────────── */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-mono font-bold text-[#F5F5F5] uppercase tracking-wider flex items-center gap-1.5">
-            <Smartphone className="h-3.5 w-3.5 text-[#A8C7FA]" />
-            DETECTED PAYMENTS
-          </h2>
-          <Link
-            href="/devices"
-            className="text-[10px] font-mono text-[#99999F] hover:text-[#A8C7FA] flex items-center gap-0.5"
-          >
-            <span>Companion Sync</span>
-            <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-
-        {detectedPayments.length === 0 ? (
-          <div className="p-3 bg-[#151515] border border-[#303030] rounded-2xl flex items-center justify-between text-xs text-[#99999F]">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-[#80D5AE]" />
-              <span>All detected payments are reviewed and ledger is up to date</span>
-            </span>
-            <Badge variant="outline" className="text-[9px] font-mono border-[#303030] text-[#99999F]">
-              SYNC ACTIVE
-            </Badge>
+      {detectedPayments.length > 0 && (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-mono font-bold text-mobile-primary uppercase tracking-wider flex items-center gap-1.5">
+              <Smartphone className="h-3.5 w-3.5 text-mobile-accent" />
+              DETECTED PAYMENTS ({detectedPayments.length})
+            </h2>
+            <Link
+              href="/devices"
+              className="text-[10px] font-mono text-mobile-secondaryText hover:text-mobile-accent flex items-center gap-0.5"
+            >
+              <span>Companion Sync</span>
+              <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-        ) : (
+
           <div className="space-y-2">
             {detectedPayments.map((item) => {
               const isInc = item.transaction_type === "income";
-              const accountName = accountMap.get(item.account_id) || "Default Account";
+              const accountName = accountMap.get(item.account_id) || "Account";
               return (
                 <div
                   key={item.id}
-                  className="p-3 bg-[#151515] border border-[#303030] rounded-2xl flex items-center justify-between gap-2 shadow-xs"
+                  className="p-3 bg-mobile-surface border border-mobile-border rounded-2xl flex items-center justify-between gap-2 shadow-xs"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="h-9 w-9 rounded-xl bg-[#202020] border border-[#303030] flex items-center justify-center text-[#99999F] shrink-0">
+                    <div className="h-9 w-9 rounded-xl bg-mobile-secondary border border-mobile-border flex items-center justify-center text-mobile-secondaryText shrink-0">
                       <Smartphone className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs text-[#F5F5F5] truncate">
+                      <p className="font-semibold text-xs text-mobile-primary truncate">
                         {item.merchant_or_person || item.description}
                       </p>
-                      <p className="text-[10px] text-[#99999F] font-mono truncate">
+                      <p className="text-[10px] text-mobile-secondaryText font-mono truncate">
                         {accountName} • {format(new Date(item.transaction_date), "dd MMMM")}
                       </p>
                     </div>
@@ -946,26 +1029,26 @@ export function MobileDashboardView({
                     <span
                       className={cn(
                         "font-mono font-bold text-xs tabular-nums",
-                        isInc ? "text-[#80D5AE]" : "text-[#F5F5F5]"
+                        isInc ? "text-mobile-income" : "text-mobile-primary"
                       )}
                     >
                       {isInc ? "+" : "-"}₹{parseFloat(item.amount).toLocaleString("en-IN")}
                     </span>
 
-                    {/* Approve Action (+) */}
+                    {/* Approve Action */}
                     <button
                       onClick={() => handleApprovePayment(item.id)}
                       disabled={approvingId === item.id}
-                      className="h-8 w-8 rounded-full bg-[#80D5AE]/15 hover:bg-[#80D5AE]/25 border border-[#80D5AE]/30 text-[#80D5AE] flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                      className="h-8 w-8 rounded-full bg-mobile-income/15 hover:bg-mobile-income/25 border border-mobile-income/30 text-mobile-income flex items-center justify-center transition-all cursor-pointer active:scale-95"
                       title="Approve transaction"
                     >
                       <Check className="h-4 w-4 stroke-[2.5]" />
                     </button>
 
-                    {/* Dismiss Action (X) */}
+                    {/* Dismiss Action */}
                     <button
                       onClick={() => handleDismissPayment(item.id)}
-                      className="h-8 w-8 rounded-full bg-[#E58A91]/15 hover:bg-[#E58A91]/25 border border-[#E58A91]/30 text-[#E58A91] flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                      className="h-8 w-8 rounded-full bg-mobile-expense/15 hover:bg-mobile-expense/25 border border-mobile-expense/30 text-mobile-expense flex items-center justify-center transition-all cursor-pointer active:scale-95"
                       title="Dismiss transaction"
                     >
                       <X className="h-4 w-4 stroke-[2.5]" />
@@ -975,34 +1058,34 @@ export function MobileDashboardView({
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
-          6. RECENT TRANSACTIONS (MAX 5 ITEMS) (Reference 9)
+          7. RECENT TRANSACTIONS (MAX 5 ITEMS)
       ────────────────────────────────────────────────────────────── */}
       <div className="space-y-2.5 pt-1">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-mono font-bold text-[#F5F5F5] uppercase tracking-wider flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-[#A8C7FA]" />
+          <h2 className="text-xs font-mono font-bold text-mobile-primary uppercase tracking-wider flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-mobile-accent" />
             RECENT TRANSACTIONS
           </h2>
           <Link
             href="/transactions"
-            className="text-[11px] font-mono text-[#A8C7FA] hover:underline flex items-center gap-0.5"
+            className="text-[11px] font-mono text-mobile-accent hover:underline flex items-center gap-0.5"
           >
             <span>See All</span>
             <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
 
-        {masterTransactions.length === 0 ? (
-          <div className="p-6 bg-[#151515] border border-dashed border-[#303030] rounded-2xl text-center text-xs text-[#99999F]">
-            No transactions logged yet. Tap + to add an entry.
+        {accountMasterTransactions.length === 0 ? (
+          <div className="p-6 bg-mobile-surface border border-dashed border-mobile-border rounded-2xl text-center text-xs text-mobile-secondaryText">
+            No transactions logged for this account yet. Tap + to add an entry.
           </div>
         ) : (
-          <div className="bg-[#151515] border border-[#303030] rounded-3xl p-3 divide-y divide-[#202020] shadow-xl">
-            {masterTransactions.slice(0, 5).map((tx) => {
+          <div className="bg-mobile-surface border border-mobile-border rounded-3xl p-3 divide-y divide-mobile-border/60 shadow-xl">
+            {(selectedAccount ? accountMasterTransactions.slice(0, 5) : masterTransactions.slice(0, 5)).map((tx) => {
               const isIncome = tx.transaction_type === "income" || tx.transaction_type === "refund";
               const isTransfer = tx.transaction_type === "transfer";
               const catName = tx.category?.name || "General";
@@ -1016,22 +1099,22 @@ export function MobileDashboardView({
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={cn(
-                        "h-9 w-9 rounded-2xl flex items-center justify-center shrink-0 border border-[#303030]",
+                        "h-9 w-9 rounded-2xl flex items-center justify-center shrink-0 border border-mobile-border",
                         isIncome
-                          ? "bg-[#80D5AE]/15 text-[#80D5AE]"
+                          ? "bg-mobile-income/15 text-mobile-income"
                           : isTransfer
-                          ? "bg-[#A8C7FA]/15 text-[#A8C7FA]"
-                          : "bg-[#202020] text-[#99999F]"
+                          ? "bg-mobile-accent/15 text-mobile-accent"
+                          : "bg-mobile-secondary text-mobile-secondaryText"
                       )}
                     >
                       {getCategoryIcon(catName)}
                     </div>
 
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs text-[#F5F5F5] truncate">
+                      <p className="font-semibold text-xs text-mobile-primary truncate">
                         {tx.merchant_or_person || tx.description}
                       </p>
-                      <div className="flex items-center gap-1 text-[10px] text-[#99999F] font-mono mt-0.5">
+                      <div className="flex items-center gap-1 text-[10px] text-mobile-secondaryText font-mono mt-0.5">
                         <span className="truncate max-w-[100px]">{catName}</span>
                         <span>•</span>
                         <span>{format(new Date(tx.transaction_date), "dd MMM")}</span>
@@ -1046,10 +1129,10 @@ export function MobileDashboardView({
                       className={cn(
                         "font-mono font-bold tabular-nums text-xs",
                         isIncome
-                          ? "text-[#80D5AE]"
+                          ? "text-mobile-income"
                           : isTransfer
-                          ? "text-[#A8C7FA]"
-                          : "text-[#F5F5F5]"
+                          ? "text-mobile-accent"
+                          : "text-mobile-primary"
                       )}
                     >
                       {isIncome ? "+" : isTransfer ? "" : "-"}
@@ -1064,16 +1147,16 @@ export function MobileDashboardView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          7. ACCOUNT BREAKDOWN BOTTOM SHEET (Reference 8)
+          8. ACCOUNT BREAKDOWN BOTTOM SHEET
       ────────────────────────────────────────────────────────────── */}
       <Sheet open={showAccountBreakdown} onOpenChange={setShowAccountBreakdown}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl p-5 bg-[#151515] border-t border-[#303030] text-[#F5F5F5] max-w-md mx-auto max-h-[85vh] overflow-y-auto"
+          className="rounded-t-3xl p-5 bg-mobile-surface border-t border-mobile-border text-mobile-primary max-w-md mx-auto max-h-[85vh] overflow-y-auto"
         >
           <SheetHeader className="pb-3 text-left">
-            <span className="text-[10px] font-mono text-[#99999F] uppercase">Total balance</span>
-            <SheetTitle className="text-2xl font-extrabold text-[#F5F5F5] font-mono tabular-nums">
+            <span className="text-[10px] font-mono text-mobile-secondaryText uppercase">Total balance</span>
+            <SheetTitle className="text-2xl font-extrabold text-mobile-primary font-mono tabular-nums">
               {isPrivacyMode
                 ? "••••••••"
                 : `₹${totalAvailableBalance.toLocaleString("en-IN", {
@@ -1081,32 +1164,30 @@ export function MobileDashboardView({
                     maximumFractionDigits: 2,
                   })}`}
             </SheetTitle>
-            <p className="text-xs text-[#99999F] font-mono">
+            <p className="text-xs text-mobile-secondaryText font-mono">
               Across {accounts.filter((a) => !a.is_archived).length} active linked accounts
             </p>
           </SheetHeader>
 
-          {/* Section: Eligible Liquid Accounts */}
+          {/* Individual Account List */}
           <div className="pt-2">
-            <span className="text-[10px] font-mono text-[#99999F] uppercase block tracking-wider">
+            <span className="text-[10px] font-mono text-mobile-secondaryText uppercase block tracking-wider">
               Eligible Liquid Accounts:
             </span>
           </div>
-
-          {/* Individual Account List */}
-          <div className="space-y-2 py-3 divide-y divide-[#202020]">
+          <div className="space-y-2 py-3 divide-y divide-mobile-border/60">
             {bankAccountsList.map((acc) => (
               <div key={acc.id} className="pt-2 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-[#202020] border border-[#303030] flex items-center justify-center text-[#A8C7FA]">
+                  <div className="h-8 w-8 rounded-xl bg-mobile-secondary border border-mobile-border flex items-center justify-center text-mobile-accent">
                     <Landmark className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-[#F5F5F5]">{acc.name}</p>
-                    <p className="text-[10px] text-[#99999F] font-mono">{acc.institution_name || "Bank Account"}</p>
+                    <p className="text-xs font-semibold text-mobile-primary">{acc.name}</p>
+                    <p className="text-[10px] text-mobile-secondaryText font-mono">{acc.institution_name || "Bank Account"}</p>
                   </div>
                 </div>
-                <span className="font-mono text-xs font-bold text-[#F5F5F5] tabular-nums">
+                <span className="font-mono text-xs font-bold text-mobile-primary tabular-nums">
                   {isPrivacyMode ? "••••" : `₹${parseFloat(String(acc.current_balance || 0)).toLocaleString("en-IN")}`}
                 </span>
               </div>
@@ -1115,32 +1196,32 @@ export function MobileDashboardView({
             {cashAccountsList.map((acc) => (
               <div key={acc.id} className="pt-2 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-[#202020] border border-[#303030] flex items-center justify-center text-[#80D5AE]">
+                  <div className="h-8 w-8 rounded-xl bg-mobile-secondary border border-mobile-border flex items-center justify-center text-mobile-income">
                     <Wallet className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-[#F5F5F5]">{acc.name}</p>
-                    <p className="text-[10px] text-[#99999F] font-mono">Cash / Physical Wallet</p>
+                    <p className="text-xs font-semibold text-mobile-primary">{acc.name}</p>
+                    <p className="text-[10px] text-mobile-secondaryText font-mono">Cash / Physical Wallet</p>
                   </div>
                 </div>
-                <span className="font-mono text-xs font-bold text-[#F5F5F5] tabular-nums">
+                <span className="font-mono text-xs font-bold text-mobile-primary tabular-nums">
                   {isPrivacyMode ? "••••" : `₹${parseFloat(String(acc.current_balance || 0)).toLocaleString("en-IN")}`}
                 </span>
               </div>
             ))}
 
             {totalCreditOutstanding > 0 && (
-              <div className="pt-2 flex items-center justify-between text-[#E58A91]">
+              <div className="pt-2 flex items-center justify-between text-mobile-expense">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-[#E58A91]/15 border border-[#E58A91]/30 flex items-center justify-center text-[#E58A91]">
+                  <div className="h-8 w-8 rounded-xl bg-mobile-expense/15 border border-mobile-expense/30 flex items-center justify-center text-mobile-expense">
                     <CreditCard className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-[#E58A91]">Credit Card Dues</p>
-                    <p className="text-[10px] text-[#99999F] font-mono">Total Statement Obligations</p>
+                    <p className="text-xs font-semibold text-mobile-expense">Credit Card Dues</p>
+                    <p className="text-[10px] text-mobile-secondaryText font-mono">Total Statement Obligations</p>
                   </div>
                 </div>
-                <span className="font-mono text-xs font-bold text-[#E58A91] tabular-nums">
+                <span className="font-mono text-xs font-bold text-mobile-expense tabular-nums">
                   -{isPrivacyMode ? "••••" : `₹${totalCreditOutstanding.toLocaleString("en-IN")}`}
                 </span>
               </div>
@@ -1149,7 +1230,7 @@ export function MobileDashboardView({
 
           <div className="pt-3">
             <Link href="/accounts" onClick={() => setShowAccountBreakdown(false)}>
-              <Button className="w-full h-10 bg-[#A8C7FA] hover:bg-[#A8C7FA]/90 text-[#050505] font-bold rounded-2xl font-mono text-xs">
+              <Button className="w-full h-10 bg-mobile-accent hover:bg-mobile-accent/90 text-background font-bold rounded-2xl font-mono text-xs">
                 Manage Accounts & Transfers
               </Button>
             </Link>

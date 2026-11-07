@@ -147,7 +147,7 @@ export function AppHeader({ user }: AppHeaderProps) {
     };
 
   return (
-    <header className="h-16 border-b border-border bg-card/90 backdrop-blur-md px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
+    <header className="hidden lg:flex h-16 border-b border-border bg-card/90 backdrop-blur-md px-3.5 sm:px-6 items-center justify-between sticky top-0 z-30 transition-colors">
       {/* Left: Mobile Navigation Drawer & Desktop Breadcrumbs */}
       <div className="flex items-center space-x-2.5 sm:space-x-3">
         {/* Mobile Navigation Drawer ("More" Hub) */}

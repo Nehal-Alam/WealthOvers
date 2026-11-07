@@ -8,11 +8,9 @@ import {
   isSameMonth,
   addMonths,
   subMonths,
-  parseISO,
 } from "date-fns";
 import {
   Search,
-  Filter,
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -33,11 +31,15 @@ import {
   X,
   CreditCard,
   Landmark,
+  RotateCcw,
 } from "lucide-react";
 import { Tables } from "@/types/database";
 import { cn } from "@/lib/utils";
 import Decimal from "decimal.js";
 import { toDecimal } from "@/lib/calculations/financial";
+import { useUIStore } from "@/stores/ui-store";
+import { AccountSelector } from "@/components/accounts/account-selector";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface MobileActivityViewProps {
   transactions: any[];
@@ -89,6 +91,7 @@ export function MobileActivityView({
   onEdit,
   onInspect,
 }: MobileActivityViewProps) {
+  const { selectedAccountId, setSelectedAccountId } = useUIStore();
   const [selectedMonth, setSelectedMonth] = React.useState<Date>(() => new Date());
   const [filterType, setFilterType] = React.useState<"all" | "spent" | "income">("all");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -98,17 +101,43 @@ export function MobileActivityView({
   const handlePrevMonth = () => setSelectedMonth((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setSelectedMonth((prev) => addMonths(prev, 1));
 
+  // Selected Account
+  const selectedAccount = React.useMemo(() => {
+    if (selectedAccountId === "all") return null;
+    return accounts.find((a) => a.id === selectedAccountId) || null;
+  }, [selectedAccountId, accounts]);
+
+  // Filter transactions by selected account first
+  const accountTransactions = React.useMemo(() => {
+    if (!selectedAccount) return transactions;
+    return transactions.filter(
+      (t) => t.account_id === selectedAccount.id || t.destination_account_id === selectedAccount.id
+    );
+  }, [transactions, selectedAccount]);
+
   // Filter transactions by selected month, search query and type filter
   const { monthTransactions, spentThisMonth, groupedDays } = React.useMemo(() => {
     let spentSum = new Decimal(0);
     const inMonth: any[] = [];
 
-    for (const t of transactions) {
+    for (const t of accountTransactions) {
       const txDate = new Date(t.transaction_date);
       if (isSameMonth(txDate, selectedMonth)) {
         inMonth.push(t);
-        if (t.transaction_type === "expense") {
-          spentSum = spentSum.plus(toDecimal(t.amount || 0));
+        if (selectedAccount) {
+          if (t.transaction_type === "expense" && t.account_id === selectedAccount.id) {
+            spentSum = spentSum.plus(toDecimal(t.amount || 0));
+          } else if (
+            t.transaction_type === "transfer" &&
+            t.account_id === selectedAccount.id &&
+            t.destination_account_id !== selectedAccount.id
+          ) {
+            spentSum = spentSum.plus(toDecimal(t.amount || 0));
+          }
+        } else {
+          if (t.transaction_type === "expense") {
+            spentSum = spentSum.plus(toDecimal(t.amount || 0));
+          }
         }
       }
     }
@@ -116,11 +145,19 @@ export function MobileActivityView({
     // Filter by type
     let filtered = inMonth;
     if (filterType === "spent") {
-      filtered = filtered.filter((t) => t.transaction_type === "expense");
+      filtered = filtered.filter((t) => {
+        if (selectedAccount && t.transaction_type === "transfer") {
+          return t.account_id === selectedAccount.id; // transfer out
+        }
+        return t.transaction_type === "expense";
+      });
     } else if (filterType === "income") {
-      filtered = filtered.filter(
-        (t) => t.transaction_type === "income" || t.transaction_type === "refund"
-      );
+      filtered = filtered.filter((t) => {
+        if (selectedAccount && t.transaction_type === "transfer") {
+          return t.destination_account_id === selectedAccount.id; // transfer in
+        }
+        return t.transaction_type === "income" || t.transaction_type === "refund";
+      });
     }
 
     // Filter by search query
@@ -163,11 +200,7 @@ export function MobileActivityView({
       spentThisMonth: spentSum.toNumber(),
       groupedDays: sortedGroups,
     };
-  }, [transactions, selectedMonth, filterType, searchQuery]);
-
-  const activeAccountsCount = React.useMemo(() => {
-    return accounts.filter((a) => !a.is_archived).length;
-  }, [accounts]);
+  }, [accountTransactions, selectedMonth, filterType, searchQuery, selectedAccount]);
 
   // Format date header string
   const formatDayHeader = (date: Date) => {
@@ -177,19 +210,24 @@ export function MobileActivityView({
   };
 
   return (
-    <div className="flex flex-col space-y-4 max-w-md mx-auto pb-24 text-[#F5F5F5] select-none">
+    <div className="flex flex-col space-y-4 max-w-md mx-auto pb-24 text-mobile-primary select-none">
       {/* ─────────────────────────────────────────────────────────────
-          1. HEADER: ACTIVITY TITLE & ACTIONS (Reference 4 & 7)
+          1. HEADER: ACTIVITY TITLE, THEME TOGGLE & ACTIONS
       ────────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-2 px-1">
-        <h1 className="text-xl font-bold tracking-tight text-[#F5F5F5] font-mono">
+        <h1 className="text-xl font-bold tracking-tight text-mobile-primary font-mono">
           Activity
         </h1>
 
         <div className="flex items-center space-x-1.5">
+          {/* Theme Toggle */}
+          <div className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary transition-all">
+            <ThemeToggle />
+          </div>
+
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="h-9 w-9 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-all cursor-pointer"
+            className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-all cursor-pointer"
             aria-label="Search transactions"
           >
             <Search className="h-4 w-4" />
@@ -197,7 +235,7 @@ export function MobileActivityView({
 
           <button
             onClick={() => setSelectedMonth(new Date())}
-            className="h-9 w-9 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-all cursor-pointer"
+            className="h-9 w-9 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-all cursor-pointer"
             title="Reset to current month"
           >
             <CalendarIcon className="h-4 w-4" />
@@ -205,22 +243,40 @@ export function MobileActivityView({
         </div>
       </div>
 
+      {/* ─────────────────────────────────────────────────────────────
+          2. COMPACT ACCOUNT SELECTOR (Home & Activity Synced)
+      ────────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-1">
+        <AccountSelector accounts={accounts} />
+
+        {selectedAccountId !== "all" && (
+          <button
+            onClick={() => setSelectedAccountId("all")}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-mobile-secondary text-mobile-accent text-[11px] font-mono border border-mobile-border hover:bg-mobile-secondary/80 transition-all cursor-pointer"
+            title="Reset to All Accounts"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>All Accounts</span>
+          </button>
+        )}
+      </div>
+
       {/* SEARCH BAR (collapsible) */}
       {isSearchOpen && (
         <div className="relative px-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#99999F]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-mobile-secondaryText" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search merchant, category, note..."
-            className="w-full bg-[#151515] border border-[#303030] rounded-2xl pl-10 pr-9 py-2 text-xs text-[#F5F5F5] placeholder:text-[#99999F] focus:outline-none focus:border-[#A8C7FA]"
+            className="w-full bg-mobile-surface border border-mobile-border rounded-2xl pl-10 pr-9 py-2 text-xs text-mobile-primary placeholder:text-mobile-secondaryText focus:outline-none focus:border-mobile-accent font-mono"
             autoFocus
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#99999F] hover:text-[#F5F5F5]"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-mobile-secondaryText hover:text-mobile-primary"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -229,24 +285,24 @@ export function MobileActivityView({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          2. MONTH NAVIGATION (Reference 4 & 7: < November 2026 >)
+          3. MONTH NAVIGATION
       ────────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-2 py-1">
         <button
           onClick={handlePrevMonth}
-          className="h-8 w-8 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-colors cursor-pointer"
+          className="h-8 w-8 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-colors cursor-pointer"
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <span className="text-sm font-semibold text-[#F5F5F5] font-mono tracking-wide">
+        <span className="text-sm font-semibold text-mobile-primary font-mono tracking-wide">
           {format(selectedMonth, "MMMM yyyy")}
         </span>
 
         <button
           onClick={handleNextMonth}
-          className="h-8 w-8 rounded-full bg-[#151515] border border-[#303030] flex items-center justify-center text-[#99999F] hover:text-[#F5F5F5] active:scale-95 transition-colors cursor-pointer"
+          className="h-8 w-8 rounded-full bg-mobile-surface border border-mobile-border flex items-center justify-center text-mobile-secondaryText hover:text-mobile-primary active:scale-95 transition-colors cursor-pointer"
           aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
@@ -254,33 +310,33 @@ export function MobileActivityView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. SPENT THIS MONTH SUMMARY CARD (Reference 4 & 7)
+          4. SPENT THIS MONTH SUMMARY CARD
       ────────────────────────────────────────────────────────────── */}
-      <div className="bg-[#151515] border border-[#303030] rounded-3xl p-5 shadow-xl space-y-2">
-        <span className="text-[11px] text-[#99999F] font-mono uppercase tracking-wider block">
-          Spent this month
+      <div className="bg-mobile-surface border border-mobile-border rounded-3xl p-5 shadow-xl space-y-2">
+        <span className="text-[11px] text-mobile-secondaryText font-mono uppercase tracking-wider block">
+          {selectedAccount ? `Spent (${selectedAccount.name})` : "Spent this month"}
         </span>
-        <div className="text-3xl sm:text-4xl font-extrabold text-[#F5F5F5] font-mono tabular-nums tracking-tight">
+        <div className="text-3xl sm:text-4xl font-extrabold text-mobile-primary font-mono tabular-nums tracking-tight">
           ₹ {spentThisMonth.toLocaleString("en-IN")}
         </div>
-        <div className="text-xs text-[#99999F] font-mono flex items-center gap-1.5 pt-0.5">
+        <div className="text-xs text-mobile-secondaryText font-mono flex items-center gap-1.5 pt-0.5">
           <span>{monthTransactions.length} entries</span>
           <span>•</span>
-          <span>{activeAccountsCount} active accounts</span>
+          <span>{selectedAccount ? selectedAccount.name : "All linked accounts"}</span>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          4. SEGMENTED FILTER PILLS (All | Spent | Income) (Reference 4 & 7)
+          5. SEGMENTED FILTER PILLS (All | Spent | Income)
       ────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#151515] border border-[#303030] rounded-2xl text-xs font-mono">
+      <div className="grid grid-cols-3 gap-1.5 p-1 bg-mobile-surface border border-mobile-border rounded-2xl text-xs font-mono">
         <button
           onClick={() => setFilterType("all")}
           className={cn(
             "py-2 text-center rounded-xl transition-all cursor-pointer font-medium",
             filterType === "all"
-              ? "bg-[#202020] text-[#F5F5F5] font-bold shadow-xs border border-[#303030]"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "bg-mobile-secondary text-mobile-primary font-bold shadow-xs border border-mobile-border"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           All
@@ -290,8 +346,8 @@ export function MobileActivityView({
           className={cn(
             "py-2 text-center rounded-xl transition-all cursor-pointer font-medium",
             filterType === "spent"
-              ? "bg-[#202020] text-[#E58A91] font-bold shadow-xs border border-[#303030]"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "bg-mobile-secondary text-mobile-expense font-bold shadow-xs border border-mobile-border"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           Spent
@@ -301,8 +357,8 @@ export function MobileActivityView({
           className={cn(
             "py-2 text-center rounded-xl transition-all cursor-pointer font-medium",
             filterType === "income"
-              ? "bg-[#202020] text-[#80D5AE] font-bold shadow-xs border border-[#303030]"
-              : "text-[#99999F] hover:text-[#F5F5F5]"
+              ? "bg-mobile-secondary text-mobile-income font-bold shadow-xs border border-mobile-border"
+              : "text-mobile-secondaryText hover:text-mobile-primary"
           )}
         >
           Income
@@ -310,12 +366,13 @@ export function MobileActivityView({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. TRANSACTIONS GROUPED BY DATE (Reference 4 & 7)
+          6. TRANSACTIONS GROUPED BY DATE
       ────────────────────────────────────────────────────────────── */}
       <div className="space-y-4 pt-1">
         {groupedDays.length === 0 ? (
-          <div className="p-8 bg-[#151515] border border-dashed border-[#303030] rounded-3xl text-center text-xs text-[#99999F]">
-            No transactions found for this period.
+          <div className="p-8 bg-mobile-surface border border-dashed border-mobile-border rounded-3xl text-center text-xs text-mobile-secondaryText font-mono">
+            No transactions found for this period
+            {selectedAccount ? ` on ${selectedAccount.name}` : ""}.
           </div>
         ) : (
           groupedDays.map((group) => {
@@ -324,18 +381,18 @@ export function MobileActivityView({
 
             return (
               <div key={group.date.toISOString()} className="space-y-1.5">
-                {/* Date Group Header: "Yesterday • ₹15,386" */}
+                {/* Date Group Header */}
                 <div className="flex items-center justify-between px-1 text-xs font-mono">
-                  <span className="text-[#99999F] font-medium">{dateStr}</span>
+                  <span className="text-mobile-secondaryText font-medium">{dateStr}</span>
                   {totalSpentNum > 0 && (
-                    <span className="text-[#99999F] font-bold tabular-nums">
+                    <span className="text-mobile-secondaryText font-bold tabular-nums">
                       ₹{totalSpentNum.toLocaleString("en-IN")}
                     </span>
                   )}
                 </div>
 
                 {/* Day's Transactions Card */}
-                <div className="bg-[#151515] border border-[#303030] rounded-3xl p-3 divide-y divide-[#202020] shadow-md">
+                <div className="bg-mobile-surface border border-mobile-border rounded-3xl p-3 divide-y divide-mobile-border/60 shadow-md">
                   {group.items.map((tx) => {
                     const isIncome =
                       tx.transaction_type === "income" || tx.transaction_type === "refund";
@@ -348,18 +405,18 @@ export function MobileActivityView({
                       <div
                         key={tx.id}
                         onClick={() => onInspect(tx)}
-                        className="py-2.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3 text-xs cursor-pointer active:bg-[#202020]/50 transition-colors rounded-xl px-1"
+                        className="py-2.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3 text-xs cursor-pointer active:bg-mobile-secondary/50 transition-colors rounded-xl px-1"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {/* Circular Category Icon */}
                           <div
                             className={cn(
-                              "h-9 w-9 rounded-2xl flex items-center justify-center shrink-0 border border-[#303030]",
+                              "h-9 w-9 rounded-2xl flex items-center justify-center shrink-0 border border-mobile-border",
                               isIncome
-                                ? "bg-[#80D5AE]/15 text-[#80D5AE]"
+                                ? "bg-mobile-income/15 text-mobile-income"
                                 : isTransfer
-                                ? "bg-[#A8C7FA]/15 text-[#A8C7FA]"
-                                : "bg-[#202020] text-[#99999F]"
+                                ? "bg-mobile-accent/15 text-mobile-accent"
+                                : "bg-mobile-secondary text-mobile-secondaryText"
                             )}
                           >
                             {getCategoryIcon(catName)}
@@ -367,10 +424,10 @@ export function MobileActivityView({
 
                           {/* Merchant & Subtitle */}
                           <div className="min-w-0">
-                            <p className="font-semibold text-xs text-[#F5F5F5] truncate">
+                            <p className="font-semibold text-xs text-mobile-primary truncate">
                               {tx.merchant_or_person || tx.description}
                             </p>
-                            <div className="flex items-center gap-1 text-[10px] text-[#99999F] font-mono mt-0.5">
+                            <div className="flex items-center gap-1 text-[10px] text-mobile-secondaryText font-mono mt-0.5">
                               <span>{timeStr}</span>
                               <span>•</span>
                               <span className="truncate max-w-[120px]">{catName}</span>
@@ -392,10 +449,10 @@ export function MobileActivityView({
                             className={cn(
                               "font-mono font-bold tabular-nums text-xs",
                               isIncome
-                                ? "text-[#80D5AE]"
+                                ? "text-mobile-income"
                                 : isTransfer
-                                ? "text-[#A8C7FA]"
-                                : "text-[#F5F5F5]"
+                                ? "text-mobile-accent"
+                                : "text-mobile-primary"
                             )}
                           >
                             {isIncome ? "+" : isTransfer ? "" : "-"}

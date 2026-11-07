@@ -339,8 +339,11 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          description: string | null
+          display_order: number
           icon: string
           id: string
+          is_archived: boolean
           is_system: boolean
           name: string
           type: string
@@ -350,8 +353,11 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          description?: string | null
+          display_order?: number
           icon?: string
           id?: string
+          is_archived?: boolean
           is_system?: boolean
           name: string
           type: string
@@ -361,8 +367,11 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          description?: string | null
+          display_order?: number
           icon?: string
           id?: string
+          is_archived?: boolean
           is_system?: boolean
           name?: string
           type?: string
@@ -1302,8 +1311,11 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          description: string | null
+          display_order: number
           icon: string | null
           id: string
+          is_archived: boolean
           name: string
           updated_at: string
           user_id: string
@@ -1311,8 +1323,11 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string
+          description?: string | null
+          display_order?: number
           icon?: string | null
           id?: string
+          is_archived?: boolean
           name: string
           updated_at?: string
           user_id: string
@@ -1320,8 +1335,11 @@ export type Database = {
         Update: {
           category_id?: string
           created_at?: string
+          description?: string | null
+          display_order?: number
           icon?: string | null
           id?: string
+          is_archived?: boolean
           name?: string
           updated_at?: string
           user_id?: string
@@ -1764,12 +1782,52 @@ export type Database = {
           }
         ]
       }
+      tags: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reassign_category_transactions: {
+        Args: {
+          p_user_id: string
+          p_old_category_id: string
+          p_new_category_id: string | null
+        }
+        Returns: number
+      }
     }
     Enums: {
       account_type_enum:

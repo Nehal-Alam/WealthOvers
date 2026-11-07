@@ -27,17 +27,21 @@
     --warning: #B77A18;
     --info: #397EBA;
 
-    /* Mobile Minimal Design Tokens */
+    /* Mobile Minimal Design Tokens (Light Mode - WealthOvers V2 Palette) */
     --mobile-bg: #F5F6F8;
     --mobile-surface: #FFFFFF;
-    --mobile-surface-secondary: #EDF0F3;
-    --mobile-text-primary: #18232D;
-    --mobile-text-secondary: #74808C;
-    --mobile-accent: #244B3C;
-    --mobile-positive: #16865D;
-    --mobile-negative: #D65353;
-    --mobile-warning: #B77A18;
-    --mobile-border: #E1E6EA;
+    --mobile-surface-secondary: #EEF1F5;
+    --mobile-surface-elevated: #FFFFFF;
+    --mobile-text-primary: #171A21;
+    --mobile-text-secondary: #697386;
+    --mobile-border: #E1E5EB;
+    --mobile-accent: #376FE5;
+    --mobile-blue: #376FE5;
+    --mobile-income: #16865B;
+    --mobile-expense: #D94D5C;
+    --mobile-warning: #B77B19;
+    --mobile-rent: #9C6B3E;
+    --mobile-investment: #16865B;
 
     /* Tailwind HSL Mapping for Component Primitives */
     --background: 210 18% 96.1%;        /* #F3F5F7 */
@@ -115,16 +119,21 @@
     --negative: #EF6A68;
     --info: #62A6E8;
 
-    /* Mobile Minimal Design Tokens */
-    --mobile-bg: #101820;
-    --mobile-surface: #18232D;
-    --mobile-surface-secondary: #23313D;
-    --mobile-text-primary: #F1F5F8;
-    --mobile-text-secondary: #A7B4BF;
-    --mobile-accent: #8EB6A2;
-    --mobile-positive: #39B98A;
-    --mobile-negative: #EF6A68;
-    --mobile-border: #34424E;
+    /* Mobile Minimal Design Tokens (Dark Mode - WealthOvers V2 Palette) */
+    --mobile-bg: #080A0D;
+    --mobile-surface: #14171C;
+    --mobile-surface-secondary: #1C2027;
+    --mobile-surface-elevated: #242A33;
+    --mobile-text-primary: #F4F6F9;
+    --mobile-text-secondary: #A0A8B5;
+    --mobile-border: #303743;
+    --mobile-accent: #A8C7FA;
+    --mobile-blue: #A8C7FA;
+    --mobile-income: #80D5AE;
+    --mobile-expense: #E58A91;
+    --mobile-warning: #E6BD70;
+    --mobile-rent: #D7B99F;
+    --mobile-investment: #83D4B3;
 
     /* Mobile Reference Palette (Pure Pitch Black Aesthetic) */
     --mobile-pitch-bg: #050505;
